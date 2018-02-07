@@ -1,0 +1,891 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="trove,redis," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="Redis持久化Redis支持两种数据持久化方式：RDB方式和AOF方式。前者会根据配置的规则定时将内存中的数据持久化到硬盘上，后者则是在每次执行写命令之后将命令记录下来。两种持久化方式可以单独使用，但是通常会将两者结合使用。 RDB方式RDB方式的持久化是通过快照的方式完成的。当符合某种规则时，会将内存中的数据全量生成一份副本存储到硬盘上，这个过程称作”快照”，Redis会在以下几种情况下对数据">
+<meta name="keywords" content="trove,redis">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis服务调研">
+<meta property="og:url" content="http://www.ictfox.cn/2017/03/01/2017-03-01-redis-service-invest/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="Redis持久化Redis支持两种数据持久化方式：RDB方式和AOF方式。前者会根据配置的规则定时将内存中的数据持久化到硬盘上，后者则是在每次执行写命令之后将命令记录下来。两种持久化方式可以单独使用，但是通常会将两者结合使用。 RDB方式RDB方式的持久化是通过快照的方式完成的。当符合某种规则时，会将内存中的数据全量生成一份副本存储到硬盘上，这个过程称作”快照”，Redis会在以下几种情况下对数据">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.ictfox.cn/images/redis-intro-config1.jpg">
+<meta property="og:updated_time" content="2017-06-30T14:40:40.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Redis服务调研">
+<meta name="twitter:description" content="Redis持久化Redis支持两种数据持久化方式：RDB方式和AOF方式。前者会根据配置的规则定时将内存中的数据持久化到硬盘上，后者则是在每次执行写命令之后将命令记录下来。两种持久化方式可以单独使用，但是通常会将两者结合使用。 RDB方式RDB方式的持久化是通过快照的方式完成的。当符合某种规则时，会将内存中的数据全量生成一份副本存储到硬盘上，这个过程称作”快照”，Redis会在以下几种情况下对数据">
+<meta name="twitter:image" content="http://www.ictfox.cn/images/redis-intro-config1.jpg">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> Redis服务调研 | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              Redis服务调研
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2017-03-01T11:31:17+08:00" content="2017-03-01">
+            2017-03-01
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/trove/" itemprop="url" rel="index">
+                  <span itemprop="name">trove</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><h2 id="Redis持久化"><a href="#Redis持久化" class="headerlink" title="Redis持久化"></a>Redis持久化</h2><p>Redis支持两种数据持久化方式：RDB方式和AOF方式。前者会根据配置的规则定时将内存中的数据持久化到硬盘上，后者则是在每次执行写命令之后将命令记录下来。两种持久化方式可以单独使用，但是通常会将两者结合使用。</p>
+<h3 id="RDB方式"><a href="#RDB方式" class="headerlink" title="RDB方式"></a>RDB方式</h3><p>RDB方式的持久化是通过快照的方式完成的。当符合某种规则时，会将内存中的数据全量生成一份副本存储到硬盘上，这个过程称作”快照”，Redis会在以下几种情况下对数据进行快照：</p>
+<ul>
+<li>根据配置规则进行自动快照</li>
+<li>用户执行SAVE, BGSAVE命令</li>
+<li>执行FLUSHALL命令</li>
+<li>执行复制（replication）时</li>
+</ul>
+<p>Redis允许用户自定义快照条件，当满足条件时自动执行快照，快照规则的配置方式如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">save 900 1</span><br><span class="line">save 300 10</span><br><span class="line">save 60 10000</span><br></pre></td></tr></table></figure>
+<p>每个快照条件独占一行，他们之间是或（||）关系，只要满足任何一个就进行快照。上面配置save后的第一个参数T是时间，单位是秒，第二个参数M是更改的键的个数，含义是：当时间T内被更改的键的个数大于M时，自动进行快照。比如save 900 1的含义是15分钟内(900s)被更改的键的个数大于1时，自动进行快照操作。 </p>
+<h4 id="执行SAVE或BGSAVE命令"><a href="#执行SAVE或BGSAVE命令" class="headerlink" title="执行SAVE或BGSAVE命令"></a>执行SAVE或BGSAVE命令</h4><p>除了让Redis自动进行快照外，当我们需要重启，迁移，备份Redis时，我们也可以手动执行SAVE或BGSAVE命令主动进行快照操作。</p>
+<ul>
+<li>SAVE命令<br>  当执行SAVE命令时，Redis同步进行快照操作，期间会阻塞所有来自客户端的请求，所以放数据库数据较多时，应该避免使用该命令。</li>
+<li>BGSAVE命令<br>  从命令名字就能看出来，这个命令与SAVE命令的区别就在于该命令的快照操作是在后台异步进行的，进行快照操作的同时还能处理来自客户端的请求。执行BGSAVE命令后Redis会马上返回OK表示开始进行快照操作，如果想知道快照操作是否已经完成，可以使用LASTSAVE命令返回最近一次成功执行快照的时间，返回结果是一个Unix时间戳。</li>
+</ul>
+<h4 id="快照原理"><a href="#快照原理" class="headerlink" title="快照原理"></a>快照原理</h4><p>Redis默认会将快照文件存储在Redis当前进程的工作目录的dump.rdb文件中，可以通过配置文件中的dir和dbfilename两个参数分别指定快照文件的存储路径和文件名，例如：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">dbfilename dump.rdb</span><br><span class="line">dir /opt/soft/redis-3.0.4/cache</span><br></pre></td></tr></table></figure>
+<p>快照执行的过程如下：</p>
+<ol>
+<li>Redis使用fork函数复制一份当前进程（父进程）的副本（子进程）；</li>
+<li>父进程继续处理来自客户端的请求，子进程开始将内存中的数据写入硬盘中的临时文件；</li>
+<li>当子进程写完所有的数据后，用该临时文件替换旧的RDB文件，至此，一次快照操作完成。</li>
+</ol>
+<h3 id="AOF方式"><a href="#AOF方式" class="headerlink" title="AOF方式"></a>AOF方式</h3><p>在使用Redis存储非临时数据时，一般都需要打开AOF持久化来降低进程终止导致的数据丢失，AOF可以将Redis执行的每一条写命令追加到硬盘文件中，这一过程显然会降低Redis的性能，但是大部分情况下这个影响是可以接受的，另外，使用较快的硬盘能提高AOF的性能。</p>
+<h4 id="开启AOF"><a href="#开启AOF" class="headerlink" title="开启AOF"></a>开启AOF</h4><p>默认情况下，Redis没有开启AOF（append only file）持久化功能，可以通过在配置文件中作如下配置启用：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">appendonly yes</span><br></pre></td></tr></table></figure>
+<p>开启之后，Redis每执行一条写命令就会将该命令写入硬盘中的AOF文件。AOF文件保存路径和RDB文件路径是一致的，都是通过dir参数配置，默认文件名是：appendonly.aof，可以通过配置appendonlyfilename参数修改，例如：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">appendonlyfilename appendonly.aof</span><br></pre></td></tr></table></figure>
+<h4 id="同步硬盘数据"><a href="#同步硬盘数据" class="headerlink" title="同步硬盘数据"></a>同步硬盘数据</h4><p>虽然每次执行更改数据库的内容时，AOF都会记录执行的命令，但是由于操作系统本身的硬盘缓存的缘故，AOF文件的内容并没有真正地写入硬盘，在默认情况下，操作系统会每隔30s将硬盘缓存中的数据同步到硬盘，但是为了防止系统异常退出而导致丢数据的情况发生，我们还可以在Redis的配置文件中配置这个同步的频率：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># appendfsync always</span></span><br><span class="line">appendfsync everysec</span><br><span class="line"><span class="comment"># appendfsync no</span></span><br></pre></td></tr></table></figure>
+<p>第一行表示每次AOF写入一个命令都会执行同步操作，这是最安全也是最慢的方式；<br>第二行表示每秒钟进行一次同步操作，一般来说使用这种方式已经足够；<br>第三行表示不主动进行同步操作，这是最不安全的方式。 </p>
+<h2 id="Redis-Info信息"><a href="#Redis-Info信息" class="headerlink" title="Redis Info信息"></a>Redis Info信息</h2><p>INFO命令以一种易于理解和阅读的格式，返回关于Redis服务器的各种信息和统计数值。</p>
+<p>通过给定可选的参数 section ，可以让命令只返回某一部分的信息:</p>
+<ul>
+<li>server: Redis服务器的一般信息</li>
+<li>clients: 客户端的连接部分</li>
+<li>memory: 内存消耗相关信息</li>
+<li>persistence: RDB和AOF相关信息</li>
+<li>stats: 一般统计</li>
+<li>replication: 主/从复制信息</li>
+<li>cpu: 统计CPU的消耗</li>
+<li>commandstats: Redis命令统计</li>
+<li>cluster: Redis集群信息</li>
+<li>keyspace: 数据库的相关统计</li>
+</ul>
+<p>它也可以采取以下值:</p>
+<ul>
+<li>all: 返回所有信息</li>
+<li>default: 返回默认设置的信息<br>如果没有使用任何参数时，默认为default。 </li>
+</ul>
+<h2 id="Redis的configuration-group"><a href="#Redis的configuration-group" class="headerlink" title="Redis的configuration group"></a>Redis的configuration group</h2><p>可以配置Redis支持的配置参数，参考文件：<code>trove/trove/templates/redis/validation-rules.json</code></p>
+<p>里面可配置的参数很多，我们可以选择部分支持的参数提供给用户配置。</p>
+<p>阿里提供的配置参数有：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>maxmemory-policy</td>
+<td>volatile-lru</td>
+</tr>
+<tr>
+<td>hash-max-ziplist-entries</td>
+<td>512</td>
+</tr>
+<tr>
+<td>hash-max-ziplist-value</td>
+<td>64</td>
+</tr>
+<tr>
+<td>list-max-ziplist-entries</td>
+<td>512</td>
+</tr>
+<tr>
+<td>list-max-ziplist-value</td>
+<td>64</td>
+</tr>
+<tr>
+<td>set-max-intset-entries</td>
+<td>512</td>
+</tr>
+<tr>
+<td>zset-max-ziplist-entries</td>
+<td>128</td>
+</tr>
+<tr>
+<td>zset-max-ziplist-value</td>
+<td>64</td>
+</tr>
+<tr>
+<td>notify-keyspace-events</td>
+</tr>
+</tbody>
+</table>
+<p>注释：上表中红色的部分是我们提供的redis 3.2.5版本中没有的，在新版本中的配置参数为：list-max-ziplist-size</p>
+<p>青云支持的Redis配置参数更多：<br><img src="/images/redis-intro-config1.jpg" alt="redis-qingcloud"></p>
+<p>配置redis, 3.2.5版本的config parameters：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># trove-manage --config-file /opt/etc/trove/trove.conf db_load_datastore_config_parameters redis 3.2.5 /opt/openstack/trove/trove/templates/redis/validation-rules.json</span></span><br></pre></td></tr></table></figure>
+<p>创建Redis对应的configuration group：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># trove configuration-create redisCGroup '&#123;"requirepass": "mypass", "hll-sparse-max-bytes": 200&#125;'  --datastore redis --datastore_version 3.2.5</span></span><br></pre></td></tr></table></figure>
+<p>Attach configuration group到实例：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># trove configuration-attach &lt;instance&gt; &lt;configuration&gt;</span></span><br></pre></td></tr></table></figure>
+<p>Detach configuration group到实例：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># trove configuration-detach &lt;instance&gt;</span></span><br></pre></td></tr></table></figure>
+<h2 id="Redis的备份和恢复"><a href="#Redis的备份和恢复" class="headerlink" title="Redis的备份和恢复"></a>Redis的备份和恢复</h2><h3 id="Redis的备份"><a href="#Redis的备份" class="headerlink" title="Redis的备份"></a>Redis的备份</h3><p>查看Trove代码，Redis备份的是RDB的dbfile，执行备份的步骤如下：</p>
+<ol>
+<li>保存当前数据到dbfile：执行 redis-cli BGSAVE命令</li>
+<li>等待BGSAVE完成，通过redis-cli LASTSAVE获取dbfile的最新保存时间，变化的话即代表第1步BGSAVE完成</li>
+<li>获取dbfile文件，通过cat <dbfile> | zip | encrypt，把文件上传到对象存储S3中</dbfile></li>
+</ol>
+<h3 id="Redis的恢复"><a href="#Redis的恢复" class="headerlink" title="Redis的恢复"></a>Redis的恢复</h3><p>Reids是通过之前备份的dbfile恢复数据的，执行恢复的步骤如下：</p>
+<ol>
+<li>若redis配置文件中aof为开启状态，则关闭aof：overrides = {‘appendonly’: ‘no’}</li>
+<li>停止redis服务</li>
+<li>删除当前的dbfile</li>
+<li>根据当前的配置创建dbfile的目录（按实际需要）</li>
+<li>从对象存储S3中拉取备份文件后，通过 decrypt | unzip到配置的dbfile</li>
+<li>启动redis服务</li>
+<li>若redis之前的配置中aof为关闭状态，则恢复完成，否则执行后续步骤；</li>
+<li>通过redis-cli info persistence 获取redis的恢复状态：loading 0</li>
+<li>重写aof文件：redis-cli BGREWRITEAOF</li>
+<li>通过redis-cli info persistence 获取aof重写状态：aof_rewrite_in_progress 0</li>
+<li>修改redis的配置文件，开启aof：overrides = {‘appendonly’: ‘yes’}</li>
+<li>重启redis服务</li>
+</ol>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/trove/" rel="tag">#trove</a>
+          
+            <a href="/tags/redis/" rel="tag">#redis</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/03/10/2017-03-10-redis-cluster-trove/" rel="prev">Redis集群方案</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/02/22/2017-02-22-rbd-data-replication/" rel="next">ceph块存储跨机房灾备调研</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Redis持久化"><span class="nav-number">1.</span> <span class="nav-text">Redis持久化</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#RDB方式"><span class="nav-number">1.1.</span> <span class="nav-text">RDB方式</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#执行SAVE或BGSAVE命令"><span class="nav-number">1.1.1.</span> <span class="nav-text">执行SAVE或BGSAVE命令</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#快照原理"><span class="nav-number">1.1.2.</span> <span class="nav-text">快照原理</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#AOF方式"><span class="nav-number">1.2.</span> <span class="nav-text">AOF方式</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#开启AOF"><span class="nav-number">1.2.1.</span> <span class="nav-text">开启AOF</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#同步硬盘数据"><span class="nav-number">1.2.2.</span> <span class="nav-text">同步硬盘数据</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Redis-Info信息"><span class="nav-number">2.</span> <span class="nav-text">Redis Info信息</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Redis的configuration-group"><span class="nav-number">3.</span> <span class="nav-text">Redis的configuration group</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Redis的备份和恢复"><span class="nav-number">4.</span> <span class="nav-text">Redis的备份和恢复</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Redis的备份"><span class="nav-number">4.1.</span> <span class="nav-text">Redis的备份</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Redis的恢复"><span class="nav-number">4.2.</span> <span class="nav-text">Redis的恢复</span></a></li></ol></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

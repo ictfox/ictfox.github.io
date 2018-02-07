@@ -1,0 +1,798 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="fstream c++," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="概述在用c++的fstream时遇到一个很奇怪的问题，记录和分析过程如下。 需求两个文件，一个122k（file-bak），一个100k(file)，file是file-bak的前100k的内容，需要从file-bak里读取后面的22k数据，写入file的后面，然后对比file和file-bak，数据应该一致。 c++实现实现1打开ofile后调用：ofile.seekp(102400, ios:">
+<meta name="keywords" content="fstream c++">
+<meta property="og:type" content="article">
+<meta property="og:title" content="使用c++ fstream时遇到的一个问题与分析">
+<meta property="og:url" content="http://www.ictfox.cn/2017/10/25/2017-10-25-one-issue-about-c++-fstream/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述在用c++的fstream时遇到一个很奇怪的问题，记录和分析过程如下。 需求两个文件，一个122k（file-bak），一个100k(file)，file是file-bak的前100k的内容，需要从file-bak里读取后面的22k数据，写入file的后面，然后对比file和file-bak，数据应该一致。 c++实现实现1打开ofile后调用：ofile.seekp(102400, ios:">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2017-10-25T00:40:44.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="使用c++ fstream时遇到的一个问题与分析">
+<meta name="twitter:description" content="概述在用c++的fstream时遇到一个很奇怪的问题，记录和分析过程如下。 需求两个文件，一个122k（file-bak），一个100k(file)，file是file-bak的前100k的内容，需要从file-bak里读取后面的22k数据，写入file的后面，然后对比file和file-bak，数据应该一致。 c++实现实现1打开ofile后调用：ofile.seekp(102400, ios:">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> 使用c++ fstream时遇到的一个问题与分析 | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              使用c++ fstream时遇到的一个问题与分析
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2017-10-25T08:40:17+08:00" content="2017-10-25">
+            2017-10-25
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/c/" itemprop="url" rel="index">
+                  <span itemprop="name">c++</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在用c++的<code>fstream</code>时遇到一个很奇怪的问题，记录和分析过程如下。</p>
+<h2 id="需求"><a href="#需求" class="headerlink" title="需求"></a>需求</h2><p>两个文件，一个122k（file-bak），一个100k(file)，<code>file</code>是<code>file-bak</code>的前100k的内容，需要从<code>file-bak</code>里读取后面的22k数据，写入<code>file</code>的后面，然后对比<code>file</code>和<code>file-bak</code>，数据应该一致。</p>
+<h2 id="c-实现"><a href="#c-实现" class="headerlink" title="c++实现"></a>c++实现</h2><h3 id="实现1"><a href="#实现1" class="headerlink" title="实现1"></a>实现1</h3><p>打开<code>ofile</code>后调用：<code>ofile.seekp(102400, ios::beg)</code></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fstream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="built_in">std</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span>* argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span> buffer[<span class="number">22168</span>];</span><br><span class="line"></span><br><span class="line">    <span class="function">ifstream <span class="title">ifile</span><span class="params">(<span class="string">"file2-bak"</span>, <span class="built_in">std</span>::ios_base::in | <span class="built_in">std</span>::ios_base::binary)</span></span>;</span><br><span class="line">    ifile.seekg(<span class="number">102400</span>);</span><br><span class="line">    ifile.read(buffer, <span class="number">22168</span>);</span><br><span class="line">    ifile.close();</span><br><span class="line"></span><br><span class="line">    ofstream ofile;</span><br><span class="line">    ofile.open(<span class="string">"file2"</span>, <span class="built_in">std</span>::ios_base::out | <span class="built_in">std</span>::ios_base::binary);</span><br><span class="line">    ofile.seekp(<span class="number">102400</span>, ios::beg);	<span class="comment">// seek to offset 102400 from begin</span></span><br><span class="line">    <span class="built_in">cout</span> &lt;&lt; ofile.tellp() &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    ofile.write(buffer, <span class="number">22168</span>);</span><br><span class="line">    ofile.close();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>编译运行如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># g++ -std=c++11 -o fstream_tst fstream_tst.cc</span></span><br><span class="line"><span class="comment"># ll -h file*</span></span><br><span class="line">-rw-r--r-- 1 root root 100K Oct 18 17:53 file</span><br><span class="line">-rw-r--r-- 1 root root 122K Oct 18 15:18 file-bak</span><br><span class="line"><span class="comment"># ./fstream_tst</span></span><br><span class="line">102400</span><br><span class="line"><span class="comment"># ll -h file*</span></span><br><span class="line">-rw-r--r-- 1 root root 100K Oct 18 17:56 file</span><br><span class="line">-rw-r--r-- 1 root root 122K Oct 18 15:18 file-bak</span><br><span class="line"><span class="comment"># diff file1 file-bak</span></span><br><span class="line">Binary files file and file-bak differ</span><br></pre></td></tr></table></figure>
+<p><strong>结果异常</strong></p>
+<h3 id="实现2"><a href="#实现2" class="headerlink" title="实现2"></a>实现2</h3><p>打开<code>ofile</code>后调用：<code>ofile.seekp(0, ios::end)</code></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fstream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="built_in">std</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span>* argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span> buffer[<span class="number">22168</span>];</span><br><span class="line"></span><br><span class="line">    <span class="function">ifstream <span class="title">ifile</span><span class="params">(<span class="string">"file2-bak"</span>, <span class="built_in">std</span>::ios_base::in | <span class="built_in">std</span>::ios_base::binary)</span></span>;</span><br><span class="line">    ifile.seekg(<span class="number">102400</span>);</span><br><span class="line">    ifile.read(buffer, <span class="number">22168</span>);</span><br><span class="line">    ifile.close();</span><br><span class="line"></span><br><span class="line">    ofstream ofile;</span><br><span class="line">    ofile.open(<span class="string">"file2"</span>, <span class="built_in">std</span>::ios_base::out | <span class="built_in">std</span>::ios_base::binary);</span><br><span class="line">    ofile.seekp(<span class="number">0</span>, ios::end); 	<span class="comment">// seek to the end of the file</span></span><br><span class="line">    <span class="built_in">cout</span> &lt;&lt; ofile.tellp() &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    ofile.write(buffer, <span class="number">22168</span>);</span><br><span class="line">    ofile.close();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>编译运行如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># g++ -std=c++11 -o fstream_tst fstream_tst.cc</span></span><br><span class="line"><span class="comment"># ll -h file*</span></span><br><span class="line">-rw-r--r-- 1 root root 100K Oct 18 18:01 file</span><br><span class="line">-rw-r--r-- 1 root root 122K Oct 18 15:18 file-bak</span><br><span class="line"><span class="comment"># ./fstream_tst</span></span><br><span class="line">0</span><br><span class="line"><span class="comment"># ll -h file*</span></span><br><span class="line">-rw-r--r-- 1 root root  22K Oct 18 18:05 file</span><br><span class="line">-rw-r--r-- 1 root root 122K Oct 18 15:18 file-bak</span><br><span class="line"><span class="comment"># diff file1 file-bak</span></span><br><span class="line">Binary files file and file-bak differ</span><br></pre></td></tr></table></figure>
+<p><strong>结果异常</strong></p>
+<blockquote>
+<p>很奇怪为啥 ofile.seekp(0, ios::end); 后 ofile.tellp() 的输出为0</p>
+</blockquote>
+<h3 id="实现3"><a href="#实现3" class="headerlink" title="实现3"></a>实现3</h3><p>打开<code>ofile</code>时指定：<code>std::ios_base::out | std::ios_base::binary | std::ios_base::app</code></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fstream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="built_in">std</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span>* argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span> buffer[<span class="number">22168</span>];</span><br><span class="line"></span><br><span class="line">    <span class="function">ifstream <span class="title">ifile</span><span class="params">(<span class="string">"file2-bak"</span>, <span class="built_in">std</span>::ios_base::in | <span class="built_in">std</span>::ios_base::binary)</span></span>;</span><br><span class="line">    ifile.seekg(<span class="number">102400</span>);</span><br><span class="line">    ifile.read(buffer, <span class="number">22168</span>);</span><br><span class="line">    ifile.close();</span><br><span class="line"></span><br><span class="line">    ofstream ofile;</span><br><span class="line">    ofile.open(<span class="string">"file2"</span>, <span class="built_in">std</span>::ios_base::out | <span class="built_in">std</span>::ios_base::binary | <span class="built_in">std</span>::ios_base::app);</span><br><span class="line">    <span class="built_in">cout</span> &lt;&lt; ofile.tellp() &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    ofile.write(buffer, <span class="number">22168</span>);</span><br><span class="line">    ofile.close();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>编译运行如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># g++ -std=c++11 -o fstream_tst fstream_tst.cc</span></span><br><span class="line"><span class="comment"># ll -h file*</span></span><br><span class="line">-rw-r--r-- 1 root root 100K Oct 18 18:12 file</span><br><span class="line">-rw-r--r-- 1 root root 122K Oct 18 15:18 file-bak</span><br><span class="line"><span class="comment"># ./fstream_tst</span></span><br><span class="line">102400</span><br><span class="line"><span class="comment"># ll -h file*</span></span><br><span class="line">-rw-r--r-- 1 root root 122K Oct 18 18:15 file</span><br><span class="line">-rw-r--r-- 1 root root 122K Oct 18 15:18 file-bak</span><br><span class="line"><span class="comment"># diff file1 file-bak</span></span><br><span class="line"><span class="comment">#</span></span><br></pre></td></tr></table></figure>
+<p><strong>结果正常</strong></p>
+<h2 id="c实现"><a href="#c实现" class="headerlink" title="c实现"></a>c实现</h2><p>代码如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span>* argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span> buffer[<span class="number">22168</span>];</span><br><span class="line"></span><br><span class="line">    FILE *fpr = fopen(<span class="string">"file-bak"</span>, <span class="string">"rb"</span>);</span><br><span class="line">    fseek(fpr, <span class="number">102400</span>, SEEK_SET);</span><br><span class="line">    fread(buffer, <span class="keyword">sizeof</span>(<span class="keyword">char</span>), <span class="number">22168</span>, fpr);</span><br><span class="line">    fclose(fpr);</span><br><span class="line"></span><br><span class="line">    FILE *fpw = fopen(<span class="string">"file"</span>, <span class="string">"rwb+"</span>);</span><br><span class="line">    fseek(fpw, <span class="number">102400</span>, SEEK_SET);</span><br><span class="line">    fwrite(buffer, <span class="keyword">sizeof</span>(<span class="keyword">char</span>), <span class="number">22168</span>, fpw);</span><br><span class="line">    fclose(fpw);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>编译运行如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># gcc -o fstream_tst fstream_tst.c</span></span><br><span class="line"><span class="comment"># ll -h file*</span></span><br><span class="line">-rw-r--r-- 1 root root 100K Oct 18 18:23 file</span><br><span class="line">-rw-r--r-- 1 root root 122K Oct 18 15:18 file-bak</span><br><span class="line"><span class="comment"># ./fstream_tst</span></span><br><span class="line"><span class="comment"># ll -h file*</span></span><br><span class="line">-rw-r--r-- 1 root root 122K Oct 18 18:25 file</span><br><span class="line">-rw-r--r-- 1 root root 122K Oct 18 15:18 file-bak</span><br><span class="line"><span class="comment"># diff file1 file-bak</span></span><br><span class="line"><span class="comment">#</span></span><br></pre></td></tr></table></figure>
+<p><strong>结果正常</strong></p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>用c++代码的<code>实现1</code>分析如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># strace ./fstream_tst</span></span><br><span class="line">...</span><br><span class="line">open(<span class="string">"file-bak"</span>, O_RDONLY)              = 3</span><br><span class="line">lseek(3, 102400, SEEK_SET)               = 102400</span><br><span class="line"><span class="built_in">read</span>(3, <span class="string">"4318\n4319\n4320\n4321\n4322\n4323\n43"</span>..., 22168) = 22168</span><br><span class="line">close(3)                                = 0</span><br><span class="line">open(<span class="string">"file"</span>, O_WRONLY|O_CREAT|O_TRUNC, 0666) = 3</span><br><span class="line">lseek(3, 102400, SEEK_SET)               = 102400</span><br><span class="line">lseek(3, 0, SEEK_CUR)                   = 102400</span><br><span class="line">fstat(1, &#123;st_mode=S_IFCHR|0620, st_rdev=makedev(136, 0), ...&#125;) = 0</span><br><span class="line">mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f81ce101000</span><br><span class="line">write(1, <span class="string">"102400\n"</span>, 6102400</span><br><span class="line">)                  = 6</span><br><span class="line">writev(3, [&#123;NULL, 0&#125;, &#123;<span class="string">"4318\n4319\n4320\n4321\n4322\n4323\n43"</span>..., 22168&#125;], 2) = 22168</span><br><span class="line">close(3)</span><br></pre></td></tr></table></figure>
+<p>从上面可以看出编译后的可执行文件在打开要写入的文件时调用的是：<code>open(&quot;file&quot;, O_WRONLY|O_CREAT|O_TRUNC, 0666) = 3</code></p>
+<p><strong>好奇怪为啥译后可执行文件执行open系统调用加了truncate标记！</strong></p>
+<p>网上搜索了好久，没找到相关的解释，于是翻看《C++ Primer》圣书，找到如下说明，也明白了原因：</p>
+<ul>
+<li>默认 <code>ofstream</code>流对象关联的文件将以<code>out模式</code>打开，使文件可写；以<code>out模式</code>打开的文件会被情况：丢弃该文件存储的所有数据；</li>
+<li>所以从效果上来看，为<code>ofstream</code>对象指定<code>out模式</code>等效于同时指定了<code>out和trunc模式</code></li>
+</ul>
+<p>针对分析到的原因，修改代码如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fstream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="built_in">std</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span>* argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span> buffer[<span class="number">22168</span>];</span><br><span class="line"></span><br><span class="line">    <span class="function">ifstream <span class="title">ifile</span><span class="params">(<span class="string">"file2-bak"</span>, <span class="built_in">std</span>::ios_base::in | <span class="built_in">std</span>::ios_base::binary)</span></span>;</span><br><span class="line">    ifile.seekg(<span class="number">102400</span>);</span><br><span class="line">    ifile.read(buffer, <span class="number">22168</span>);</span><br><span class="line">    ifile.close();</span><br><span class="line"></span><br><span class="line">    ofstream ofile;</span><br><span class="line">    ofile.open(<span class="string">"file2"</span>, <span class="built_in">std</span>::ios_base::in | <span class="built_in">std</span>::ios_base::out | <span class="built_in">std</span>::ios_base::binary);</span><br><span class="line">    ofile.seekp(<span class="number">102400</span>, ios::beg);	<span class="comment">// seek to offset 102400 from begin</span></span><br><span class="line">    <span class="built_in">cout</span> &lt;&lt; ofile.tellp() &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    ofile.write(buffer, <span class="number">22168</span>);</span><br><span class="line">    ofile.close();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>编译运行如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># gcc -o fstream_tst fstream_tst.c</span></span><br><span class="line"><span class="comment"># ll -h file*</span></span><br><span class="line">-rw-r--r-- 1 root root 100K Oct 19 12:03 file</span><br><span class="line">-rw-r--r-- 1 root root 122K Oct 18 15:18 file-bak</span><br><span class="line"><span class="comment"># ./fstream_tst</span></span><br><span class="line">102400</span><br><span class="line"><span class="comment"># ll -h file*</span></span><br><span class="line">-rw-r--r-- 1 root root 122K Oct 19 12:04 file</span><br><span class="line">-rw-r--r-- 1 root root 122K Oct 18 15:18 file-bak</span><br><span class="line"><span class="comment"># diff file1 file-bak</span></span><br><span class="line"><span class="comment">#</span></span><br></pre></td></tr></table></figure>
+<p><strong>结果正常</strong></p>
+<h2 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h2><p>经过这么大半天的测试分析查找，稍微明白了C++的<code>fstream</code>的使用，还真是不能直接想当然的拿C的那一套来推测。。。坑啊！</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://www.runoob.com/cplusplus/cpp-files-streams.html" target="_blank" rel="noopener">http://www.runoob.com/cplusplus/cpp-files-streams.html</a><br><a href="https://stackoverflow.com/questions/34238063/c-seekp0-iosend-not-working" target="_blank" rel="noopener">https://stackoverflow.com/questions/34238063/c-seekp0-iosend-not-working</a><br><a href="https://stackoverflow.com/questions/29593940/why-is-an-fstream-truncated-when-it-is-opened-with-the-flags-iosate-and-ioso" target="_blank" rel="noopener">https://stackoverflow.com/questions/29593940/why-is-an-fstream-truncated-when-it-is-opened-with-the-flags-iosate-and-ioso</a><br><a href="https://social.msdn.microsoft.com/Forums/vstudio/en-US/8f121287-539f-4fe1-96b6-db3e5b9306f4/vc10-using-stdofstream-truncates-file-without-trunc" target="_blank" rel="noopener">https://social.msdn.microsoft.com/Forums/vstudio/en-US/8f121287-539f-4fe1-96b6-db3e5b9306f4/vc10-using-stdofstream-truncates-file-without-trunc</a></p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/fstream-c/" rel="tag">#fstream c++</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/11/06/2017-11-06-aws-sdk-cpp-s3-introduction/" rel="prev">aws sdk cpp中S3相关的应用和示例</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/10/19/2017-10-19-g3log-introduction/" rel="next">一个开源的C++日志框架-G3log的简单示例</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#需求"><span class="nav-number">2.</span> <span class="nav-text">需求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#c-实现"><span class="nav-number">3.</span> <span class="nav-text">c++实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#实现1"><span class="nav-number">3.1.</span> <span class="nav-text">实现1</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#实现2"><span class="nav-number">3.2.</span> <span class="nav-text">实现2</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#实现3"><span class="nav-number">3.3.</span> <span class="nav-text">实现3</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#c实现"><span class="nav-number">4.</span> <span class="nav-text">c实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#分析"><span class="nav-number">5.</span> <span class="nav-text">分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#结论"><span class="nav-number">6.</span> <span class="nav-text">结论</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">7.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

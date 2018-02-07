@@ -1,0 +1,839 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="hexo,github," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="之前都是把工作学习中写的文章记录在Evernote上，方便自己搜索，然后在CSDN上开了个blog，会发一些整理过的文章；后来感觉有必要自己搭建个技术blog，记录自己的总结，方便自己也有利于他人，就开始搜索如何方便快捷搭建一个blog；首先搜索到的是Jekyll + pages github，学习了半天后发现，想找个喜欢的模板不容易，搭建也不是分分钟的事情，后来就搜索到了Hexo + pages">
+<meta name="keywords" content="hexo,github">
+<meta property="og:type" content="article">
+<meta property="og:title" content="基于Hexo + pages github搭建个人blog站点">
+<meta property="og:url" content="http://www.ictfox.cn/2017/05/21/2017-05-21-hexo-pagesgithub-build-website/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="之前都是把工作学习中写的文章记录在Evernote上，方便自己搜索，然后在CSDN上开了个blog，会发一些整理过的文章；后来感觉有必要自己搭建个技术blog，记录自己的总结，方便自己也有利于他人，就开始搜索如何方便快捷搭建一个blog；首先搜索到的是Jekyll + pages github，学习了半天后发现，想找个喜欢的模板不容易，搭建也不是分分钟的事情，后来就搜索到了Hexo + pages">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.ictfox.cn/images/hexo-pagesgithub-build-website1.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/hexo-pagesgithub-build-website2.jpg">
+<meta property="og:updated_time" content="2017-05-22T01:07:04.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="基于Hexo + pages github搭建个人blog站点">
+<meta name="twitter:description" content="之前都是把工作学习中写的文章记录在Evernote上，方便自己搜索，然后在CSDN上开了个blog，会发一些整理过的文章；后来感觉有必要自己搭建个技术blog，记录自己的总结，方便自己也有利于他人，就开始搜索如何方便快捷搭建一个blog；首先搜索到的是Jekyll + pages github，学习了半天后发现，想找个喜欢的模板不容易，搭建也不是分分钟的事情，后来就搜索到了Hexo + pages">
+<meta name="twitter:image" content="http://www.ictfox.cn/images/hexo-pagesgithub-build-website1.jpg">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> 基于Hexo + pages github搭建个人blog站点 | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              基于Hexo + pages github搭建个人blog站点
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2017-05-21T19:31:17+08:00" content="2017-05-21">
+            2017-05-21
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/tools/" itemprop="url" rel="index">
+                  <span itemprop="name">tools</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><p>之前都是把工作学习中写的文章记录在Evernote上，方便自己搜索，然后在CSDN上开了个blog，会发一些整理过的文章；<br>后来感觉有必要自己搭建个技术blog，记录自己的总结，方便自己也有利于他人，就开始搜索如何方便快捷搭建一个blog；<br>首先搜索到的是<code>Jekyll + pages github</code>，学习了半天后发现，想找个喜欢的模板不容易，搭建也不是分分钟的事情，后来就搜索到了<code>Hexo + pages github</code>的方案，应用后发现很便捷，这里记录下来。</p>
+<h2 id="创建github库"><a href="#创建github库" class="headerlink" title="创建github库"></a>创建github库</h2><p>github相信大多数朋友都用过，这里介绍的是github提供的pages功能，可以很方便的搭建个人的静态网站，特别适合简介的blog系统；并且默认提供的二级域名就可以访问；</p>
+<p>在自己的github账号下创建如下命名的repository：<code>&lt;your-github-name&gt;.github.io</code>，一切选择默认即可；<br>其中<code>&lt;your-github-name&gt;</code>即是你登录github账号的名字；<br><strong>注意：别的名称的repository重命名为上述名称的repository不行</strong></p>
+<h2 id="下载repository"><a href="#下载repository" class="headerlink" title="下载repository"></a>下载repository</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ mkdir YourGithubName.github.io</span><br><span class="line">$ <span class="built_in">cd</span> YourGithubName.github.io</span><br><span class="line">$ git <span class="built_in">clone</span> &lt;git@github.com:YourGithubName/YourGithubName.github.io.git&gt;</span><br></pre></td></tr></table></figure>
+<p><strong>注：上述YourGithubName替换为你自己的github库名字</strong></p>
+<p>为了能有权限上传代码到repository，你需要生成自己的ssh-key，并填写到github的配置里； </p>
+<ol>
+<li><p>首先本地生成ssh key</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ ssh-keygen	// 一路回车，选择默认值即可</span><br><span class="line">$ cat ~/.ssh/id_rsa.pub</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>更新ssh key到github<br> 步骤为： <code>右上角头像 -&gt; Settings -&gt; SSH and GPG keys -&gt; New SSH key</code><br> 然后填写<code>Title，Key</code>即可；<br> Title 自己随便命名，Key 为上步骤中<code>cat ~/.ssh/id_rsa.pub</code>的值</p>
+</li>
+</ol>
+<h2 id="Hexo初始化repository目录"><a href="#Hexo初始化repository目录" class="headerlink" title="Hexo初始化repository目录"></a>Hexo初始化repository目录</h2><p>上述我们clone下路的repository还是空目录一个，为了搭建网站，搜索我们需要的就是通过hexo命令来初始化该目录</p>
+<p>首先安装hexo，请参考：<a href="https://hexo.io/zh-cn/docs/#安装" target="_blank" rel="noopener">https://hexo.io/zh-cn/docs/#安装</a></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ npm install -g hexo-cli</span><br><span class="line">$ npm install hexo --save</span><br><span class="line">$ npm install hexo-deployer-git --save	// hexo deploy到git时需要</span><br></pre></td></tr></table></figure>
+<p>初始化repository目录</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="built_in">cd</span> YourGithubName.github.io</span><br><span class="line">$ hexo init .</span><br><span class="line">$ npm install</span><br><span class="line">$ ls</span><br><span class="line">_config.yml  node_modules package.json scaffolds    <span class="built_in">source</span>       themes</span><br></pre></td></tr></table></figure>
+<p>这里我们主要关注的是：</p>
+<ul>
+<li>_config.yml 文件：整个hexo的配置文件</li>
+<li>source 目录：所有网站相关页面的目录，后续写的markdown文件都应该放在source/_post/目录下</li>
+<li>themes 目录：hexo模板的目录，里面每个子目录都是一个hexo的模板</li>
+</ul>
+<h2 id="网站测试"><a href="#网站测试" class="headerlink" title="网站测试"></a>网站测试</h2><p>初始化repository目录后，即可在本地测试下网站的功能步骤如下：</p>
+<ol>
+<li><p>启动hexo server</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br><span class="line">INFO  Start processing</span><br><span class="line">INFO  Hexo is running at http://localhost:4000/. Press Ctrl+C to stop.</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>本地浏览器查看<br> 本地浏览器里输入: <code>http://localhost:4000/</code> 访问</p>
+</li>
+</ol>
+<h2 id="Hexo模板"><a href="#Hexo模板" class="headerlink" title="Hexo模板"></a>Hexo模板</h2><p>Hexo包含了很多美观的模板，我们可以随便选择自己喜欢的Hexo模板来搭建网站<br>Hexo模板：<a href="https://hexo.io/themes/" target="_blank" rel="noopener">https://hexo.io/themes/</a><br>我选择的是Next模板：<a href="https://github.com/idhyt/hexo-theme-next" target="_blank" rel="noopener">https://github.com/idhyt/hexo-theme-next</a><br>还有一款简洁的模板：<a href="https://github.com/tufu9441/maupassant-hexo.git" target="_blank" rel="noopener">https://github.com/tufu9441/maupassant-hexo.git</a></p>
+<p>选择好一个模板后，就可以把它下载到我们的repository里</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ git <span class="built_in">clone</span> https://github.com/idhyt/hexo-theme-next.git themes/next</span><br><span class="line">$ ls themes/next</span><br><span class="line">README.en.md README.md    _config.yml  bower.json   languages    layout       scripts      <span class="built_in">source</span>       <span class="built_in">test</span></span><br></pre></td></tr></table></figure>
+<p>theme里有自己的<code>_config.yml</code>文件，里面是主题相关的配置参数，详情请参考具体模板的README.md</p>
+<p>配置repository目录下的<code>_config.yml</code>文件，指定使用模板：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">$ vim _config.xml</span><br><span class="line">...</span><br><span class="line"><span class="comment"># Extensions</span></span><br><span class="line"><span class="comment">## Plugins: https://hexo.io/plugins/</span></span><br><span class="line"><span class="comment">## Themes: https://hexo.io/themes/</span></span><br><span class="line">theme: landscape</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">然后修改上面的theme为next即可</span><br><span class="line">theme : next</span><br></pre></td></tr></table></figure>
+<p>启动<code>hexo server</code>，本地测试下外观 ;)</p>
+<h2 id="更新blog"><a href="#更新blog" class="headerlink" title="更新blog"></a>更新blog</h2><p>网站和选用的模式都确定后，下一步就是更新我们自己的blog了，通过hexo也是异常简单</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new mypage</span><br><span class="line">INFO  Created: ~/YourGithubName.github.io/<span class="built_in">source</span>/_posts/mypage.md</span><br></pre></td></tr></table></figure>
+<p>默认这里生产的<code>mypage.md</code>是没有日期格式的，这个可以在<code>_config.yml</code>里配置<code>new_post_name</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ vim _config.yml</span><br><span class="line">...</span><br><span class="line"><span class="comment"># Writing</span></span><br><span class="line">new_post_name: :year-:month-:day-:title.md <span class="comment"># File name of new posts</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>当然这里我们也可以自己在<code>source/_posts/</code>目录下创建markdown文件，填写自己的内容，为了支持分类和tag，建议markdown文件加入以下头部：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">---</span><br><span class="line">title: <span class="string">"my first blog"</span></span><br><span class="line">date: 2016-08-11 17:31:17</span><br><span class="line">tags: [tag1, tag2]</span><br><span class="line">categories: life</span><br><span class="line">---</span><br><span class="line"></span><br><span class="line">blog正文</span><br></pre></td></tr></table></figure>
+<p>若你在 source 目录下没有看到 tags, categories 等目录，可以通过如下命令创建:</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new page tags</span><br><span class="line">$ hexo new page categories</span><br></pre></td></tr></table></figure>
+<p>以上的目录需求跟你使用的模板息息相关，详情请仔细阅读hexo帮助文档和你选择模板的README.md。</p>
+<h2 id="更新网站内容到github"><a href="#更新网站内容到github" class="headerlink" title="更新网站内容到github"></a>更新网站内容到github</h2><p>当本地网站测试满意后，我们就可以更新网站内容到pages github了</p>
+<p>首先要配置<code>_config.yml</code>文件制定github repository</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ vim _config.yml</span><br><span class="line"><span class="comment"># 添加deploy配置</span></span><br><span class="line">deploy:</span><br><span class="line">  <span class="built_in">type</span>: git</span><br><span class="line">  repo: git@github.com:ictfox/ictfox.github.io.git</span><br><span class="line">  branch: master</span><br></pre></td></tr></table></figure>
+<p>然后执行hexo命令部署</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ hexo clean</span><br><span class="line">$ hexo generate</span><br><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+<p>我写了个脚本来做部署这个事情，免得每次忘记执行某一步</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">$ cat deploy.sh</span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"></span><br><span class="line">hexo clean</span><br><span class="line"><span class="keyword">if</span> [[ $? -ne 0 ]]; <span class="keyword">then</span></span><br><span class="line">    <span class="built_in">echo</span> <span class="string">"hexo clean Error!"</span></span><br><span class="line">    <span class="built_in">return</span> 1</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line">hexo generate</span><br><span class="line"><span class="keyword">if</span> [[ $? -ne 0 ]]; <span class="keyword">then</span></span><br><span class="line">    <span class="built_in">echo</span> <span class="string">"hexo generate Error!"</span></span><br><span class="line">    <span class="built_in">return</span> 1</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line">hexo deploy</span><br><span class="line"><span class="keyword">if</span> [[ $? -ne 0 ]]; <span class="keyword">then</span></span><br><span class="line">    <span class="built_in">echo</span> <span class="string">"hexo deploy Error!"</span></span><br><span class="line">    <span class="built_in">return</span> 1</span><br><span class="line"><span class="keyword">fi</span></span><br></pre></td></tr></table></figure>
+<p>更新成功后，我们就可以通过浏览器访问github的二级域名查看网站了，默认为：<a href="YourGithubName.github.io">YourGithubName.github.io</a></p>
+<h2 id="申请域名"><a href="#申请域名" class="headerlink" title="申请域名"></a>申请域名</h2><p>国内比较便捷的申请域名的服务是阿里和腾讯提供的</p>
+<ul>
+<li>阿里 <a href="https://wanwang.aliyun.com/domain/" target="_blank" rel="noopener">https://wanwang.aliyun.com/domain/</a></li>
+<li>腾讯 <a href="https://dnspod.qcloud.com/" target="_blank" rel="noopener">https://dnspod.qcloud.com/</a></li>
+</ul>
+<p>他们都需要注册对应的账户，登录后即可查询自己喜欢的域名是否还没有注册，然后按照流程注册即可。<br>我对比发现腾讯的价格便宜，就选择了腾讯的服务。<br>申请后可以在账号里看到自己的域名信息。</p>
+<h2 id="域名绑定"><a href="#域名绑定" class="headerlink" title="域名绑定"></a>域名绑定</h2><p>鉴于国内对cn域名的使用需要审核，这里依com域名为例，cn域名审核后的步骤一样；</p>
+<h3 id="github添加CNAME文件"><a href="#github添加CNAME文件" class="headerlink" title="github添加CNAME文件"></a>github添加CNAME文件</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="built_in">echo</span> <span class="string">'www.yangguanjun.com'</span> &gt; <span class="built_in">source</span>/CNAME</span><br></pre></td></tr></table></figure>
+<p>然后执行deploy.py脚本提交到github repository</p>
+<h3 id="解析com域名"><a href="#解析com域名" class="headerlink" title="解析com域名"></a>解析com域名</h3><p>在域名提供商的console界面里，找到域名后面的<code>解析</code>按钮，在里面添加CNAME的解析记录<br><img src="/images/hexo-pagesgithub-build-website1.jpg" alt=""><br><img src="/images/hexo-pagesgithub-build-website2.jpg" alt=""></p>
+<p>然后访问域名就可以了 ;)</p>
+<h2 id="其他功能"><a href="#其他功能" class="headerlink" title="其他功能"></a>其他功能</h2><p>我选择的Next模板里，默认的 搜索 和 评论 功能是关闭的，而这两个还是挺有用的，自己可以配置打开</p>
+<h3 id="搜索功能"><a href="#搜索功能" class="headerlink" title="搜索功能"></a>搜索功能</h3><p>Next主题里支持 tinysou 和 swiftype 两种搜索功能，我这里实践了 swiftype，感觉还是不错的</p>
+<p>配置文件修改：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ vim themes/next/_config.yml</span><br><span class="line">...</span><br><span class="line">swiftype_key: <span class="string">'your swiftype key'</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>swiftype官网：<a href="https://swiftype.com/" target="_blank" rel="noopener">https://swiftype.com/</a><br>参考文章：<a href="http://prozhuchen.com/2015/10/03/Hexo%E5%8D%9A%E5%AE%A2%E7%AC%AC%E5%9B%9B%E7%AB%99/" target="_blank" rel="noopener">http://prozhuchen.com/2015/10/03/Hexo%E5%8D%9A%E5%AE%A2%E7%AC%AC%E5%9B%9B%E7%AB%99/</a></p>
+<h3 id="评论功能"><a href="#评论功能" class="headerlink" title="评论功能"></a>评论功能</h3><p>Next主题里支持 duoshuo 和 disqus 两种评论功能，duoshuo 马上就要关闭支持了，我就选择了国外的 disqus，但也有个问题，这个disqus是被墙的 ;(，不翻墙的用户是刷不出来的。。。</p>
+<p>配置文件修改：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ vim themes/next/_config.yml</span><br><span class="line">...</span><br><span class="line">disqus_shortname: ictfox</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>Disqus官网：<a href="https://disqus.com/" target="_blank" rel="noopener">https://disqus.com/</a><br>参考文章：<a href="http://www.lmnsyunhao.cn/2017/03/29/hexo-disqus-comments/" target="_blank" rel="noopener">http://www.lmnsyunhao.cn/2017/03/29/hexo-disqus-comments/</a></p>
+<h2 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章"></a>参考文章</h2><p><a href="https://hexo.io/zh-cn/docs/" target="_blank" rel="noopener">https://hexo.io/zh-cn/docs/</a><br><a href="http://www.jianshu.com/p/834d7cc0668d" target="_blank" rel="noopener">http://www.jianshu.com/p/834d7cc0668d</a><br><a href="https://wsgzao.github.io/post/hexo-guide/" target="_blank" rel="noopener">https://wsgzao.github.io/post/hexo-guide/</a><br><a href="https://linghucong.js.org/2016/04/15/2016-04-15-hexo-github-pages-blog/" target="_blank" rel="noopener">https://linghucong.js.org/2016/04/15/2016-04-15-hexo-github-pages-blog/</a></p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/hexo/" rel="tag">#hexo</a>
+          
+            <a href="/tags/github/" rel="tag">#github</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/05/23/2017-05-23-Ceph-osd_enable_op_tracker/" rel="prev">Ceph osd_enable_op_tracker配置分析</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/05/15/2017-05-15-Ceph-configuration/" rel="next">Ceph配置参数详解</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#创建github库"><span class="nav-number">1.</span> <span class="nav-text">创建github库</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#下载repository"><span class="nav-number">2.</span> <span class="nav-text">下载repository</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Hexo初始化repository目录"><span class="nav-number">3.</span> <span class="nav-text">Hexo初始化repository目录</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#网站测试"><span class="nav-number">4.</span> <span class="nav-text">网站测试</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Hexo模板"><span class="nav-number">5.</span> <span class="nav-text">Hexo模板</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#更新blog"><span class="nav-number">6.</span> <span class="nav-text">更新blog</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#更新网站内容到github"><span class="nav-number">7.</span> <span class="nav-text">更新网站内容到github</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#申请域名"><span class="nav-number">8.</span> <span class="nav-text">申请域名</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#域名绑定"><span class="nav-number">9.</span> <span class="nav-text">域名绑定</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#github添加CNAME文件"><span class="nav-number">9.1.</span> <span class="nav-text">github添加CNAME文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#解析com域名"><span class="nav-number">9.2.</span> <span class="nav-text">解析com域名</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#其他功能"><span class="nav-number">10.</span> <span class="nav-text">其他功能</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#搜索功能"><span class="nav-number">10.1.</span> <span class="nav-text">搜索功能</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#评论功能"><span class="nav-number">10.2.</span> <span class="nav-text">评论功能</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文章"><span class="nav-number">11.</span> <span class="nav-text">参考文章</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,863 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="ceph,radosgw," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="概述本文针对对象存储OSS的基本功能，提供能测试的方法和脚本一些基于boto3API的简单操作示例：boto3API.py 1234567891011121314151617181920212223242526272829303132333435363738394041424344#!/usr/bin/env python#-*- coding:utf-8 -*-import boto3# cre">
+<meta name="keywords" content="ceph,radosgw">
+<meta property="og:type" content="article">
+<meta property="og:title" content="对象存储OSS功能测试">
+<meta property="og:url" content="http://www.ictfox.cn/2016/12/15/2016-12-15-rgw-functions-tst/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述本文针对对象存储OSS的基本功能，提供能测试的方法和脚本一些基于boto3API的简单操作示例：boto3API.py 1234567891011121314151617181920212223242526272829303132333435363738394041424344#!/usr/bin/env python#-*- coding:utf-8 -*-import boto3# cre">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2017-05-20T13:09:23.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="对象存储OSS功能测试">
+<meta name="twitter:description" content="概述本文针对对象存储OSS的基本功能，提供能测试的方法和脚本一些基于boto3API的简单操作示例：boto3API.py 1234567891011121314151617181920212223242526272829303132333435363738394041424344#!/usr/bin/env python#-*- coding:utf-8 -*-import boto3# cre">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> 对象存储OSS功能测试 | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              对象存储OSS功能测试
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2016-12-15T15:11:17+08:00" content="2016-12-15">
+            2016-12-15
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/ceph/" itemprop="url" rel="index">
+                  <span itemprop="name">ceph</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>本文针对对象存储OSS的基本功能，提供能测试的方法和脚本<br>一些基于boto3API的简单操作示例：boto3API.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="comment">#-*- coding:utf-8 -*-</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> boto3</span><br><span class="line"></span><br><span class="line"><span class="comment"># creating a client</span></span><br><span class="line">s3client = boto3.client(<span class="string">'s3'</span>,</span><br><span class="line">                        aws_secret_access_key = <span class="string">'ZSU2I***8aNgGyMHBFhqwWnRzKz1fO'</span>,</span><br><span class="line">                        aws_access_key_id = <span class="string">'C6Y1E0C3EB***W8YIKEW'</span>,</span><br><span class="line">                        endpoint_url = <span class="string">'http://10.1.0.29'</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># creating a bucket</span></span><br><span class="line">bucket_name = <span class="string">'ictfox'</span></span><br><span class="line">response = s3client.create_bucket(Bucket = bucket_name)</span><br><span class="line"><span class="keyword">print</span> <span class="string">"Creating bucket &#123;0&#125; returns =&gt; &#123;1&#125;\n"</span>.format(bucket_name, response)</span><br><span class="line"></span><br><span class="line"><span class="comment"># listing owned buckets</span></span><br><span class="line">response = s3client.list_buckets()</span><br><span class="line"><span class="keyword">for</span> bucket <span class="keyword">in</span> response[<span class="string">'Buckets'</span>]:</span><br><span class="line">    <span class="keyword">print</span> <span class="string">"Listing owned buckets returns =&gt; &#123;0&#125; was created on &#123;1&#125;\n"</span>.format(bucket[<span class="string">'Name'</span>], bucket[<span class="string">'CreationDate'</span>])</span><br><span class="line"></span><br><span class="line"><span class="comment"># creating an object</span></span><br><span class="line">object_key = <span class="string">'hello.txt'</span></span><br><span class="line">response = s3client.put_object(Bucket = bucket_name, Key = object_key, Body = <span class="string">'Hello World!'</span>)</span><br><span class="line"><span class="keyword">print</span> <span class="string">"Creating object &#123;0&#125; returns =&gt; &#123;1&#125;\n"</span>.format(object_key, response)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Listing a bucket's content</span></span><br><span class="line">response = s3client.list_objects(Bucket = bucket_name)</span><br><span class="line"><span class="keyword">for</span> obj <span class="keyword">in</span> response[<span class="string">'Contents'</span>]:</span><br><span class="line">    <span class="keyword">print</span> <span class="string">"Listing a bucket's content returns =&gt; &#123;0&#125;\t&#123;1&#125;\t&#123;2&#125;\n"</span>.format(obj[<span class="string">'Key'</span>], obj[<span class="string">'Size'</span>], obj[<span class="string">'LastModified'</span>])</span><br><span class="line"></span><br><span class="line"><span class="comment"># Changing an object's metadata(head object)</span></span><br><span class="line">metadata = &#123;<span class="string">'x-amz-meta-datastore'</span>: <span class="string">'qr'</span>, <span class="string">'x-amz-meta-datastore-version'</span>: <span class="string">'1.0.1'</span>&#125;</span><br><span class="line">copySrc = <span class="string">'&#123;0&#125;/&#123;1&#125;'</span>.format(bucket_name, object_key)</span><br><span class="line">response = s3client.copy_object(Bucket = bucket_name, CopySource = copySrc, Key = object_key, Metadata = metadata, MetadataDirective = <span class="string">'REPLACE'</span>)</span><br><span class="line"><span class="keyword">print</span> <span class="string">"Changing metadata of object &#123;0&#125; returns =&gt; &#123;1&#125;\n"</span>.format(object_key, response)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Deleting an object</span></span><br><span class="line">response = s3client.delete_object(Bucket = bucket_name, Key = object_key)</span><br><span class="line"><span class="keyword">print</span> <span class="string">"Deleting object &#123;0&#125; returns =&gt; &#123;1&#125;\n"</span>.format(object_key, response)</span><br><span class="line"></span><br><span class="line"><span class="comment"># deleting a bucket</span></span><br><span class="line">response = s3client.delete_bucket(Bucket = bucket_name)</span><br><span class="line"><span class="keyword">print</span> <span class="string">"Deleting bucket &#123;0&#125; returns =&gt; &#123;1&#125;\n"</span>.format(bucket_name, response)</span><br></pre></td></tr></table></figure>
+<h2 id="用户管理"><a href="#用户管理" class="headerlink" title="用户管理"></a>用户管理</h2><p>用户的管理是通过Admin Ops API提供；这里我们通过之前创建好的管理账户来执行Admin Ops API，具体可以参考：<a href="http://docs.ceph.com/docs/master/radosgw/adminops/" target="_blank" rel="noopener">http://docs.ceph.com/docs/master/radosgw/adminops/</a></p>
+<h3 id="创建用户"><a href="#创建用户" class="headerlink" title="创建用户"></a>创建用户</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">$ cat usercreate.sh</span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">token=5L65QDE4df8JJ8RM7MN5 <span class="comment">## USER_TOKEN</span></span><br><span class="line">secret=Y9HPiBCwLDeSMSaiQhmPT2h7NgNUndvLERhktnIZ <span class="comment">## USER_SECRET</span></span><br><span class="line">query=<span class="variable">$1</span></span><br><span class="line">name=<span class="variable">$2</span></span><br><span class="line"><span class="built_in">echo</span> <span class="variable">$query</span>, <span class="variable">$name</span></span><br><span class="line">query3=<span class="string">"&amp;uid="</span></span><br><span class="line">query2=admin/user</span><br><span class="line">date=$(<span class="keyword">for</span> i <span class="keyword">in</span> $(date <span class="string">"+%H"</span>) ; <span class="keyword">do</span> date <span class="string">"+%a, %d %b %Y <span class="variable">$(( 10#$i-8 )</span>):%M:%S +0000"</span> ; <span class="keyword">done</span>)</span><br><span class="line">header=<span class="string">"PUT\n\n\n<span class="variable">$&#123;date&#125;</span>\n/<span class="variable">$&#123;query2&#125;</span>"</span></span><br><span class="line">sig=$(<span class="built_in">echo</span> -en <span class="variable">$&#123;header&#125;</span> | openssl sha1 -hmac <span class="variable">$&#123;secret&#125;</span> -binary | base64)</span><br><span class="line">curl -v -H <span class="string">"Date: <span class="variable">$&#123;date&#125;</span>"</span> -H <span class="string">"Authorization: AWS <span class="variable">$&#123;token&#125;</span>:<span class="variable">$&#123;sig&#125;</span>"</span> -L -X PUT <span class="string">"http://&lt;your-host-ip&gt;/<span class="variable">$&#123;query2&#125;</span>?format=json<span class="variable">$&#123;query3&#125;</span><span class="variable">$&#123;query&#125;</span>&amp;display-name=<span class="variable">$&#123;name&#125;</span>"</span> -H <span class="string">"Host: &lt;your-host-ip&gt;"</span></span><br></pre></td></tr></table></figure>
+<h3 id="删除用户"><a href="#删除用户" class="headerlink" title="删除用户"></a>删除用户</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">$ cat userdelete.sh</span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">token=5L65QDE4238JJ8RM7MN5 <span class="comment">## USER_TOKEN</span></span><br><span class="line">secret=Y9HPiBCwLDeSMSaiQhmPT2h7NgNUnqVLERhktnIZ <span class="comment">## USER_SECRET</span></span><br><span class="line">query=<span class="variable">$1</span></span><br><span class="line">query3=<span class="string">"&amp;uid="</span></span><br><span class="line">query2=admin/user</span><br><span class="line">date=$(<span class="keyword">for</span> i <span class="keyword">in</span> $(date <span class="string">"+%H"</span>) ; <span class="keyword">do</span> date <span class="string">"+%a, %d %b %Y <span class="variable">$(( 10#$i-8 )</span>):%M:%S +0000"</span> ; <span class="keyword">done</span>)</span><br><span class="line">header=<span class="string">"DELETE\n\n\n<span class="variable">$&#123;date&#125;</span>\n/<span class="variable">$&#123;query2&#125;</span>"</span></span><br><span class="line">sig=$(<span class="built_in">echo</span> -en <span class="variable">$&#123;header&#125;</span> | openssl sha1 -hmac <span class="variable">$&#123;secret&#125;</span> -binary | base64)</span><br><span class="line">curl -v -H <span class="string">"Date: <span class="variable">$&#123;date&#125;</span>"</span> -H <span class="string">"Authorization: AWS <span class="variable">$&#123;token&#125;</span>:<span class="variable">$&#123;sig&#125;</span>"</span> -L -X DELETE <span class="string">"http://&lt;your-host-ip&gt;/<span class="variable">$&#123;query2&#125;</span>?format=json<span class="variable">$&#123;query3&#125;</span><span class="variable">$&#123;query&#125;</span>"</span> -H <span class="string">"Host: &lt;your-host-ip&gt;"</span></span><br></pre></td></tr></table></figure>
+<h2 id="User-keys"><a href="#User-keys" class="headerlink" title="User keys"></a>User keys</h2><p>管理User的keys也是通过admin Ops API操作的，同样需要通过管理账户来执行；</p>
+<h3 id="创建user-key"><a href="#创建user-key" class="headerlink" title="创建user key"></a>创建user key</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$cat</span> createKey.sh</span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">token=5L65QDE4238JJ8RM7MN5 <span class="comment">## USER_TOKEN</span></span><br><span class="line">secret=Y9HPiBCwLDeSMSaiQhmPT2h7NgNUnqVLERhktnIZ <span class="comment">## USER_SECRET</span></span><br><span class="line">operate=<span class="string">"PUT"</span></span><br><span class="line">user=<span class="variable">$1</span></span><br><span class="line">query=<span class="string">"admin/user"</span></span><br><span class="line">date=$(<span class="keyword">for</span> i <span class="keyword">in</span> $(date <span class="string">"+%H"</span>) ; <span class="keyword">do</span> date <span class="string">"+%a, %d %b %Y <span class="variable">$(( 10#$i-8 )</span>):%M:%S +0000"</span> ; <span class="keyword">done</span>)</span><br><span class="line">header=<span class="string">"<span class="variable">$&#123;operate&#125;</span>\n\n\n<span class="variable">$&#123;date&#125;</span>\n/<span class="variable">$&#123;query&#125;</span>"</span></span><br><span class="line">sig=$(<span class="built_in">echo</span> -en <span class="variable">$&#123;header&#125;</span> | openssl sha1 -hmac <span class="variable">$&#123;secret&#125;</span> -binary | base64)</span><br><span class="line">curl -v -L -X <span class="variable">$&#123;operate&#125;</span> <span class="string">"http://&lt;your-host-ip&gt;/<span class="variable">$&#123;query&#125;</span>?key&amp;format=json&amp;uid=<span class="variable">$&#123;user&#125;</span>&amp;generate-key=True"</span> \</span><br><span class="line"> -H <span class="string">"Date: <span class="variable">$&#123;date&#125;</span>"</span> \</span><br><span class="line"> -H <span class="string">"Authorization: AWS <span class="variable">$&#123;token&#125;</span>:<span class="variable">$&#123;sig&#125;</span>"</span> \</span><br><span class="line"> -H <span class="string">"Host: &lt;your-host-ip&gt;"</span></span><br></pre></td></tr></table></figure>
+<h3 id="删除user-key"><a href="#删除user-key" class="headerlink" title="删除user key"></a>删除user key</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">cat removeKey.sh</span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">token=5L65QDE4238JJ8RM7MN5 <span class="comment">## USER_TOKEN</span></span><br><span class="line">secret=Y9HPiBCwLDeSMSaiQhmPT2h7NgNUnqVLERhktnIZ <span class="comment">## USER_SECRET</span></span><br><span class="line">operate=<span class="string">"DELETE"</span></span><br><span class="line">key=<span class="variable">$1</span></span><br><span class="line">query=<span class="string">"admin/user"</span></span><br><span class="line">date=$(<span class="keyword">for</span> i <span class="keyword">in</span> $(date <span class="string">"+%H"</span>) ; <span class="keyword">do</span> date <span class="string">"+%a, %d %b %Y <span class="variable">$(( 10#$i-8 )</span>):%M:%S +0000"</span> ; <span class="keyword">done</span>)</span><br><span class="line">header=<span class="string">"<span class="variable">$&#123;operate&#125;</span>\n\n\n<span class="variable">$&#123;date&#125;</span>\n/<span class="variable">$&#123;query&#125;</span>"</span></span><br><span class="line">sig=$(<span class="built_in">echo</span> -en <span class="variable">$&#123;header&#125;</span> | openssl sha1 -hmac <span class="variable">$&#123;secret&#125;</span> -binary | base64)</span><br><span class="line">curl -v -L -X <span class="variable">$&#123;operate&#125;</span> <span class="string">"http://&lt;your-host-ip&gt;/<span class="variable">$&#123;query&#125;</span>?key&amp;format=json&amp;access-key=<span class="variable">$&#123;key&#125;</span>"</span> \</span><br><span class="line">           -H <span class="string">"Date: <span class="variable">$&#123;date&#125;</span>"</span> \</span><br><span class="line">           -H <span class="string">"Authorization: AWS <span class="variable">$&#123;token&#125;</span>:<span class="variable">$&#123;sig&#125;</span>"</span> \</span><br><span class="line">           -H <span class="string">"Host: &lt;your-host-ip&gt;"</span></span><br></pre></td></tr></table></figure>
+<h3 id="列出user-keys"><a href="#列出user-keys" class="headerlink" title="列出user keys"></a>列出user keys</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">cat getUserInfo.sh</span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">token=5L65QDE4238JJ8RM7MN5 <span class="comment">## USER_TOKEN</span></span><br><span class="line">secret=Y9HPiBCwLDeSMSaiQhmPT2h7NgNUnqVLERhktnIZ <span class="comment">## USER_SECRET</span></span><br><span class="line">user=<span class="variable">$1</span></span><br><span class="line">query=admin/user</span><br><span class="line">date=$(<span class="keyword">for</span> i <span class="keyword">in</span> $(date <span class="string">"+%H"</span>) ; <span class="keyword">do</span> date <span class="string">"+%a, %d %b %Y <span class="variable">$(( 10#$i-8 )</span>):%M:%S +0000"</span> ; <span class="keyword">done</span>)</span><br><span class="line">header=<span class="string">"GET\n\n\n<span class="variable">$&#123;date&#125;</span>\n/<span class="variable">$&#123;query&#125;</span>"</span></span><br><span class="line">sig=$(<span class="built_in">echo</span> -en <span class="variable">$&#123;header&#125;</span> | openssl sha1 -hmac <span class="variable">$&#123;secret&#125;</span> -binary | base64)</span><br><span class="line"><span class="built_in">echo</span> <span class="variable">$sig</span></span><br><span class="line">curl -v -L -X GET <span class="string">"http://&lt;your-host-ip&gt;/<span class="variable">$&#123;query&#125;</span>?format=json&amp;uid=<span class="variable">$&#123;user&#125;</span>"</span> \</span><br><span class="line">           -H <span class="string">"Date: <span class="variable">$&#123;date&#125;</span>"</span> \</span><br><span class="line">           -H <span class="string">"Authorization: AWS <span class="variable">$&#123;token&#125;</span>:<span class="variable">$&#123;sig&#125;</span>"</span> \</span><br><span class="line">           -H <span class="string">"Host: &lt;your-host-ip&gt;"</span></span><br></pre></td></tr></table></figure>
+<h2 id="权限管理"><a href="#权限管理" class="headerlink" title="权限管理"></a>权限管理</h2><p>开源的比较常用的s3的SDK有boto3，我们在RDS的备份中已经使用过<br>参考：<a href="http://boto3.readthedocs.io/en/latest/reference/services/s3.html#s3" target="_blank" rel="noopener">http://boto3.readthedocs.io/en/latest/reference/services/s3.html#s3</a></p>
+<p><strong>下面的操作都简要列出了调用的api和说明；</strong></p>
+<h3 id="获取Bucket权限"><a href="#获取Bucket权限" class="headerlink" title="获取Bucket权限"></a>获取Bucket权限</h3><p>get_bucket_acl(**kwargs)  </p>
+<ul>
+<li>Gets the access control policy for the bucket.</li>
+</ul>
+<h3 id="设置Bucket权限"><a href="#设置Bucket权限" class="headerlink" title="设置Bucket权限"></a>设置Bucket权限</h3><p>put_bucket_acl(**kwargs)  </p>
+<ul>
+<li>Sets the permissions on a bucket using access control lists (ACL).</li>
+</ul>
+<h2 id="Bucket操作"><a href="#Bucket操作" class="headerlink" title="Bucket操作"></a>Bucket操作</h2><p>同权限管理，下面的操作基于boto3，都简要列出了调用的api和说明；</p>
+<h3 id="列出Buckets"><a href="#列出Buckets" class="headerlink" title="列出Buckets"></a>列出Buckets</h3><p>list_buckets()  </p>
+<ul>
+<li>Returns a list of all buckets owned by the authenticated sender of the request.</li>
+</ul>
+<h3 id="创建Bucket"><a href="#创建Bucket" class="headerlink" title="创建Bucket"></a>创建Bucket</h3><p>create_bucket(**kwargs)  </p>
+<ul>
+<li>Creates a new bucket.</li>
+</ul>
+<h3 id="删除Bucket"><a href="#删除Bucket" class="headerlink" title="删除Bucket"></a>删除Bucket</h3><p>delete_bucket(**kwargs)  </p>
+<ul>
+<li>Deletes the bucket. All objects (including all object versions and Delete Markers) in the bucket must be deleted before the bucket itself can be deleted.</li>
+</ul>
+<h3 id="列出Bucket-Objects"><a href="#列出Bucket-Objects" class="headerlink" title="列出Bucket Objects"></a>列出Bucket Objects</h3><ol>
+<li><p>list_objects(**kwargs)<br> Returns some or all (up to 1000) of the objects in a bucket. You can use the request parameters as selection criteria to return a subset of the objects in a bucket.</p>
+</li>
+<li><p>list_objects_v2(**kwargs)<br> Returns some or all (up to 1000) of the objects in a bucket. You can use the request parameters as selection criteria to return a subset of the objects in a bucket. Note: ListObjectsV2 is the revised List Objects API and we recommend you use this revised API for new application development.</p>
+</li>
+</ol>
+<h3 id="获取Bucket-ACL"><a href="#获取Bucket-ACL" class="headerlink" title="获取Bucket ACL"></a>获取Bucket ACL</h3><p>get_bucket_acl(**kwargs)  </p>
+<ul>
+<li>Gets the access control policy for the bucket.</li>
+</ul>
+<h3 id="设置Bucket-ACL"><a href="#设置Bucket-ACL" class="headerlink" title="设置Bucket ACL"></a>设置Bucket ACL</h3><p>put_bucket_acl(**kwargs)  </p>
+<ul>
+<li>Sets the permissions on a bucket using access control lists (ACL).</li>
+</ul>
+<h3 id="获取Bucket-Info"><a href="#获取Bucket-Info" class="headerlink" title="获取Bucket Info"></a>获取Bucket Info</h3><p>head_bucket(**kwargs)  </p>
+<ul>
+<li>This operation is useful to determine if a bucket exists and you have permission to access it.</li>
+</ul>
+<h3 id="枚举Bucket分块上传"><a href="#枚举Bucket分块上传" class="headerlink" title="枚举Bucket分块上传"></a>枚举Bucket分块上传</h3><p>list_multipart_uploads(**kwargs)  </p>
+<ul>
+<li>This operation lists in-progress multipart uploads.</li>
+</ul>
+<h2 id="Object操作"><a href="#Object操作" class="headerlink" title="Object操作"></a>Object操作</h2><h3 id="上传Object"><a href="#上传Object" class="headerlink" title="上传Object"></a>上传Object</h3><ol>
+<li><p>put_object(**kwargs)<br> Adds an object to a bucket.</p>
+</li>
+<li><p>upload_file(Filename, Bucket, Key, ExtraArgs=None, Callback=None, Config=None)<br> Upload a file to an S3 object.</p>
+</li>
+<li><p>upload_fileobj(Fileobj, Bucket, Key, ExtraArgs=None, Callback=None, Config=None)<br> Upload a file-like object to S3.<br> The file-like object must be in binary mode.<br> This is a managed transfer which will perform a multipart upload in multiple threads if necessary.</p>
+</li>
+</ol>
+<h3 id="复制Object"><a href="#复制Object" class="headerlink" title="复制Object"></a>复制Object</h3><p>copy_object(**kwargs)  </p>
+<ul>
+<li>Creates a copy of an object that is already stored in Amazon S3.</li>
+</ul>
+<h3 id="删除Object"><a href="#删除Object" class="headerlink" title="删除Object"></a>删除Object</h3><ol>
+<li><p>delete_object(**kwargs)<br> Removes the null version (if there is one) of an object and inserts a delete marker, which becomes the latest version of the object. If there isn’t a null version, Amazon S3 does not remove any objects.</p>
+</li>
+<li><p>delete_objects(**kwargs)<br> This operation enables you to delete multiple objects from a bucket using a single HTTP request. You may specify up to 1000 keys.</p>
+</li>
+</ol>
+<h3 id="下载Object"><a href="#下载Object" class="headerlink" title="下载Object"></a>下载Object</h3><ol>
+<li><p>get_object(**kwargs)<br> Retrieves objects from Amazon S3.</p>
+</li>
+<li><p>download_file(Bucket, Key, Filename, ExtraArgs=None, Callback=None, Config=None)<br> Download an S3 object to a file.</p>
+</li>
+<li><p>download_fileobj(Bucket, Key, Fileobj, ExtraArgs=None, Callback=None, Config=None)<br> Download an object from S3 to a file-like object.<br> The file-like object must be in binary mode.<br> This is a managed transfer which will perform a multipart download in multiple threads if necessary.</p>
+</li>
+</ol>
+<h3 id="获取Object-ACL"><a href="#获取Object-ACL" class="headerlink" title="获取Object ACL"></a>获取Object ACL</h3><p>get_object_acl(**kwargs)  </p>
+<ul>
+<li>Returns the access control list (ACL) of an object.</li>
+</ul>
+<h3 id="设置Object-ACL"><a href="#设置Object-ACL" class="headerlink" title="设置Object ACL"></a>设置Object ACL</h3><p>put_object_acl(**kwargs)  </p>
+<ul>
+<li>uses the acl subresource to set the access control list (ACL) permissions for an object that already exists in a bucket</li>
+</ul>
+<h3 id="获取Object-Info"><a href="#获取Object-Info" class="headerlink" title="获取Object Info"></a>获取Object Info</h3><p>head_object(**kwargs)  </p>
+<ul>
+<li>The HEAD operation retrieves metadata from an object without returning the object itself. This operation is useful if you’re only interested in an object’s metadata. To use HEAD, you must have READ access to the object.</li>
+</ul>
+<h3 id="支持Object-Multipart"><a href="#支持Object-Multipart" class="headerlink" title="支持Object Multipart"></a>支持Object Multipart</h3><ol>
+<li><p>create_multipart_upload(**kwargs)<br> Initiates a multipart upload and returns an upload ID.</p>
+</li>
+<li><p>complete_multipart_upload(**kwargs)<br> Completes a multipart upload by assembling previously uploaded parts.</p>
+</li>
+<li><p>abort_multipart_upload(**kwargs)<br> Aborts a multipart upload.<br> To verify that all parts have been removed, so you don’t get charged for the part storage, you should call the List Parts operation and ensure the parts list is empty.</p>
+</li>
+<li><p>upload_part(**kwargs)<br> Uploads a part in a multipart upload.</p>
+</li>
+</ol>
+<h2 id="其他操作"><a href="#其他操作" class="headerlink" title="其他操作"></a>其他操作</h2><h3 id="获取RGW-User统计信息"><a href="#获取RGW-User统计信息" class="headerlink" title="获取RGW User统计信息"></a>获取RGW User统计信息</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">$ cat getUsage.sh</span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">token=5L65QDE4238JJ8RM7MN5 <span class="comment">## USER_TOKEN</span></span><br><span class="line">secret=Y9HPiBCwLDeSMSaiQhmPT2h7NgNUnqVLERhktnIZ <span class="comment">## USER_SECRET</span></span><br><span class="line">operate=<span class="string">"GET"</span></span><br><span class="line">user=<span class="variable">$1</span></span><br><span class="line">query=<span class="string">"admin/usage"</span></span><br><span class="line">date=$(<span class="keyword">for</span> i <span class="keyword">in</span> $(date <span class="string">"+%H"</span>) ; <span class="keyword">do</span> date <span class="string">"+%a, %d %b %Y <span class="variable">$(( 10#$i-8 )</span>):%M:%S +0000"</span> ; <span class="keyword">done</span>)</span><br><span class="line">header=<span class="string">"<span class="variable">$&#123;operate&#125;</span>\n\n\n<span class="variable">$&#123;date&#125;</span>\n/<span class="variable">$&#123;query&#125;</span>"</span></span><br><span class="line">sig=$(<span class="built_in">echo</span> -en <span class="variable">$&#123;header&#125;</span> | openssl sha1 -hmac <span class="variable">$&#123;secret&#125;</span> -binary | base64)</span><br><span class="line">curl -v -L -X <span class="variable">$&#123;operate&#125;</span> <span class="string">"http://&lt;your-host-ip&gt;/<span class="variable">$&#123;query&#125;</span>?format=json&amp;uid=<span class="variable">$&#123;user&#125;</span>"</span> \</span><br><span class="line">           -H <span class="string">"Date: <span class="variable">$&#123;date&#125;</span>"</span> \</span><br><span class="line">           -H <span class="string">"Authorization: AWS <span class="variable">$&#123;token&#125;</span>:<span class="variable">$&#123;sig&#125;</span>"</span> \</span><br><span class="line">           -H <span class="string">"Host: &lt;your-host-ip&gt;"</span></span><br></pre></td></tr></table></figure>
+<h3 id="删除RGW-User统计信息"><a href="#删除RGW-User统计信息" class="headerlink" title="删除RGW User统计信息"></a>删除RGW User统计信息</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">$ cat trimeUsage.sh</span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">token=5L65QDE4238JJ8RM7MN5 <span class="comment">## USER_TOKEN</span></span><br><span class="line">secret=Y9HPiBCwLDeSMSaiQhmPT2h7NgNUnqVLERhktnIZ <span class="comment">## USER_SECRET</span></span><br><span class="line">operate=<span class="string">"DELETE"</span></span><br><span class="line">user=<span class="variable">$1</span></span><br><span class="line">stime=<span class="variable">$2</span> <span class="comment">#start time</span></span><br><span class="line">etime=<span class="variable">$3</span> <span class="comment">#end time</span></span><br><span class="line">query=<span class="string">"admin/usage"</span></span><br><span class="line">date=$(<span class="keyword">for</span> i <span class="keyword">in</span> $(date <span class="string">"+%H"</span>) ; <span class="keyword">do</span> date <span class="string">"+%a, %d %b %Y <span class="variable">$(( 10#$i-8 )</span>):%M:%S +0000"</span> ; <span class="keyword">done</span>)</span><br><span class="line">header=<span class="string">"<span class="variable">$&#123;operate&#125;</span>\n\n\n<span class="variable">$&#123;date&#125;</span>\n/<span class="variable">$&#123;query&#125;</span>"</span></span><br><span class="line">sig=$(<span class="built_in">echo</span> -en <span class="variable">$&#123;header&#125;</span> | openssl sha1 -hmac <span class="variable">$&#123;secret&#125;</span> -binary | base64)</span><br><span class="line">curl -v -L -X <span class="variable">$&#123;operate&#125;</span> <span class="string">"http://&lt;your-host-ip&gt;/<span class="variable">$&#123;query&#125;</span>?format=json&amp;uid=<span class="variable">$&#123;user&#125;</span>&amp;start=<span class="variable">$&#123;stime&#125;</span>&amp;end=<span class="variable">$&#123;etime&#125;</span>"</span> \</span><br><span class="line">           -H <span class="string">"Date: <span class="variable">$&#123;date&#125;</span>"</span> \</span><br><span class="line">           -H <span class="string">"Authorization: AWS <span class="variable">$&#123;token&#125;</span>:<span class="variable">$&#123;sig&#125;</span>"</span> \</span><br><span class="line">           -H <span class="string">"Host: &lt;your-host-ip&gt;"</span></span><br></pre></td></tr></table></figure>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag">#ceph</a>
+          
+            <a href="/tags/radosgw/" rel="tag">#radosgw</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/02/22/2017-02-22-rbd-data-replication/" rel="prev">ceph块存储跨机房灾备调研</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/12/12/2016-12-12-rgw-oss/" rel="next">RadosGW对象存储使用文档</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#用户管理"><span class="nav-number">2.</span> <span class="nav-text">用户管理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#创建用户"><span class="nav-number">2.1.</span> <span class="nav-text">创建用户</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除用户"><span class="nav-number">2.2.</span> <span class="nav-text">删除用户</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#User-keys"><span class="nav-number">3.</span> <span class="nav-text">User keys</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#创建user-key"><span class="nav-number">3.1.</span> <span class="nav-text">创建user key</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除user-key"><span class="nav-number">3.2.</span> <span class="nav-text">删除user key</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#列出user-keys"><span class="nav-number">3.3.</span> <span class="nav-text">列出user keys</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#权限管理"><span class="nav-number">4.</span> <span class="nav-text">权限管理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#获取Bucket权限"><span class="nav-number">4.1.</span> <span class="nav-text">获取Bucket权限</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#设置Bucket权限"><span class="nav-number">4.2.</span> <span class="nav-text">设置Bucket权限</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Bucket操作"><span class="nav-number">5.</span> <span class="nav-text">Bucket操作</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#列出Buckets"><span class="nav-number">5.1.</span> <span class="nav-text">列出Buckets</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#创建Bucket"><span class="nav-number">5.2.</span> <span class="nav-text">创建Bucket</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除Bucket"><span class="nav-number">5.3.</span> <span class="nav-text">删除Bucket</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#列出Bucket-Objects"><span class="nav-number">5.4.</span> <span class="nav-text">列出Bucket Objects</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#获取Bucket-ACL"><span class="nav-number">5.5.</span> <span class="nav-text">获取Bucket ACL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#设置Bucket-ACL"><span class="nav-number">5.6.</span> <span class="nav-text">设置Bucket ACL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#获取Bucket-Info"><span class="nav-number">5.7.</span> <span class="nav-text">获取Bucket Info</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#枚举Bucket分块上传"><span class="nav-number">5.8.</span> <span class="nav-text">枚举Bucket分块上传</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Object操作"><span class="nav-number">6.</span> <span class="nav-text">Object操作</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#上传Object"><span class="nav-number">6.1.</span> <span class="nav-text">上传Object</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#复制Object"><span class="nav-number">6.2.</span> <span class="nav-text">复制Object</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除Object"><span class="nav-number">6.3.</span> <span class="nav-text">删除Object</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#下载Object"><span class="nav-number">6.4.</span> <span class="nav-text">下载Object</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#获取Object-ACL"><span class="nav-number">6.5.</span> <span class="nav-text">获取Object ACL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#设置Object-ACL"><span class="nav-number">6.6.</span> <span class="nav-text">设置Object ACL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#获取Object-Info"><span class="nav-number">6.7.</span> <span class="nav-text">获取Object Info</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#支持Object-Multipart"><span class="nav-number">6.8.</span> <span class="nav-text">支持Object Multipart</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#其他操作"><span class="nav-number">7.</span> <span class="nav-text">其他操作</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#获取RGW-User统计信息"><span class="nav-number">7.1.</span> <span class="nav-text">获取RGW User统计信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除RGW-User统计信息"><span class="nav-number">7.2.</span> <span class="nav-text">删除RGW User统计信息</span></a></li></ol></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

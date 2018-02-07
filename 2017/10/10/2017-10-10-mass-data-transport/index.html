@@ -1,0 +1,892 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="data transfer," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="概述随着云的普及，越来越多的客户需要把数据迁移到云上，针对小量的数据，通过云公司提供的迁移工具走互联网就可以做到，但针对海量的数据，互联网上传输是不现实的，这就需要我们提供一种新的迁移方案来缩短数据迁移时间。 结合过去磁带库的容灾备份方案，针对海量数据迁移到云上的需求，云公司也采用了离线设备+传统运输的解决方案，能大大缩短数据迁移的时间周期，降低成本。 方案步骤 准备离线设备 源端数据拷贝到离线设">
+<meta name="keywords" content="data transfer">
+<meta property="og:type" content="article">
+<meta property="og:title" content="海量数据迁移方案">
+<meta property="og:url" content="http://www.ictfox.cn/2017/10/10/2017-10-10-mass-data-transport/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述随着云的普及，越来越多的客户需要把数据迁移到云上，针对小量的数据，通过云公司提供的迁移工具走互联网就可以做到，但针对海量的数据，互联网上传输是不现实的，这就需要我们提供一种新的迁移方案来缩短数据迁移时间。 结合过去磁带库的容灾备份方案，针对海量数据迁移到云上的需求，云公司也采用了离线设备+传统运输的解决方案，能大大缩短数据迁移的时间周期，降低成本。 方案步骤 准备离线设备 源端数据拷贝到离线设">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.ictfox.cn/images/aws-snowball-steps.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/aws-snowball-device.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/azure-data-import.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/azure-data-export.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/aliyun-lighting-cube.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/aliyun-lighting-cube-device.jpg">
+<meta property="og:updated_time" content="2017-10-10T13:24:00.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="海量数据迁移方案">
+<meta name="twitter:description" content="概述随着云的普及，越来越多的客户需要把数据迁移到云上，针对小量的数据，通过云公司提供的迁移工具走互联网就可以做到，但针对海量的数据，互联网上传输是不现实的，这就需要我们提供一种新的迁移方案来缩短数据迁移时间。 结合过去磁带库的容灾备份方案，针对海量数据迁移到云上的需求，云公司也采用了离线设备+传统运输的解决方案，能大大缩短数据迁移的时间周期，降低成本。 方案步骤 准备离线设备 源端数据拷贝到离线设">
+<meta name="twitter:image" content="http://www.ictfox.cn/images/aws-snowball-steps.jpg">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> 海量数据迁移方案 | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              海量数据迁移方案
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2017-10-10T21:41:17+08:00" content="2017-10-10">
+            2017-10-10
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/storage/" itemprop="url" rel="index">
+                  <span itemprop="name">storage</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>随着云的普及，越来越多的客户需要把数据迁移到云上，针对小量的数据，通过云公司提供的迁移工具走互联网就可以做到，但针对海量的数据，互联网上传输是不现实的，这就需要我们提供一种新的迁移方案来缩短数据迁移时间。</p>
+<p>结合过去磁带库的容灾备份方案，针对海量数据迁移到云上的需求，云公司也采用了<code>离线设备+传统运输</code>的解决方案，能大大缩短数据迁移的时间周期，降低成本。</p>
+<h3 id="方案步骤"><a href="#方案步骤" class="headerlink" title="方案步骤"></a>方案步骤</h3><ol>
+<li>准备<code>离线设备</code></li>
+<li>源端数据拷贝到<code>离线设备</code></li>
+<li><code>离线设备</code>通过传统方式运输到云公司机房</li>
+<li>云公司机房从<code>离线设备</code>上导入数据 / <code>离线设备</code>直接组建存储集群提供服务</li>
+</ol>
+<h2 id="友商"><a href="#友商" class="headerlink" title="友商"></a>友商</h2><p>提供服务的友商有: AWS，Azure，阿里云</p>
+<h2 id="产品功能"><a href="#产品功能" class="headerlink" title="产品功能"></a>产品功能</h2><ol>
+<li>定制<code>离线设备</code></li>
+<li>开发客户端</li>
+<li>NFS/CIFS数据导入</li>
+<li>文件导出到OSS，支持配置文件存放bucket的对应关系</li>
+<li>数据加密，压缩</li>
+<li>数据秘钥管理</li>
+</ol>
+<h2 id="友商实现"><a href="#友商实现" class="headerlink" title="友商实现"></a>友商实现</h2><h3 id="AWS"><a href="#AWS" class="headerlink" title="AWS"></a>AWS</h3><p>Snowball 是一种 PB 级数据传输解决方案，它使用安全设备在 AWS 云之间传输大量数据。使用 Snowball 可解决大规模数据传输的难题（包括高昂网络成本、较长传输时间和安全问题）。使用 Snowball 传输数据简单、快速、安全，并且成本可低至高速 Internet 费用的五分之一。</p>
+<p>借助 Snowball，您无需编写任何代码或购买任何硬件即可传输您的数据。只需在 AWS 管理控制台中创建一个任务，然后 Snowball 设备将自动交付于您。当它到达后，将该设备挂载到您的本地网络、下载并运行 Snowball 客户端来建立连接，然后使用该客户端选择要传输到该设备的文件目录。客户端随后将对文件进行加密，并将其高速传输至该设备。当传输完成后即可返还该设备，E-Ink 运送标签将自动更新，您可以通过 Amazon Simple Notification Service (SNS)、短信或直接在控制台中跟踪任务状态。</p>
+<p><img src="/images/aws-snowball-steps.jpg" alt="snowball steps"></p>
+<h4 id="硬件设备"><a href="#硬件设备" class="headerlink" title="硬件设备"></a>硬件设备</h4><p>便携式大容量设备，这些设备使用防篡改附件、加密和端到端跟踪，旨在确保数据的安全和全程监管链。<br>每台 Snowball 设备可传输数 TB 的数据，根据您需要传输的数据量，您可以使用多台 Snowball 以并行方式或一个接一个地传输大型数据集。</p>
+<p><img src="/images/aws-snowball-device.jpg" alt="snowball device"></p>
+<h4 id="客户端"><a href="#客户端" class="headerlink" title="客户端"></a>客户端</h4><p>Snowball 客户端是您安装在本地主计算机上的软件，用于高效识别、压缩、加密您指定目录中的数据并将其传输到 Snowball。</p>
+<h4 id="产品特色"><a href="#产品特色" class="headerlink" title="产品特色"></a>产品特色</h4><ol>
+<li>高速</li>
+<li>高度可扩展</li>
+<li>防状态和安全性</li>
+<li>简单且可兼容</li>
+<li>成本低廉</li>
+<li>轻松检索数据</li>
+</ol>
+<h3 id="Azure"><a href="#Azure" class="headerlink" title="Azure"></a>Azure</h3><p>Azure 导入/导出服务将大型数据快速、安全地迁移到云中。</p>
+<p>使用 Azure 导入/导出服务，可以将硬盘驱动器寄送到 Azure 数据中心，从而安全地将大量数据传输到 Azure Blob 存储（==高度可缩放的非结构化数据对象存储==）。 你还可以使用此服务将数据从 Azure Blob 存储传输到硬盘驱动器，然后再寄送到你的本地站点。 如果需要在本地站点和 Azure 之间传输数 TB 的数据，而由于带宽限制或网络成本过高，通过网络上传或下载数据不可行，在这种情况下，则可以使用此服务。<br>服务要求对硬盘驱动器进行 BitLocker 加密以确保数据的安全性。 服务支持所有公共 Azure 区域中的经典和 Azure Resource Manager 存储帐户（标准层和冷层）。 必须将硬盘驱动器寄送到本文后面指定的某个受支持的位置。</p>
+<h4 id="产品特色-1"><a href="#产品特色-1" class="headerlink" title="产品特色"></a>产品特色</h4><ol>
+<li><p>高效迁移大量数据集</p>
+<p> 与网络传输相比，将物理磁盘传入/传出 Azure 可节省时间和金钱。将大量初始工作负荷数据导入 Azure，或者将数据快速发送到客户网站进行简单的内容分发。创建本地数据备份以存储到云中，然后按需将数据恢复到本地位置。</p>
+</li>
+<li><p>保持数据私有</p>
+<p> 使用“导入/导出”服务时，数据在整个过程中都很安全。磁盘使用 Microsoft BitLocker 驱动器加密进行加密，并在 Azure 门户或 Azure REST API 上通过 SSL 管理加密密钥。在数据中心内，我们使用快速、专用的网络上传链接将用户的数据从驱动器迁移到云。</p>
+</li>
+<li><p>确保数据完整性</p>
+<p> 使用“导入/导出”服务放心迁移数据。内置校验和以及 MD5 哈希可确保数据完整性。通过 Azure 门户上的日志和审核痕迹跟踪并监视数据迁移状态。</p>
+</li>
+</ol>
+<h4 id="硬件设备-1"><a href="#硬件设备-1" class="headerlink" title="硬件设备"></a>硬件设备</h4><p>支持将 2.5 英寸 SSD 或者 2.5/3.5 英寸 SATA II 或 III 内部 HDD 用于导入/导出服务。</p>
+<p>单个导入/导出作业最多可以有 10 个 HDD/SSD，并且每个 HDD/SSD 可以为任意大小。大量驱动器可以分布在多个作业上，并且可创建的作业数没有限制。</p>
+<h4 id="导入作业"><a href="#导入作业" class="headerlink" title="导入作业"></a>导入作业</h4><p>概括而言，导入作业包括以下步骤：</p>
+<ul>
+<li>确定要导入的数据，以及所需驱动器数目。</li>
+<li>确定 Blob 存储中用于存储数据的目标 Blob 位置。</li>
+<li>使用 WAImportExport 工具将数据复制到一个或多个硬盘驱动器，并使用 BitLocker 进行加密。</li>
+<li>使用 Azure 门户或导入/导出 REST API 在目标存储帐户中创建导入作业。 如果使用 Azure 门户，请上传驱动器日记文件。</li>
+<li>请提供回寄地址以及快递商帐户号码，以便我们将驱动器寄回给你。</li>
+<li>将硬盘驱动器寄送到在创建作业时获得的寄送地址。</li>
+<li>在导入作业详细信息中更新快递跟踪号码，然后提交导入作业。</li>
+<li>Azure 数据中心在收到驱动器后会对其进行处理。</li>
+<li>该中心会使用你的快递商帐户将驱动器寄送到你在导入作业中提供的回寄地址。</li>
+</ul>
+<p><img src="/images/azure-data-import.jpg" alt="data import"></p>
+<h4 id="导出作业"><a href="#导出作业" class="headerlink" title="导出作业"></a>导出作业</h4><p>概括而言，导出作业包括以下步骤：</p>
+<ul>
+<li>确定要导出的数据，以及所需驱动器数目。</li>
+<li>确定你的数据在 Blob 存储中的源 Blob 或容器路径。</li>
+<li>使用 Azure 门户或导入/导出 REST API 在源存储帐户中创建导出作业。</li>
+<li>指定你的数据在导出作业中的源 Blob 或容器路径。</li>
+<li>请提供回寄地址以及快递商帐户号码，以便我们将驱动器寄回给你。</li>
+<li>将硬盘驱动器寄送到在创建作业时获得的寄送地址。</li>
+<li>在导出作业详细信息中更新快递跟踪号码，然后提交导出作业。</li>
+<li>Azure 数据中心在收到驱动器后会对其进行处理。</li>
+<li>驱动器使用 BitLocker 加密；密钥通过 Azure 门户提供。</li>
+<li>该中心会使用你的快递商帐户将驱动器寄送到你在导入作业中提供的回寄地址。</li>
+</ul>
+<p><img src="/images/azure-data-export.jpg" alt="data export"></p>
+<h4 id="导入-导出工具"><a href="#导入-导出工具" class="headerlink" title="导入/导出工具"></a>导入/导出工具</h4><p>使用此 WAImportExport 工具可以方便地将数据复制到驱动器、使用 BitLocker 加密驱动器上的数据，以及生成驱动器日志文件。</p>
+<p>WAImportExport 工具仅兼容 64 位 Windows 操作系统。</p>
+<h3 id="阿里云"><a href="#阿里云" class="headerlink" title="阿里云"></a>阿里云</h3><p>闪电立方 Lightning Cube，支持TB到PB级别数据上云解决方案。通过定制的离线迁移设备，解决本地数据中心大规模数据传输上云的迁移周期长，网络专线费用昂贵，数据复制效率低，迁移过程数据安全等问题。快速、安全、高效、降低90%的数据迁移成本。</p>
+<p>2017年6月10号，阿里云发布了产品“闪电立方”。它像是一个可移动的“数据中心”，通过一个安全的存储硬件，可将100TB数据安全地一次性转移，最快24小时即可完成PB级数据迁移。“闪电立方”外形黑色立方，可防尘防水，抗震抗压。容量上可容纳100TB数据，并能实现最高30：1的压缩比，配合高效的去重功能可节省更多的存储空间。内置了20Gbps的光纤网络连接。在数据安全性方面，“闪电立方”采用AES 256端到端加密算法，密钥由用户保管，运送过程中全程断网，同时配备24小时定位监控。</p>
+<p><img src="/images/aliyun-lighting-cube.jpg" alt="aliyun lighting cube"></p>
+<h4 id="产品特色-2"><a href="#产品特色-2" class="headerlink" title="产品特色"></a>产品特色</h4><ol>
+<li><p>高速高效</p>
+<p> 相比传统的Internet和高速专线速度提升20倍，成本降低60%</p>
+<ul>
+<li><p>数据压缩<br>  支持最高30倍压缩比</p>
+</li>
+<li><p>数据去重<br>  自动对数据进行去重处理，迁移过程中自动恢复</p>
+</li>
+<li><p>小文件优化<br>  小文件自动合并，提升读写效率</p>
+</li>
+</ul>
+</li>
+<li><p>安全可靠</p>
+<ul>
+<li>加密能力<br>  提供设备端到端的加密机制，用户自己管理密码并通过密码授权解密，保障运输过程中数据的安全  </li>
+<li>权限<br>  用户主动通过RAM授权的方式，允许数据同步到云端用户的存储空间  </li>
+<li>数据擦除<br>  数据迁移完毕后，通过阿里云官方数据擦除机制，确保数据不会被第三方获取</li>
+</ul>
+</li>
+<li><p>低成本</p>
+<p> 单次大容量的离线迁移能力，大幅降低物流成本和网络成本</p>
+</li>
+<li><p>可扩展</p>
+<p> 单台设备可支持100TB或480TB的迁移能力，可横向扩展，利用多套设备同时迁移PB+级别数据</p>
+</li>
+</ol>
+<h4 id="硬件设备-2"><a href="#硬件设备-2" class="headerlink" title="硬件设备"></a>硬件设备</h4><p>为数据迁移而生的专业设备，标准机架和电源，可多套同时部署提升迁移效率。<br>支持的数据源包括：本地文件系统，NAS，HDFS，FastDFS等。</p>
+<p><img src="/images/aliyun-lighting-cube-device.jpg" alt="aliyun lighting cube device"></p>
+<h4 id="客户端-1"><a href="#客户端-1" class="headerlink" title="客户端"></a>客户端</h4><p>没找到文档介绍“闪电立方”的客户端，从它支持的数据源包括：本地FS，NAS，HDFS，FastDFS等，可以推断出肯定有这样的一个客户端软件。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>在海量数据上云面前，离线物理设备迁移是一种很好的解决方案，几大公有云提供商都提供了专门的迁移设备和迁移服务，比较好的会设计专门的<code>硬件设备</code>，简单点的就使用标准的 2.5/3.5 英寸磁盘，但都会考虑数据安全性，这也是客户比较关注的问题。</p>
+<p>总结下产品所需的功能如下：</p>
+<ol>
+<li>硬件设备</li>
+<li>客户端软件</li>
+<li>数据加密</li>
+<li>秘钥管理</li>
+<li>数据压缩</li>
+<li>数据校验</li>
+</ol>
+<h3 id="自研需求"><a href="#自研需求" class="headerlink" title="自研需求"></a>自研需求</h3><p>该产品现在没有开源的解决方案，除了AWS以外，Azure和阿里云都是今年刚推出该服务，我们也只能参考他们的实现来自己研发产品。</p>
+<h4 id="硬件设备研发"><a href="#硬件设备研发" class="headerlink" title="硬件设备研发"></a>硬件设备研发</h4><p>若要设计研发可以跟友商竞争的硬件设备，包括整套专业硬件设备的研发，难点非常大</p>
+<p>难度：★★★★★</p>
+<h4 id="客户端软件"><a href="#客户端软件" class="headerlink" title="客户端软件"></a>客户端软件</h4><p>客户端软件研发也是重点，需要包括的功能有：</p>
+<ul>
+<li>支持哪些数据源？</li>
+<li>数据源跟云上产品的映射关系？</li>
+<li>数据加密，压缩，一致性校验</li>
+<li>秘钥管理</li>
+</ul>
+<p>难度：★★★★☆</p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/data-transfer/" rel="tag">#data transfer</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/10/19/2017-10-19-g3log-introduction/" rel="prev">一个开源的C++日志框架-G3log的简单示例</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/09/18/2017-09-18-cephfs-knowledge-share-part2/" rel="next">cephfs架构解读与测试分析-part2</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#方案步骤"><span class="nav-number">1.1.</span> <span class="nav-text">方案步骤</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#友商"><span class="nav-number">2.</span> <span class="nav-text">友商</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#产品功能"><span class="nav-number">3.</span> <span class="nav-text">产品功能</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#友商实现"><span class="nav-number">4.</span> <span class="nav-text">友商实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#AWS"><span class="nav-number">4.1.</span> <span class="nav-text">AWS</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#硬件设备"><span class="nav-number">4.1.1.</span> <span class="nav-text">硬件设备</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#客户端"><span class="nav-number">4.1.2.</span> <span class="nav-text">客户端</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#产品特色"><span class="nav-number">4.1.3.</span> <span class="nav-text">产品特色</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Azure"><span class="nav-number">4.2.</span> <span class="nav-text">Azure</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#产品特色-1"><span class="nav-number">4.2.1.</span> <span class="nav-text">产品特色</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#硬件设备-1"><span class="nav-number">4.2.2.</span> <span class="nav-text">硬件设备</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#导入作业"><span class="nav-number">4.2.3.</span> <span class="nav-text">导入作业</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#导出作业"><span class="nav-number">4.2.4.</span> <span class="nav-text">导出作业</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#导入-导出工具"><span class="nav-number">4.2.5.</span> <span class="nav-text">导入/导出工具</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#阿里云"><span class="nav-number">4.3.</span> <span class="nav-text">阿里云</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#产品特色-2"><span class="nav-number">4.3.1.</span> <span class="nav-text">产品特色</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#硬件设备-2"><span class="nav-number">4.3.2.</span> <span class="nav-text">硬件设备</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#客户端-1"><span class="nav-number">4.3.3.</span> <span class="nav-text">客户端</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#自研需求"><span class="nav-number">5.1.</span> <span class="nav-text">自研需求</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#硬件设备研发"><span class="nav-number">5.1.1.</span> <span class="nav-text">硬件设备研发</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#客户端软件"><span class="nav-number">5.1.2.</span> <span class="nav-text">客户端软件</span></a></li></ol></li></ol></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

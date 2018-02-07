@@ -1,0 +1,792 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="rbd,mysql,sysbench," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="概述在我们的应用中，发现数据库上跑rbd的性能比较差，为此我对比测试了mysql的benchmark在本地 sata，ssd和rbd上的性能，并进行了分析比较。 测试工具sysbenchsysbench是一个模块化的、跨平台、多线程基准测试工具，主要用于评估测试各种不同系统参数下的数据库负载情况。关于这个项目的详细介绍请看：https://github.com/akopytov/sysbench">
+<meta name="keywords" content="rbd,mysql,sysbench">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Mysql performance test on localdisk and rbd">
+<meta property="og:url" content="http://www.ictfox.cn/2017/07/27/2017-07-27-compare-mysql-on-localdisk-rbddisk/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述在我们的应用中，发现数据库上跑rbd的性能比较差，为此我对比测试了mysql的benchmark在本地 sata，ssd和rbd上的性能，并进行了分析比较。 测试工具sysbenchsysbench是一个模块化的、跨平台、多线程基准测试工具，主要用于评估测试各种不同系统参数下的数据库负载情况。关于这个项目的详细介绍请看：https://github.com/akopytov/sysbench">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2017-07-27T12:28:11.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Mysql performance test on localdisk and rbd">
+<meta name="twitter:description" content="概述在我们的应用中，发现数据库上跑rbd的性能比较差，为此我对比测试了mysql的benchmark在本地 sata，ssd和rbd上的性能，并进行了分析比较。 测试工具sysbenchsysbench是一个模块化的、跨平台、多线程基准测试工具，主要用于评估测试各种不同系统参数下的数据库负载情况。关于这个项目的详细介绍请看：https://github.com/akopytov/sysbench">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> Mysql performance test on localdisk and rbd | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              Mysql performance test on localdisk and rbd
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2017-07-27T18:11:17+08:00" content="2017-07-27">
+            2017-07-27
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/database/" itemprop="url" rel="index">
+                  <span itemprop="name">database</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在我们的应用中，发现数据库上跑rbd的性能比较差，为此我对比测试了mysql的benchmark在本地 sata，ssd和rbd上的性能，并进行了分析比较。</p>
+<h2 id="测试工具sysbench"><a href="#测试工具sysbench" class="headerlink" title="测试工具sysbench"></a>测试工具sysbench</h2><p>sysbench是一个模块化的、跨平台、多线程基准测试工具，主要用于评估测试各种不同系统参数下的数据库负载情况。关于这个项目的详细介绍请看：<a href="https://github.com/akopytov/sysbench" target="_blank" rel="noopener">https://github.com/akopytov/sysbench</a></p>
+<p>sysbench的数据库OLTP测试支持MySQL、PostgreSQL、Oracle，目前主要用于Linux操作系统，开源社区已经将sysbench移植到了Windows，并支持SQL Server的基准测试。</p>
+<p>所以这里选用sysbench测试mysql性能，mysql table engine选择innodb。</p>
+<h2 id="sysbench安装"><a href="#sysbench安装" class="headerlink" title="sysbench安装"></a>sysbench安装</h2><p>从 <a href="https://github.com/akopytov/sysbench" target="_blank" rel="noopener">https://github.com/akopytov/sysbench</a> 上下载sysbench源码，然后编译安装即可。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yum install -y gcc gcc-c++ automake make  libtool mysql-devel</span></span><br><span class="line"><span class="comment"># ./autogen.sh</span></span><br><span class="line"><span class="comment"># ./configure</span></span><br><span class="line"><span class="comment"># make</span></span><br><span class="line"><span class="comment"># make install</span></span><br></pre></td></tr></table></figure>
+<h2 id="对比测试"><a href="#对比测试" class="headerlink" title="对比测试"></a>对比测试</h2><p>测试命令</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"></span><br><span class="line">host=<span class="variable">$1</span></span><br><span class="line">port=3306</span><br><span class="line">user=<span class="variable">$2</span></span><br><span class="line">passwd=<span class="variable">$3</span></span><br><span class="line"><span class="keyword">if</span> [ <span class="variable">$#</span> -eq 5 ]; <span class="keyword">then</span></span><br><span class="line">    port=<span class="variable">$5</span></span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line">db_name=sbtest</span><br><span class="line">db_size=5000000</span><br><span class="line">thread_count=32</span><br><span class="line">duration=600</span><br><span class="line"></span><br><span class="line"><span class="comment">#print a log and then exit</span></span><br><span class="line"><span class="keyword">function</span> <span class="function"><span class="title">EXIT</span></span>() &#123;</span><br><span class="line">    [ <span class="variable">$#</span> -ne 0 ] &amp;&amp; [ <span class="string">"<span class="variable">$1</span>"</span> != <span class="string">""</span> ] &amp;&amp; <span class="built_in">printf</span> <span class="string">"<span class="variable">$1</span>\n"</span></span><br><span class="line">    <span class="built_in">exit</span> 1</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">#create database</span></span><br><span class="line">mysql -u<span class="variable">$user</span> -p<span class="variable">$passwd</span> -h <span class="variable">$host</span> -P <span class="variable">$port</span> -e <span class="string">"create database if not exists <span class="variable">$db_name</span>;"</span></span><br><span class="line">[ $? -eq 0 ] || EXIT <span class="string">"Create database FAILED!"</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># prepare data</span></span><br><span class="line">time sysbench --oltp-table-size=<span class="variable">$db_size</span> --<span class="built_in">test</span>=/root/mike/sysbench-master/tests/include/oltp_legacy/oltp.lua --mysql-table-engine=innodb --mysql-host=<span class="variable">$host</span> --mysql-port=<span class="variable">$port</span> --mysql-user=<span class="variable">$user</span> --mysql-password=<span class="variable">$passwd</span> --mysql-db=<span class="variable">$db_name</span> prepare</span><br><span class="line">[ $? -eq 0 ] || EXIT <span class="string">"Prepare data FAILED!"</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># start benchmark</span></span><br><span class="line"><span class="keyword">if</span> [ <span class="string">"<span class="variable">$4</span>"</span> == <span class="string">"ro"</span> ]; <span class="keyword">then</span></span><br><span class="line">    time sysbench --max-time=<span class="variable">$duration</span> --max-requests=0 --num-threads=<span class="variable">$thread_count</span> --oltp-table-size=<span class="variable">$db_size</span> --<span class="built_in">test</span>=/root/mike/sysbench-master/tests/include/oltp_legacy/oltp.lua --mysql-table-engine=innodb --mysql-host=<span class="variable">$host</span> --mysql-port=<span class="variable">$port</span> --mysql-user=<span class="variable">$user</span> --mysql-password=<span class="variable">$passwd</span> --mysql-db=<span class="variable">$db_name</span> --oltp-read-only=on run</span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">    time sysbench --max-time=<span class="variable">$duration</span> --max-requests=0 --num-threads=<span class="variable">$thread_count</span> --oltp-table-size=<span class="variable">$db_size</span> --<span class="built_in">test</span>=/root/mike/sysbench-master/tests/include/oltp_legacy/oltp.lua --mysql-table-engine=innodb --mysql-host=<span class="variable">$host</span> --mysql-port=<span class="variable">$port</span> --mysql-user=<span class="variable">$user</span> --mysql-password=<span class="variable">$passwd</span> --mysql-db=<span class="variable">$db_name</span> run</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line">[ $? -eq 0 ] || EXIT <span class="string">"Start benchmark FAILED!"</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># cleanup environment</span></span><br><span class="line">sysbench --num-threads=<span class="variable">$thread_count</span> --oltp-table-size=<span class="variable">$db_size</span> --<span class="built_in">test</span>=/root/mike/sysbench-master/tests/include/oltp_legacy/oltp.lua --mysql-table-engine=innodb --mysql-host=<span class="variable">$host</span> --mysql-port=<span class="variable">$port</span> --mysql-user=<span class="variable">$user</span> --mysql-password=<span class="variable">$passwd</span> --mysql-db=<span class="variable">$db_name</span> cleanup</span><br><span class="line">[ $? -eq 0 ] || EXIT <span class="string">"Cleanup FAILED!"</span></span><br></pre></td></tr></table></figure>
+<h3 id="本地磁盘"><a href="#本地磁盘" class="headerlink" title="本地磁盘"></a>本地磁盘</h3><p>sata盘和ssd盘上的性能类似，结果如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">SQL statistics:</span><br><span class="line">    queries performed:</span><br><span class="line">        <span class="built_in">read</span>:                            40007562</span><br><span class="line">        write:                           11430732</span><br><span class="line">        other:                           5715366</span><br><span class="line">        total:                           57153660</span><br><span class="line">    transactions:                        2857683 (4762.67 per sec.)</span><br><span class="line">    queries:                             57153660 (95253.36 per sec.)</span><br><span class="line">    ignored errors:                      0      (0.00 per sec.)</span><br><span class="line">    reconnects:                          0      (0.00 per sec.)</span><br><span class="line"></span><br><span class="line">General statistics:</span><br><span class="line">    total time:                          600.0172s</span><br><span class="line">    total number of events:              2857683</span><br><span class="line"></span><br><span class="line">Latency (ms):</span><br><span class="line">         min:                                  1.37</span><br><span class="line">         avg:                                  6.72</span><br><span class="line">         max:                                100.65</span><br><span class="line">         95th percentile:                     17.01</span><br><span class="line">         sum:                            19193736.29</span><br><span class="line"></span><br><span class="line">Threads fairness:</span><br><span class="line">    events (avg/stddev):           89302.5938/256.06</span><br><span class="line">    execution time (avg/stddev):   599.8043/0.00</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">real	10m0.030s</span><br><span class="line">user	11m12.564s</span><br><span class="line">sys	9m3.083s</span><br></pre></td></tr></table></figure>
+<h3 id="rbd设备"><a href="#rbd设备" class="headerlink" title="rbd设备"></a>rbd设备</h3><p>准备rbd设备命令：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rbd create -p tstpool foxvol --size 30720 --image-format 1</span></span><br><span class="line"><span class="comment"># rbd map tstpool/foxvol</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>针对应用这里选择的image format为1，后来测试了image format为2的volume，性能一样</p>
+</blockquote>
+<p>在设备/dev/rbd0上测试结果如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">SQL statistics:</span><br><span class="line">    queries performed:</span><br><span class="line">        <span class="built_in">read</span>:                            14509516</span><br><span class="line">        write:                           4145576</span><br><span class="line">        other:                           2072788</span><br><span class="line">        total:                           20727880</span><br><span class="line">    transactions:                        1036394 (1727.28 per sec.)</span><br><span class="line">    queries:                             20727880 (34545.51 per sec.)</span><br><span class="line">    ignored errors:                      0      (0.00 per sec.)</span><br><span class="line">    reconnects:                          0      (0.00 per sec.)</span><br><span class="line"></span><br><span class="line">General statistics:</span><br><span class="line">    total time:                          600.0166s</span><br><span class="line">    total number of events:              1036394</span><br><span class="line"></span><br><span class="line">Latency (ms):</span><br><span class="line">         min:                                  2.02</span><br><span class="line">         avg:                                 18.52</span><br><span class="line">         max:                                460.01</span><br><span class="line">         95th percentile:                     63.32</span><br><span class="line">         sum:                            19197876.44</span><br><span class="line"></span><br><span class="line">Threads fairness:</span><br><span class="line">    events (avg/stddev):           32387.3125/109.50</span><br><span class="line">    execution time (avg/stddev):   599.9336/0.01</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">real	10m0.028s</span><br><span class="line">user	3m52.788s</span><br><span class="line">sys	3m17.306s</span><br></pre></td></tr></table></figure>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><h3 id="raid卡"><a href="#raid卡" class="headerlink" title="raid卡"></a>raid卡</h3><p>查看本地盘的配置，本地盘的raid卡配置的写是writeback模式，缓存有2G大小。<br>测试机器上总共有两种raid卡：</p>
+<p>raid卡1</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># hpssacli ctrl all show config detail</span></span><br><span class="line">...</span><br><span class="line">Cache Board Present: True</span><br><span class="line">Cache Status: OK</span><br><span class="line">Cache Ratio: 10% Read / 90% Write</span><br><span class="line">Drive Write Cache: Disabled</span><br><span class="line">Total Cache Size: 2.0 GB</span><br><span class="line">Total Cache Memory Available: 1.8 GB</span><br><span class="line">No-Battery Write Cache: Disabled</span><br><span class="line">SSD Caching RAID5 WriteBack Enabled: True</span><br><span class="line">SSD Caching Version: 2</span><br></pre></td></tr></table></figure>
+<p>raid卡2</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /opt/MegaRAID/MegaCli/MegaCli64 -cfgdsply -aALL</span></span><br><span class="line"> </span><br><span class="line">==============================================================================</span><br><span class="line">Adapter: 0</span><br><span class="line">Product Name: PERC H730P Mini</span><br><span class="line">Memory: 2048MB</span><br><span class="line">BBU: Present</span><br><span class="line">Serial No: 57E00PQ</span><br><span class="line">==============================================================================</span><br><span class="line">...</span><br><span class="line">Default Cache Policy: WriteBack, ReadAhead, Direct, No Write Cache <span class="keyword">if</span> Bad BBU</span><br><span class="line">Current Cache Policy: WriteBack, ReadAhead, Direct, No Write Cache <span class="keyword">if</span> Bad BBU</span><br><span class="line">Default Access Policy: Read/Write</span><br><span class="line">Current Access Policy: Read/Write</span><br><span class="line">Disk Cache Policy   : Disk<span class="string">'s Default</span></span><br></pre></td></tr></table></figure>
+<h2 id="性能测试写IOPS"><a href="#性能测试写IOPS" class="headerlink" title="性能测试写IOPS"></a>性能测试写IOPS</h2><p>dd命令测试写IOPS性能</p>
+<p>测试本地sata盘，发现raid卡能提升本地盘的IOPS到 20000 多；</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># dd if=/dev/zero of=tstfile bs=4k count=1024000 oflag=direct &amp;</span></span><br><span class="line"><span class="comment"># iostat -kx 2 sdk</span></span><br><span class="line">...</span><br><span class="line">avg-cpu:  %user   %nice %system %iowait  %steal   %idle</span><br><span class="line">           0.16    0.00    0.71    2.37    0.00   96.77</span><br><span class="line"> </span><br><span class="line">Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util</span><br><span class="line">sdk               0.00     0.00    0.00 26587.00     0.00 106348.00     8.00     0.85    0.03    0.00    0.03   0.03  85.35</span><br><span class="line"> </span><br><span class="line">avg-cpu:  %user   %nice %system %iowait  %steal   %idle</span><br><span class="line">           0.14    0.00    0.72    2.37    0.00   96.77</span><br><span class="line"> </span><br><span class="line">Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util</span><br><span class="line">sdk               0.00     0.00    0.00 26706.50     0.00 106826.00     8.00     0.84    0.03    0.00    0.03   0.03  84.35</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>测试rbd设备，IOPS只有1000多点；</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># dd if=/dev/zero of=/dev/rbd1 bs=4k count=1024000 oflag=direct &amp;</span></span><br><span class="line"><span class="comment">#iostat -kx 2 rbd1</span></span><br><span class="line">...</span><br><span class="line">avg-cpu:  %user   %nice %system %iowait  %steal   %idle</span><br><span class="line">           0.19    0.00    0.50    2.94    0.00   96.37</span><br><span class="line"> </span><br><span class="line">Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util</span><br><span class="line">rbd1              0.00     0.00    0.00 1135.50     0.00  4542.00     8.00     0.97    0.86    0.00    0.86   0.86  97.45</span><br><span class="line"> </span><br><span class="line">avg-cpu:  %user   %nice %system %iowait  %steal   %idle</span><br><span class="line">           0.86    0.00    0.63    2.93    0.00   95.58</span><br><span class="line"> </span><br><span class="line">Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util</span><br><span class="line">rbd1              0.00     0.00    0.00 1193.50     0.00  4774.00     8.00     0.98    0.82    0.00    0.82   0.82  97.85</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>分析：<br>rbd设备的所有IO是要走网络和ceph IO栈的，IO的平均时延都是ms级别的，所以每秒的IOPS也就1000多点。。。 </p>
+<p>查看网络时延</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[root@tstserver yangguanjun]<span class="comment"># ping 10.10.1.5</span></span><br><span class="line">PING 10.10.1.5 (10.10.1.5) 56(84) bytes of data.</span><br><span class="line">64 bytes from 10.10.1.5: icmp_seq=1 ttl=63 time=0.191 ms</span><br><span class="line">64 bytes from 10.10.1.5: icmp_seq=2 ttl=63 time=0.157 ms</span><br><span class="line">64 bytes from 10.10.1.5: icmp_seq=3 ttl=63 time=0.151 ms</span><br><span class="line">64 bytes from 10.10.1.5: icmp_seq=4 ttl=63 time=0.147 ms</span><br><span class="line">64 bytes from 10.10.1.5: icmp_seq=5 ttl=63 time=0.164 ms</span><br></pre></td></tr></table></figure>
+<p>网络的时延也是ms级别的，就算没有ceph io的时延，这个iops也只能是5k多，所以针对mysql这样的应用，rbd的性能会比较低；</p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/rbd/" rel="tag">#rbd</a>
+          
+            <a href="/tags/mysql/" rel="tag">#mysql</a>
+          
+            <a href="/tags/sysbench/" rel="tag">#sysbench</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/08/08/2017-08-08-ceph-knowledges-tree/" rel="prev">Ceph Knowledges tree</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/07/18/2017-07-18-cephfs-io-hang-analysis/" rel="next">Cephfs测试中IO hang问题分析</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#测试工具sysbench"><span class="nav-number">2.</span> <span class="nav-text">测试工具sysbench</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#sysbench安装"><span class="nav-number">3.</span> <span class="nav-text">sysbench安装</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#对比测试"><span class="nav-number">4.</span> <span class="nav-text">对比测试</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#本地磁盘"><span class="nav-number">4.1.</span> <span class="nav-text">本地磁盘</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#rbd设备"><span class="nav-number">4.2.</span> <span class="nav-text">rbd设备</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#分析"><span class="nav-number">5.</span> <span class="nav-text">分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#raid卡"><span class="nav-number">5.1.</span> <span class="nav-text">raid卡</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#性能测试写IOPS"><span class="nav-number">6.</span> <span class="nav-text">性能测试写IOPS</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

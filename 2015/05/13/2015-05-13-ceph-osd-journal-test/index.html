@@ -1,0 +1,812 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="ceph,osd,journal," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="创建pool12345678To create a pool, execute:ceph osd pool create &amp;#123;pool-name&amp;#125; &amp;#123;pg-num&amp;#125; [&amp;#123;pgp-num&amp;#125;] [replicated] \     [crush-ruleset-name]ceph osd pool create &amp;#123;pool-name&amp;">
+<meta name="keywords" content="ceph,osd,journal">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Ceph osd journal测试">
+<meta property="og:url" content="http://www.ictfox.cn/2015/05/13/2015-05-13-ceph-osd-journal-test/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="创建pool12345678To create a pool, execute:ceph osd pool create &amp;#123;pool-name&amp;#125; &amp;#123;pg-num&amp;#125; [&amp;#123;pgp-num&amp;#125;] [replicated] \     [crush-ruleset-name]ceph osd pool create &amp;#123;pool-name&amp;">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2017-07-18T14:17:10.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Ceph osd journal测试">
+<meta name="twitter:description" content="创建pool12345678To create a pool, execute:ceph osd pool create &amp;#123;pool-name&amp;#125; &amp;#123;pg-num&amp;#125; [&amp;#123;pgp-num&amp;#125;] [replicated] \     [crush-ruleset-name]ceph osd pool create &amp;#123;pool-name&amp;">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> Ceph osd journal测试 | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              Ceph osd journal测试
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2015-05-13T19:31:17+08:00" content="2015-05-13">
+            2015-05-13
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/ceph/" itemprop="url" rel="index">
+                  <span itemprop="name">ceph</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><h2 id="创建pool"><a href="#创建pool" class="headerlink" title="创建pool"></a>创建pool</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">To create a pool, execute:</span><br><span class="line"></span><br><span class="line">ceph osd pool create &#123;pool-name&#125; &#123;pg-num&#125; [&#123;pgp-num&#125;] [replicated] \</span><br><span class="line">     [crush-ruleset-name]</span><br><span class="line">ceph osd pool create &#123;pool-name&#125; &#123;pg-num&#125;  &#123;pgp-num&#125;   erasure \</span><br><span class="line">     [erasure-code-profile] [crush-ruleset-name]</span><br><span class="line"></span><br><span class="line"><span class="comment"># rados mkpool testpool / ceph osd pool create testpool 1024 1024 replicated</span></span><br></pre></td></tr></table></figure>
+<h2 id="测试journal文件rename"><a href="#测试journal文件rename" class="headerlink" title="测试journal文件rename"></a>测试journal文件rename</h2><ol>
+<li><p>put一个object</p>
+<pre><code>rados put testobj ~/truck-dis-6.5.tar.gz --pool=testpool
+</code></pre></li>
+<li><p>获取object的map信息</p>
+<pre><code>ceph osd map testpool testobj
+</code></pre></li>
+<li><p>到对应的osd上把journal文件重命名为别的随意名字</p>
+<pre><code>mv journal bak.journal
+</code></pre></li>
+<li><p>get这个object</p>
+<pre><code>rados get testobj tst.tar.gz --pool=testpool
+</code></pre></li>
+<li><p>对比get的object和源object一致</p>
+<pre><code>diff tst.tar.gz ~/truck-dis-6.5.tar.gz
+</code></pre></li>
+<li><p>删除该object</p>
+<pre><code>rados rm testobj --pool=testpool 
+</code></pre></li>
+<li><p>重新put该object</p>
+<pre><code>rados put testobj ~/truck-dis-6.5.tar.gz --pool=testpool
+</code></pre></li>
+<li><p>get这个object</p>
+<pre><code>rados get testobj tst.tar.gz --pool=testpool
+</code></pre></li>
+<li><p>对比get的object和源object一致</p>
+<pre><code>diff tst.tar.gz ~/truck-dis-6.5.tar.gz
+</code></pre></li>
+</ol>
+<h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>测试发现即使把osd的journal mv到新的文件，osd的写操作还是会更新到这个journal文件的，感觉是osd一直持有journal的文件句柄。</p>
+<p>FileJournal定义：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">class FileJournal : public Journal &#123;</span><br><span class="line">...</span><br><span class="line">    int fd;</span><br><span class="line">...</span><br><span class="line">    Mutex writeq_lock;</span><br><span class="line">    Cond writeq_cond;</span><br><span class="line">    deque&lt;write_item&gt; writeq;</span><br><span class="line">...</span><br><span class="line">    class Writer : public Thread &#123;</span><br><span class="line">        FileJournal *journal;</span><br><span class="line">    public:</span><br><span class="line">        Writer(FileJournal *fj) : journal(fj) &#123;&#125;</span><br><span class="line">        void *<span class="function"><span class="title">entry</span></span>() &#123;</span><br><span class="line">            journal-&gt;write_thread_entry();</span><br><span class="line">            <span class="built_in">return</span> 0;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; write_thread;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>journal初始化fd：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">OSD::init() -&gt; FileStore::mount() -&gt; JournalingObjectStore::journal_replay() -&gt; FileJournal::open() -&gt; FileJournal::_open()</span><br></pre></td></tr></table></figure>
+<p>journal close fd：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">OSD::shutdown() -&gt; FileStore::umount() -&gt; JournalingObjectStore::journal_write_close() -&gt; FileJournal::close()</span><br></pre></td></tr></table></figure>
+<p>journal写数据：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">FileJournal.Writer.entry() -&gt; FileJournal::write_thread_entry() -&gt; FileJournal::do_write() -&gt; FileJournal::write_bl()</span><br></pre></td></tr></table></figure>
+<h2 id="模拟journal文件不可读"><a href="#模拟journal文件不可读" class="headerlink" title="模拟journal文件不可读"></a>模拟journal文件不可读</h2><p>后续把某个osd的journal文件配置在别的硬盘上，然后把journal在的硬盘offline，写object返回error，该osd变为down状态。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> offline &gt; /sys/block/sdm/device/state</span><br><span class="line"><span class="built_in">echo</span> running &gt; /sys/block/sdm/device/state</span><br><span class="line"></span><br><span class="line">mount -t xfs /dev/sdm /data/cache/osd27 -o rw,noatime,inode64,logbsize=256k,delaylog</span><br><span class="line"></span><br><span class="line">service ceph restart osd.27</span><br></pre></td></tr></table></figure>
+<h2 id="分析journal文件"><a href="#分析journal文件" class="headerlink" title="分析journal文件"></a>分析journal文件</h2><p>journal文件其实就是创建的时候在文件最前面写一个header</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">struct header_t &#123;</span><br><span class="line">    enum &#123;</span><br><span class="line">        FLAG_CRC = (1&lt;&lt;0),</span><br><span class="line">        // NOTE: remove kludgey weirdness <span class="keyword">in</span> read_header() next time a flag is added.</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    uint64_t flags;</span><br><span class="line">    uuid_d fsid;</span><br><span class="line">    __u32 block_size;</span><br><span class="line">    __u32 alignment;</span><br><span class="line">    int64_t max_size;   // max size of journal ring buffer</span><br><span class="line">    int64_t start;      // offset of first entry</span><br><span class="line">    uint64_t committed_up_to; // committed up to</span><br></pre></td></tr></table></figure>
+<p>验证：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">OSD journal get fsid <span class="built_in">command</span>:</span><br><span class="line"><span class="comment"># ceph-osd -i 58 --get-journal-fsid</span></span><br><span class="line">4ac9b14d-652b-4480-a158-8837d67d1651</span><br><span class="line"></span><br><span class="line"><span class="comment"># xxd -l 4096 journal myj</span></span><br><span class="line"><span class="comment"># head -n 5 myj</span></span><br><span class="line">0000000: 0400 0000 4000 0000 0100 0000 0000 0000  ....@...........</span><br><span class="line">0000010: 4ac9 b14d 652b 4480 a158 8837 d67d 1651  J..Me+D..X.7.&#125;.Q</span><br><span class="line">0000020: 0010 0000 0010 0000 0000 0071 0200 0000  ...........q....</span><br><span class="line">0000030: 0090 9d4e 0000 0000 eeea 0000 0000 0000  ...N............</span><br><span class="line">0000040: efea 0000 0000 0000 0000 0000 0000 0000  ................</span><br></pre></td></tr></table></figure>
+<h2 id="重做journal"><a href="#重做journal" class="headerlink" title="重做journal"></a>重做journal</h2><p>重新make journal：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ceph-osd -i 58 --mkjournal</span><br></pre></td></tr></table></figure>
+<p>这个命令可以创建一个osd的journal文件, 它会读取ceph配置，在osd的目录下生成journal文件，如果journal文件存在就失败</p>
+<p>然后用新的journal文件重启osd service成功。</p>
+<h2 id="ceph-journal其他命令"><a href="#ceph-journal其他命令" class="headerlink" title="ceph journal其他命令"></a>ceph journal其他命令</h2><p>osd journal flush command：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-osd -i 58 --flush-journal</span></span><br><span class="line">2015-05-14 11:18:05.019196 7f175b62b800 -1  os/FileJournal.cc:95 journal FileJournal::_open: disabling aio <span class="keyword">for</span> non-block journal.  Use journal_force_aio to force use of aio anyway</span><br><span class="line">2015-05-14 11:18:05.212845 7f175b62b800 -1  ceph_osd.cc:271 flushed journal /data/cache/osd58/journal <span class="keyword">for</span> object store /data/cache/osd58</span><br></pre></td></tr></table></figure>
+<p>OSD journal dump command:</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-osd -i 58 --dump-journal</span></span><br><span class="line">2015-05-14 11:28:55.490619 7f1125980800 -1  common/admin_socket.cc:512 asok(0x4ab0230) AdminSocketConfigObs::init: failed: AdminSocket::bind_and_listen: failed to <span class="built_in">bind</span> the UNIX domain socket to <span class="string">'/var/run/ceph/ceph-osd.58.asok'</span>: (17) File exists</span><br><span class="line">2015-05-14 11:28:55.490695 7f1125980800 -1  os/FileJournal.cc:95 journal FileJournal::_open: disabling aio <span class="keyword">for</span> non-block journal.  Use journal_force_aio to force use of aio anyway</span><br><span class="line">[</span><br><span class="line">    &#123; <span class="string">"offset"</span>: 1411604480,</span><br><span class="line">      <span class="string">"seq"</span>: 93784,</span><br><span class="line">      <span class="string">"transactions"</span>: [</span><br><span class="line">            &#123; <span class="string">"trans_num"</span>: 0,</span><br><span class="line">              <span class="string">"ops"</span>: [</span><br><span class="line">                    &#123; <span class="string">"op_num"</span>: 0,</span><br><span class="line">                      <span class="string">"op_name"</span>: <span class="string">"omap_setkeys"</span>,</span><br><span class="line">                      <span class="string">"collection"</span>: <span class="string">"meta"</span>,</span><br><span class="line">                      <span class="string">"oid"</span>: <span class="string">"51ad36\/pglog_5.4ad\/0\/\/-1"</span>,</span><br><span class="line">                      <span class="string">"attr_lens"</span>: &#123; <span class="string">"0000000179.00000000000000000080"</span>: 186&#125;&#125;,</span><br><span class="line">                    &#123; <span class="string">"op_num"</span>: 1,</span><br><span class="line">                      <span class="string">"op_name"</span>: <span class="string">"omap_setkeys"</span>,</span><br><span class="line">                      <span class="string">"collection"</span>: <span class="string">"meta"</span>,</span><br><span class="line">                      <span class="string">"oid"</span>: <span class="string">"16ef7597\/infos\/head\/\/-1"</span>,</span><br><span class="line">                      <span class="string">"attr_lens"</span>: &#123; <span class="string">"5.4ad_epoch"</span>: 4,</span><br><span class="line">                          <span class="string">"5.4ad_info"</span>: 721&#125;&#125;,</span><br><span class="line">                    &#123; <span class="string">"op_num"</span>: 2,</span><br><span class="line">                      <span class="string">"op_name"</span>: <span class="string">"omap_rmkeys"</span>,</span><br><span class="line">                      <span class="string">"collection"</span>: <span class="string">"meta"</span>,</span><br><span class="line">                      <span class="string">"oid"</span>: <span class="string">"51ad36\/pglog_5.4ad\/0\/\/-1"</span>&#125;,</span><br><span class="line">                    &#123; <span class="string">"op_num"</span>: 3,</span><br><span class="line">                      <span class="string">"op_name"</span>: <span class="string">"omap_setkeys"</span>,</span><br><span class="line">                      <span class="string">"collection"</span>: <span class="string">"meta"</span>,</span><br><span class="line">                      <span class="string">"oid"</span>: <span class="string">"51ad36\/pglog_5.4ad\/0\/\/-1"</span>,</span><br><span class="line">                      <span class="string">"attr_lens"</span>: &#123; <span class="string">"0000000179.00000000000000000080"</span>: 186,</span><br><span class="line">                          <span class="string">"can_rollback_to"</span>: 12&#125;&#125;,</span><br><span class="line">                    &#123; <span class="string">"op_num"</span>: 4,</span><br><span class="line">                      <span class="string">"op_name"</span>: <span class="string">"touch"</span>,</span><br><span class="line">                      <span class="string">"collection"</span>: <span class="string">"5.4ad_head"</span>,</span><br><span class="line">                      <span class="string">"oid"</span>: <span class="string">"546bdcad\/default.4250.345_health_check\/18_1431573984.96\/head\/\/5"</span>&#125;,</span><br><span class="line">                    &#123; <span class="string">"op_num"</span>: 5,</span><br><span class="line">                      <span class="string">"op_name"</span>: <span class="string">"setattr"</span>,</span><br><span class="line">                      <span class="string">"collection"</span>: <span class="string">"5.4ad_head"</span>,</span><br><span class="line">                      <span class="string">"oid"</span>: <span class="string">"546bdcad\/default.4250.345_health_check\/18_1431573984.96\/head\/\/5"</span>,</span><br><span class="line">                      <span class="string">"name"</span>: <span class="string">"_user.rgw.idtag"</span>,</span><br><span class="line">                      <span class="string">"length"</span>: 19&#125;,</span><br><span class="line">                    &#123; <span class="string">"op_num"</span>: 6,</span><br><span class="line">                      <span class="string">"op_name"</span>: <span class="string">"write"</span>,</span><br><span class="line">                      <span class="string">"collection"</span>: <span class="string">"5.4ad_head"</span>,</span><br><span class="line">                      <span class="string">"oid"</span>: <span class="string">"546bdcad\/default.4250.345_health_check\/18_1431573984.96\/head\/\/5"</span>,</span><br><span class="line">                      <span class="string">"length"</span>: 12,</span><br><span class="line">                      <span class="string">"offset"</span>: 0,</span><br><span class="line">                      <span class="string">"bufferlist length"</span>: 12&#125;,</span><br><span class="line">                    &#123; <span class="string">"op_num"</span>: 7,</span><br><span class="line">                      <span class="string">"op_name"</span>: <span class="string">"setattr"</span>,</span><br><span class="line">                      <span class="string">"collection"</span>: <span class="string">"5.4ad_head"</span>,</span><br><span class="line">                      <span class="string">"oid"</span>: <span class="string">"546bdcad\/default.4250.345_health_check\/18_1431573984.96\/head\/\/5"</span>,</span><br><span class="line">                      <span class="string">"name"</span>: <span class="string">"_user.rgw.acl"</span>,</span><br><span class="line">                      <span class="string">"length"</span>: 39&#125;,</span><br><span class="line">                    &#123; <span class="string">"op_num"</span>: 8,</span><br><span class="line">                      <span class="string">"op_name"</span>: <span class="string">"setattr"</span>,</span><br><span class="line">                      <span class="string">"collection"</span>: <span class="string">"5.4ad_head"</span>,</span><br><span class="line">                      <span class="string">"oid"</span>: <span class="string">"546bdcad\/default.4250.345_health_check\/18_1431573984.96\/head\/\/5"</span>,</span><br><span class="line">                      <span class="string">"name"</span>: <span class="string">"_user.rgw.etag"</span>,</span><br><span class="line">                      <span class="string">"length"</span>: 33&#125;,</span><br><span class="line">                    &#123; <span class="string">"op_num"</span>: 9,</span><br><span class="line">                      <span class="string">"op_name"</span>: <span class="string">"setattr"</span>,</span><br><span class="line">                      <span class="string">"collection"</span>: <span class="string">"5.4ad_head"</span>,</span><br><span class="line">                      <span class="string">"oid"</span>: <span class="string">"546bdcad\/default.4250.345_health_check\/18_1431573984.96\/head\/\/5"</span>,</span><br><span class="line">                      <span class="string">"name"</span>: <span class="string">"_user.rgw.total_size"</span>,</span><br><span class="line">                      <span class="string">"length"</span>: 3&#125;,</span><br><span class="line">                    &#123; <span class="string">"op_num"</span>: 10,</span><br><span class="line">                      <span class="string">"op_name"</span>: <span class="string">"setattr"</span>,</span><br><span class="line">                      <span class="string">"collection"</span>: <span class="string">"5.4ad_head"</span>,</span><br><span class="line">                      <span class="string">"oid"</span>: <span class="string">"546bdcad\/default.4250.345_health_check\/18_1431573984.96\/head\/\/5"</span>,</span><br><span class="line">                      <span class="string">"name"</span>: <span class="string">"_"</span>,</span><br><span class="line">                      <span class="string">"length"</span>: 273&#125;,</span><br><span class="line">                    &#123; <span class="string">"op_num"</span>: 11,</span><br><span class="line">                      <span class="string">"op_name"</span>: <span class="string">"setattr"</span>,</span><br><span class="line">                      <span class="string">"collection"</span>: <span class="string">"5.4ad_head"</span>,</span><br><span class="line">                      <span class="string">"oid"</span>: <span class="string">"546bdcad\/default.4250.345_health_check\/18_1431573984.96\/head\/\/5"</span>,</span><br><span class="line">                      <span class="string">"name"</span>: <span class="string">"snapset"</span>,</span><br><span class="line">                      <span class="string">"length"</span>: 31&#125;]&#125;]&#125;2015-05-14 11:28:55.506607 7f1125980800 -1  ceph_osd.cc:285 dumped journal /data/cache/osd58/journal <span class="keyword">for</span> object store /data/cache/osd58</span><br></pre></td></tr></table></figure>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag">#ceph</a>
+          
+            <a href="/tags/osd/" rel="tag">#osd</a>
+          
+            <a href="/tags/journal/" rel="tag">#journal</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/05/25/2015-05-25-ceph-use-memstore/" rel="prev">How to configure Ceph use memstore?</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#创建pool"><span class="nav-number">1.</span> <span class="nav-text">创建pool</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#测试journal文件rename"><span class="nav-number">2.</span> <span class="nav-text">测试journal文件rename</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#结论"><span class="nav-number">2.1.</span> <span class="nav-text">结论</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#模拟journal文件不可读"><span class="nav-number">3.</span> <span class="nav-text">模拟journal文件不可读</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#分析journal文件"><span class="nav-number">4.</span> <span class="nav-text">分析journal文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#重做journal"><span class="nav-number">5.</span> <span class="nav-text">重做journal</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ceph-journal其他命令"><span class="nav-number">6.</span> <span class="nav-text">ceph journal其他命令</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

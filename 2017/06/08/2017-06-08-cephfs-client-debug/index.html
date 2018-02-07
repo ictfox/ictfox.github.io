@@ -1,0 +1,778 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="ceph,cephfs," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="获取源码12# uname -aLinux Server 3.10.0-327.el7.x86_64 #1 SMP Thu Nov 19 22:10:57 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux 从网上搜索下载Linux对应版本的源码，这里的源码版本为：3.10.0-327 查看cephfs client端模块123456789101112131415161">
+<meta name="keywords" content="ceph,cephfs">
+<meta property="og:type" content="article">
+<meta property="og:title" content="cephfs kernel client debug">
+<meta property="og:url" content="http://www.ictfox.cn/2017/06/08/2017-06-08-cephfs-client-debug/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="获取源码12# uname -aLinux Server 3.10.0-327.el7.x86_64 #1 SMP Thu Nov 19 22:10:57 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux 从网上搜索下载Linux对应版本的源码，这里的源码版本为：3.10.0-327 查看cephfs client端模块123456789101112131415161">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2017-06-19T03:12:18.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="cephfs kernel client debug">
+<meta name="twitter:description" content="获取源码12# uname -aLinux Server 3.10.0-327.el7.x86_64 #1 SMP Thu Nov 19 22:10:57 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux 从网上搜索下载Linux对应版本的源码，这里的源码版本为：3.10.0-327 查看cephfs client端模块123456789101112131415161">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> cephfs kernel client debug | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              cephfs kernel client debug
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2017-06-08T12:01:17+08:00" content="2017-06-08">
+            2017-06-08
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/ceph/" itemprop="url" rel="index">
+                  <span itemprop="name">ceph</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><h2 id="获取源码"><a href="#获取源码" class="headerlink" title="获取源码"></a>获取源码</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># uname -a</span></span><br><span class="line">Linux Server 3.10.0-327.el7.x86_64 <span class="comment">#1 SMP Thu Nov 19 22:10:57 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux</span></span><br></pre></td></tr></table></figure>
+<p>从网上搜索下载Linux对应版本的源码，这里的源码版本为：3.10.0-327</p>
+<h2 id="查看cephfs-client端模块"><a href="#查看cephfs-client端模块" class="headerlink" title="查看cephfs client端模块"></a>查看cephfs client端模块</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># lsmod | grep ceph</span></span><br><span class="line">ceph                  202130  1</span><br><span class="line">libceph               189287  2 rbd,ceph</span><br><span class="line"></span><br><span class="line"><span class="comment"># modinfo ceph</span></span><br><span class="line">filename:       /lib/modules/3.10.0-327.el7.x86_64/kernel/fs/ceph/ceph.ko</span><br><span class="line">license:        GPL</span><br><span class="line">description:    Ceph filesystem <span class="keyword">for</span> Linux</span><br><span class="line">author:         Patience Warnick &lt;patience@newdream.net&gt;</span><br><span class="line">author:         Yehuda Sadeh &lt;yehuda@hq.newdream.net&gt;</span><br><span class="line">author:         Sage Weil &lt;sage@newdream.net&gt;</span><br><span class="line"><span class="built_in">alias</span>:          fs-ceph</span><br><span class="line">rhelversion:    7.2</span><br><span class="line">srcversion:     268CE83A90FA60A7654BE27</span><br><span class="line">depends:        libceph</span><br><span class="line">intree:         Y</span><br><span class="line">vermagic:       3.10.0-327.el7.x86_64 SMP mod_unload modversions</span><br><span class="line">signer:         CentOS Linux kernel signing key</span><br><span class="line">sig_key:        79:AD:88:6A:11:3C:A0:22:35:26:33:6C:0F:82:5B:8A:94:29:6A:B3</span><br><span class="line">sig_hashalgo:   sha25</span><br><span class="line"></span><br><span class="line"><span class="comment"># modinfo libceph</span></span><br><span class="line">filename:       /lib/modules/3.10.0-327.el7.x86_64/kernel/net/ceph/libceph.ko</span><br><span class="line">license:        GPL</span><br><span class="line">description:    Ceph filesystem <span class="keyword">for</span> Linux</span><br><span class="line">author:         Patience Warnick &lt;patience@newdream.net&gt;</span><br><span class="line">author:         Yehuda Sadeh &lt;yehuda@hq.newdream.net&gt;</span><br><span class="line">author:         Sage Weil &lt;sage@newdream.net&gt;</span><br><span class="line">rhelversion:    7.2</span><br><span class="line">srcversion:     BA3AB21E57822D9AC6B9463</span><br><span class="line">depends:        libcrc32c,dns_resolver</span><br><span class="line">intree:         Y</span><br><span class="line">vermagic:       3.10.0-327.el7.x86_64 SMP mod_unload modversions</span><br><span class="line">signer:         CentOS Linux kernel signing key</span><br><span class="line">sig_key:        79:AD:88:6A:11:3C:A0:22:35:26:33:6C:0F:82:5B:8A:94:29:6A:B3</span><br><span class="line">sig_hashalgo:   sha256</span><br></pre></td></tr></table></figure>
+<h2 id="修改cephfs源码"><a href="#修改cephfs源码" class="headerlink" title="修改cephfs源码"></a>修改cephfs源码</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">到kernel源码目录</span><br><span class="line"><span class="comment"># vim include/linux/ceph/ceph_debug.h</span></span><br><span class="line">...</span><br><span class="line"><span class="comment"># if defined(DEBUG) || defined(CONFIG_DYNAMIC_DEBUG)</span></span><br><span class="line">/* 删除这块代码</span><br><span class="line">extern const char *ceph_file_part(const char *s, int len);</span><br><span class="line"><span class="comment">#  define dout(fmt, ...)                        \</span></span><br><span class="line">    pr_debug(<span class="string">"%.*s %12.12s:%-4d : "</span> fmt,                \</span><br><span class="line">         8 - (int)sizeof(KBUILD_MODNAME), <span class="string">"    "</span>,       \</span><br><span class="line">         ceph_file_part(__FILE__, sizeof(__FILE__)),        \</span><br><span class="line">         __LINE__, <span class="comment">##__VA_ARGS__)</span></span><br><span class="line"><span class="comment"># else</span></span><br><span class="line">*/</span><br><span class="line">/* faux printk call just to see any compiler warnings. */</span><br><span class="line"><span class="comment">#  define dout(fmt, ...)    do &#123;                \</span></span><br><span class="line">        <span class="keyword">if</span> (1)                      \                   // <span class="keyword">if</span>(0) 修改为 <span class="keyword">if</span>(1)</span><br><span class="line">            printk(KERN_DEBUG fmt, <span class="comment">##__VA_ARGS__);  \</span></span><br><span class="line">    &#125; <span class="keyword">while</span> (0)</span><br><span class="line"><span class="comment"># endif</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#else</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>结合自己版本里的源码，随意修改，使dout()函数能正常打印log就ok；</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># cp /boot/config-3.10.0-327.el7.x86_64 ./</span></span><br><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># mv config-3.10.0-327.el7.x86_64 .config</span></span><br><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># vim .config</span></span><br><span class="line">...</span><br><span class="line">CONFIG_CEPH_LIB_PRETTYDEBUG=y		// 打开CEPH的相关DEBUG配置</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h2 id="编译并替换cephfs的模块"><a href="#编译并替换cephfs的模块" class="headerlink" title="编译并替换cephfs的模块"></a>编译并替换cephfs的模块</h2><p>编译cephfs使用的kernel module</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># make</span></span><br><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># ll fs/ceph/ceph.ko</span></span><br><span class="line">-rw-r--r-- 1 root root 4901829 Jun  7 09:39 fs/ceph/ceph.ko</span><br><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># ll net/ceph/libceph.ko</span></span><br><span class="line">-rw-r--r-- 1 root root 4099969 Jun  7 09:40 net/ceph/libceph.ko</span><br><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># ll drivers/block/rbd.ko</span></span><br><span class="line">-rw-r--r-- 1 root root 966206 Jun  7 09:37 drivers/block/rbd.ko</span><br></pre></td></tr></table></figure>
+<p>替换cephfs的这几个模块</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># lsmod | grep rbd</span></span><br><span class="line">rbd                    58242  0</span><br><span class="line">libceph               189287  2 rbd,ceph    // rbd使用libceph module，替换libceph的话，先要删除rbd module</span><br><span class="line"></span><br><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># rmmod rbd</span></span><br><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># rmmod ceph</span></span><br><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># rmmod libceph</span></span><br><span class="line"></span><br><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># cp net/ceph/libceph.ko /lib/modules/3.10.0-327.el7.x86_64/kernel/net/ceph/libceph.ko</span></span><br><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># cp fs/ceph/ceph.ko /lib/modules/3.10.0-327.el7.x86_64/kernel/fs/ceph/ceph.ko</span></span><br><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># cp drivers/block/rbd.ko /lib/modules/3.10.0-327.el7.x86_64/kernel/drivers/block/rbd.ko</span></span><br><span class="line"></span><br><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># modprobe ceph</span></span><br><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># modprobe rbd</span></span><br></pre></td></tr></table></figure>
+<p>并不是每次修改cephfs的代码，都需要编译整个kernel的，后续仅仅需要编译对应的module即可</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@server linux-3.10.0-327.el7]<span class="comment"># make M=fs/ceph</span></span><br></pre></td></tr></table></figure>
+<h2 id="测试查看cephfs-debug-log"><a href="#测试查看cephfs-debug-log" class="headerlink" title="测试查看cephfs debug log"></a>测试查看cephfs debug log</h2><p>mount cephfs并触发写操作</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph 10.10.1.1:6789:/ /mnt/</span></span><br><span class="line"><span class="comment"># cd /mnt</span></span><br><span class="line"><span class="comment"># dd if=/dev/zero of=tstfile bs=4M count=1 oflag=direct</span></span><br></pre></td></tr></table></figure>
+<p>检查cephfs的kernel log</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># dmesg -c &gt; /dev/null</span></span><br><span class="line"><span class="comment"># dmesg -c &gt; ~/cephfs.log</span></span><br><span class="line"><span class="comment"># vim ~/cephfs.log</span></span><br><span class="line">...</span><br><span class="line">[3034497.087430] aio_write ffff8801271b0e48 10000002393.fffffffffffffffe 0~4194304 got <span class="built_in">cap</span> refs on Fwb</span><br><span class="line">[3034497.087432] sync_direct_write on file ffff882013dddf00 0~4194304</span><br><span class="line">[3034497.087449] ceph_msg_new ffff88135e1ec000 front 512</span><br><span class="line">[3034497.087450] ceph_msg_new ffff88135e1ec0f0 front 277</span><br><span class="line">[3034497.087451] mapping 0~4194304  osize 4194304 fl_su 4194304</span><br><span class="line">[3034497.087452] osize 4194304 / su 4194304 = su_per_object 1</span><br><span class="line">[3034497.087454] off 0 / su 4194304 = bl 0</span><br><span class="line">[3034497.087455] objset 0 * sc 1 = ono 0</span><br><span class="line">[3034497.087455]  obj extent 0~4194304</span><br><span class="line">[3034497.087457] calc_layout objnum=0 0~4194304</span><br><span class="line">[3034497.087576] oid <span class="string">'10000002393.00000000'</span> len 20</span><br><span class="line">[3034497.087578] build_request msg_size was 197</span><br><span class="line">[3034497.087580] __register_request ffff88111d798000 tid 8</span><br><span class="line">[3034497.087585] ceph_osdc_get_request ffff88111d798000 (was 1)</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h2 id="配置kernel-log文件"><a href="#配置kernel-log文件" class="headerlink" title="配置kernel log文件"></a>配置kernel log文件</h2><p>若不想每次从dmesg里获取kernel debug log，在centos里可以配置到指定文件</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># vim /etc/rsyslog.conf</span></span><br><span class="line">...</span><br><span class="line">kern.*                                                 /var/<span class="built_in">log</span>/kern.log   // 配置kernel <span class="built_in">log</span>文件</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="comment"># service rsyslog restart		// 重启rsyslog服务</span></span><br></pre></td></tr></table></figure>
+<p>之后就可以在<code>/var/log/kern.log</code>里查看cephfs的debug log了</p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag">#ceph</a>
+          
+            <a href="/tags/cephfs/" rel="tag">#cephfs</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/06/12/2017-06-12-ceph-radosgw-multisite/" rel="prev">对象存储跨区灾备 - RGW MultiSite</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/06/02/2017-06-02-cephfs-intro-fun/" rel="next">cephfs介绍和功能测试</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#获取源码"><span class="nav-number">1.</span> <span class="nav-text">获取源码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#查看cephfs-client端模块"><span class="nav-number">2.</span> <span class="nav-text">查看cephfs client端模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#修改cephfs源码"><span class="nav-number">3.</span> <span class="nav-text">修改cephfs源码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#编译并替换cephfs的模块"><span class="nav-number">4.</span> <span class="nav-text">编译并替换cephfs的模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#测试查看cephfs-debug-log"><span class="nav-number">5.</span> <span class="nav-text">测试查看cephfs debug log</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#配置kernel-log文件"><span class="nav-number">6.</span> <span class="nav-text">配置kernel log文件</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,784 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="s3 c++," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="概述aws提供多种sdk去访问S3，包括java、go、php、js、ruby、net、c++等，本篇文章结合作者最近应用的实践，介绍aws sdk cpp中访问S3的使用，示例中包括对S3的基本put，get等操作。 在使用aws sdk cpp中，发现它还不是那么完善，很多对S3的操作都找不到示例，并且github上这部分的源码更新很快，估计也是在持续开发和完善中，建议读者在自己应用时，下载最">
+<meta name="keywords" content="s3 c++">
+<meta property="og:type" content="article">
+<meta property="og:title" content="aws sdk cpp中S3相关的应用和示例">
+<meta property="og:url" content="http://www.ictfox.cn/2017/11/06/2017-11-06-aws-sdk-cpp-s3-introduction/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述aws提供多种sdk去访问S3，包括java、go、php、js、ruby、net、c++等，本篇文章结合作者最近应用的实践，介绍aws sdk cpp中访问S3的使用，示例中包括对S3的基本put，get等操作。 在使用aws sdk cpp中，发现它还不是那么完善，很多对S3的操作都找不到示例，并且github上这部分的源码更新很快，估计也是在持续开发和完善中，建议读者在自己应用时，下载最">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2017-11-07T13:55:32.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="aws sdk cpp中S3相关的应用和示例">
+<meta name="twitter:description" content="概述aws提供多种sdk去访问S3，包括java、go、php、js、ruby、net、c++等，本篇文章结合作者最近应用的实践，介绍aws sdk cpp中访问S3的使用，示例中包括对S3的基本put，get等操作。 在使用aws sdk cpp中，发现它还不是那么完善，很多对S3的操作都找不到示例，并且github上这部分的源码更新很快，估计也是在持续开发和完善中，建议读者在自己应用时，下载最">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> aws sdk cpp中S3相关的应用和示例 | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              aws sdk cpp中S3相关的应用和示例
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2017-11-06T09:40:17+08:00" content="2017-11-06">
+            2017-11-06
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/s3/" itemprop="url" rel="index">
+                  <span itemprop="name">s3</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>aws提供多种sdk去访问S3，包括java、go、php、js、ruby、net、c++等，本篇文章结合作者最近应用的实践，介绍aws sdk cpp中访问S3的使用，示例中包括对S3的基本put，get等操作。</p>
+<p>在使用aws sdk cpp中，发现它还不是那么完善，很多对S3的操作都找不到示例，并且github上这部分的源码更新很快，估计也是在持续开发和完善中，建议读者在自己应用时，下载最新的sdk版本后测试。</p>
+<h2 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h2><p>测试系统：CentOS Linux release 7.2.1511</p>
+<ol>
+<li><p>下载github上的sdk源码</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># git clone https://github.com/aws/aws-sdk-cpp</span></span><br></pre></td></tr></table></figure>
+<p> 或者直接下载zip压缩包后解压缩</p>
+</li>
+<li><p>安装依赖包</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">yum install -y gcc-c++</span><br><span class="line">yum install -y cmake</span><br><span class="line">yum install -y zlib-devel</span><br><span class="line">yum install -y openssl-devel</span><br><span class="line">yum install -y curl-devel</span><br></pre></td></tr></table></figure>
+<p> Ubuntu系统上：</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">apt-get install -y g++</span><br><span class="line">apt-get install -y cmake</span><br><span class="line">apt-get install -y libssl-dev</span><br><span class="line">apt-get install -y libcurl4-openssl-dev</span><br><span class="line">apt-get install -y uuid-dev</span><br><span class="line">apt-get install -y libboost-all-dev</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>安装aws cpp sdk</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">mkdir build_dir</span><br><span class="line"><span class="built_in">cd</span> build_dir</span><br><span class="line">cmake -DCMAKE_BUILD_TYPE=Release ../aws-sdk-cpp</span><br><span class="line"></span><br><span class="line"><span class="comment"># just make and install core and s3</span></span><br><span class="line">make -j `nproc` -C aws-cpp-sdk-core</span><br><span class="line">make -j `nproc` -C aws-cpp-sdk-s3</span><br><span class="line">make install -C aws-cpp-sdk-core</span><br><span class="line">make install -C aws-cpp-sdk-s3</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h2><h3 id="基本代码"><a href="#基本代码" class="headerlink" title="基本代码"></a>基本代码</h3><p>要使用aws c++ sdk，必须包含如下基本代码</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;aws/core/Aws.h&gt;</span></span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span>** argv)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">   Aws::SDKOptions options;</span><br><span class="line">   Aws::InitAPI(options);</span><br><span class="line">   &#123;</span><br><span class="line">      <span class="comment">// make your SDK calls here.</span></span><br><span class="line">   &#125;</span><br><span class="line">   Aws::ShutdownAPI(options);</span><br><span class="line">   <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>使用aws s3 client来访问对象存储</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">Aws::Client::ClientConfiguration cfg;</span><br><span class="line">cfg.endpointOverride = <span class="string">"your s3 endpoint"</span>;</span><br><span class="line">cfg.scheme = Aws::Http::Scheme::HTTP;</span><br><span class="line">cfg.connectTimeoutMs = <span class="number">100000</span>;</span><br><span class="line">cfg.requestTimeoutMs = <span class="number">100000</span>;</span><br><span class="line"></span><br><span class="line">Aws::Auth::<span class="function">AWSCredentials <span class="title">cred</span><span class="params">(<span class="string">"your access key"</span>, <span class="string">"your secret key"</span>)</span></span>;</span><br><span class="line"><span class="function">S3Client <span class="title">client</span><span class="params">(cred, cfg, <span class="literal">false</span>, <span class="literal">false</span>)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Then you can use this client object to access s3 object</span></span><br></pre></td></tr></table></figure>
+<h3 id="示例1-list-bucket"><a href="#示例1-list-bucket" class="headerlink" title="示例1 - list bucket"></a>示例1 - list bucket</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">cat aws-s3-bucket.cpp</span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;aws/s3/S3Client.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;aws/core/Aws.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;aws/core/auth/AWSCredentialsProvider.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> Aws::S3;</span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> Aws::S3::Model;</span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="built_in">std</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span>* argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    Aws::SDKOptions options;</span><br><span class="line">    Aws::InitAPI(options);</span><br><span class="line"></span><br><span class="line">    Aws::Client::ClientConfiguration cfg;</span><br><span class="line">    cfg.endpointOverride = <span class="string">"..."</span>;</span><br><span class="line">    cfg.scheme = Aws::Http::Scheme::HTTP;</span><br><span class="line"></span><br><span class="line">    Aws::Auth::<span class="function">AWSCredentials <span class="title">cred</span><span class="params">(<span class="string">"..."</span>, <span class="string">"..."</span>)</span></span>;</span><br><span class="line">    <span class="function">S3Client <span class="title">client</span><span class="params">(cred, cfg, <span class="literal">false</span>, <span class="literal">false</span>)</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">auto</span> response = client.ListBuckets();</span><br><span class="line">    <span class="keyword">if</span> (response.IsSuccess()) &#123;</span><br><span class="line">        <span class="keyword">auto</span> buckets = response.GetResult().GetBuckets();</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">auto</span> iter = buckets.begin(); iter != buckets.end(); ++iter) &#123;</span><br><span class="line">            <span class="built_in">cout</span> &lt;&lt; iter-&gt;GetName() &lt;&lt; <span class="string">"\t"</span></span><br><span class="line">                 &lt;&lt; iter-&gt;GetCreationDate().ToLocalTimeString(Aws::Utils::DateFormat::ISO_8601) &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="built_in">cout</span> &lt;&lt; <span class="string">"Error while ListBuckets "</span> &lt;&lt; response.GetError().GetExceptionName()</span><br><span class="line">            &lt;&lt; <span class="string">" "</span> &lt;&lt; response.GetError().GetMessage() &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    Aws::ShutdownAPI(options);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="示例2-get-object"><a href="#示例2-get-object" class="headerlink" title="示例2 - get object"></a>示例2 - get object</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Get object range content to local file</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">int</span> S3Storage::get_object_to_file(<span class="keyword">const</span> S3Client &amp;client,</span><br><span class="line">                    				 <span class="keyword">const</span> Aws::String bucket,</span><br><span class="line">                               	 <span class="keyword">const</span> Aws::String object,</span><br><span class="line">                                 	 <span class="keyword">const</span> <span class="built_in">string</span> &amp;file_name,</span><br><span class="line">                               	 <span class="keyword">const</span> <span class="keyword">uint64_t</span> offset,</span><br><span class="line">                       			  	 <span class="keyword">uint64_t</span> length)</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">    GetObjectRequest request;</span><br><span class="line">    request.WithBucket(bucket).WithKey(object);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">string</span> range = S3_RANGE_STRING(offset, length);</span><br><span class="line">    request.SetRange(range.c_str());</span><br><span class="line"></span><br><span class="line">    <span class="keyword">auto</span> outcome = client.GetObject(request);</span><br><span class="line">    <span class="keyword">if</span>(!outcome.IsSuccess()) &#123;</span><br><span class="line">        <span class="built_in">cout</span> &lt;&lt; <span class="string">"GetObject error: "</span> &lt;&lt;</span><br><span class="line">            outcome.GetError().GetExceptionName() &lt;&lt; <span class="string">" - "</span> &lt;&lt;</span><br><span class="line">            outcome.GetError().GetMessage() &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    Aws::OFStream local_file;</span><br><span class="line">    local_file.open(file_name.c_str(), <span class="built_in">std</span>::ios::in | <span class="built_in">std</span>::ios::out | <span class="built_in">std</span>::ios::binary);</span><br><span class="line">    assert(local_file.good());</span><br><span class="line">    local_file.seekp(offset, <span class="built_in">std</span>::ios::beg);</span><br><span class="line">    local_file &lt;&lt; outcome.GetResult().GetBody().rdbuf();</span><br><span class="line">    local_file.close();</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="示例2-put-object"><a href="#示例2-put-object" class="headerlink" title="示例2 - put object"></a>示例2 - put object</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Put whole file to s3 object</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">int</span> S3Storage::put_object_from_file(<span class="keyword">const</span> S3Client &amp;client,</span><br><span class="line">										   <span class="keyword">const</span> Aws::String bucket,</span><br><span class="line">                                    <span class="keyword">const</span> Aws::String object,</span><br><span class="line">                                    <span class="keyword">const</span> <span class="built_in">string</span> &amp;file_name)</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">    PutObjectRequest request;</span><br><span class="line">    request.WithKey(object).WithBucket(bucket);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">auto</span> input_data = Aws::MakeShared&lt;Aws::FStream&gt;(<span class="string">"PutObjectInputStream"</span>,</span><br><span class="line">                file_name.c_str(), <span class="built_in">std</span>::ios_base::in | <span class="built_in">std</span>::ios_base::binary);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//set the stream that will be put to s3</span></span><br><span class="line">    request.SetBody(input_data);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">auto</span> outcome = client.PutObject(request);</span><br><span class="line">    <span class="keyword">if</span>(outcome.IsSuccess()) &#123;</span><br><span class="line">        <span class="built_in">cout</span> &lt;&lt; <span class="string">"Put object succeeded!"</span> &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="built_in">cout</span> &lt;&lt; <span class="string">"PutObject error: "</span> &lt;&lt;</span><br><span class="line">             outcome.GetError().GetExceptionName() &lt;&lt; <span class="string">" - "</span> &lt;&lt;</span><br><span class="line">             outcome.GetError().GetMessage() &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    &#125;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>因有需要读取文件的一部分内容，然后上传到S3上的一个object，查询了好多资料没找到示例，最后翻阅aws cpp sdk的源码，参考相关的实现，花费了很多时间才试验出来，贴给有相同需要的朋友。。。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Put one file slice to s3 object</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"> <span class="keyword">int</span> S3Storage::put_object_from_file_slice(<span class="keyword">const</span> S3Client &amp;client,</span><br><span class="line">										          <span class="keyword">const</span> Aws::String bucket,</span><br><span class="line">                                           <span class="keyword">const</span> Aws::String object,</span><br><span class="line">                                           <span class="keyword">const</span> <span class="built_in">string</span> &amp;file_name,</span><br><span class="line">                                           <span class="keyword">const</span> <span class="keyword">uint64_t</span> offset,</span><br><span class="line">                                           <span class="keyword">const</span> <span class="keyword">uint64_t</span> length)</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">    <span class="comment">// Upload file with slices to s3 paralleled</span></span><br><span class="line">    PutObjectRequest request;</span><br><span class="line">    request.WithKey(object).WithBucket(bucket);</span><br><span class="line"></span><br><span class="line">    Aws::FStream local_file;</span><br><span class="line">    local_file.open(file_name.c_str(), <span class="built_in">std</span>::ios::in | <span class="built_in">std</span>::ios::binary);</span><br><span class="line">    assert(local_file.good());</span><br><span class="line"></span><br><span class="line">    Array&lt;<span class="keyword">uint8_t</span>&gt; file_contents(length);</span><br><span class="line">    local_file.seekg(offset, <span class="built_in">std</span>::ios::beg);</span><br><span class="line">    <span class="built_in">cout</span> &lt;&lt; <span class="string">"file read offset "</span> &lt;&lt; local_file.tellg() &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    local_file.read((<span class="keyword">char</span>*)file_contents.GetUnderlyingData(),</span><br><span class="line">                    file_contents.GetLength());</span><br><span class="line">    local_file.close();</span><br><span class="line"></span><br><span class="line">    <span class="comment">//set the stream that will be put to s3</span></span><br><span class="line">    <span class="keyword">auto</span> sbuff = Aws::New&lt;Aws::Utils::Stream::PreallocatedStreamBuf&gt;(CLASS_TAG,</span><br><span class="line">                                    &amp;file_contents, file_contents.GetLength());</span><br><span class="line">    <span class="keyword">auto</span> sbody = Aws::MakeShared&lt;Aws::IOStream&gt;(<span class="string">"whatever string"</span>, sbuff);</span><br><span class="line">    request.SetBody(sbody);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">auto</span> outcome = client.PutObject(request);</span><br><span class="line">    <span class="keyword">if</span>(outcome.IsSuccess()) &#123;</span><br><span class="line">        <span class="built_in">cout</span> &lt;&lt; <span class="string">"Put object succeeded!"</span> &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="built_in">cout</span> &lt;&lt; <span class="string">"PutObject error: "</span> &lt;&lt;</span><br><span class="line">                outcome.GetError().GetExceptionName() &lt;&lt; <span class="string">" - "</span> &lt;&lt;</span><br><span class="line">                outcome.GetError().GetMessage() &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    &#125;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/welcome.html" target="_blank" rel="noopener">http://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/welcome.html</a><br><a href="https://github.com/aws/aws-sdk-cpp" target="_blank" rel="noopener">https://github.com/aws/aws-sdk-cpp</a><br><a href="http://alientechlab.com/aws-sdk-cpp-part-1/" target="_blank" rel="noopener">http://alientechlab.com/aws-sdk-cpp-part-1/</a><br><a href="http://www.cnblogs.com/qiuyi21/p/7239129.html" target="_blank" rel="noopener">http://www.cnblogs.com/qiuyi21/p/7239129.html</a></p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/s3-c/" rel="tag">#s3 c++</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/11/16/2017-11-16-linx-symbolic-hard-link/" rel="prev">Linux 软链接和硬链接</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/10/25/2017-10-25-one-issue-about-c++-fstream/" rel="next">使用c++ fstream时遇到的一个问题与分析</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安装"><span class="nav-number">2.</span> <span class="nav-text">安装</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#示例"><span class="nav-number">3.</span> <span class="nav-text">示例</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#基本代码"><span class="nav-number">3.1.</span> <span class="nav-text">基本代码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#示例1-list-bucket"><span class="nav-number">3.2.</span> <span class="nav-text">示例1 - list bucket</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#示例2-get-object"><span class="nav-number">3.3.</span> <span class="nav-text">示例2 - get object</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#示例2-put-object"><span class="nav-number">3.4.</span> <span class="nav-text">示例2 - put object</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

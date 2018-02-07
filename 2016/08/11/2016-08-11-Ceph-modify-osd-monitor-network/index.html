@@ -1,0 +1,842 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="ceph,osd,monitor," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="引言随着Ceph应用的不断深入，不少企业在部署完Ceph集群并运行一段时间后，会遇到机房网络变动或集群网络升级的情况，这时我们都期望能用最简便高效的方法解决Ceph网络变化带来的问题。那么，如何处理才能快速解除Ceph网络变动危机呢？ 在Ceph底层的RADOS集群中，有两种节点，一种是为数众多的、负责完成数据存储和维护功能的OSD（Object Storage Device），另一种则是若干个负">
+<meta name="keywords" content="ceph,osd,monitor">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Ceph修改OSD和Monitor的网络">
+<meta property="og:url" content="http://www.ictfox.cn/2016/08/11/2016-08-11-Ceph-modify-osd-monitor-network/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="引言随着Ceph应用的不断深入，不少企业在部署完Ceph集群并运行一段时间后，会遇到机房网络变动或集群网络升级的情况，这时我们都期望能用最简便高效的方法解决Ceph网络变化带来的问题。那么，如何处理才能快速解除Ceph网络变动危机呢？ 在Ceph底层的RADOS集群中，有两种节点，一种是为数众多的、负责完成数据存储和维护功能的OSD（Object Storage Device），另一种则是若干个负">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2017-05-21T08:15:46.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Ceph修改OSD和Monitor的网络">
+<meta name="twitter:description" content="引言随着Ceph应用的不断深入，不少企业在部署完Ceph集群并运行一段时间后，会遇到机房网络变动或集群网络升级的情况，这时我们都期望能用最简便高效的方法解决Ceph网络变化带来的问题。那么，如何处理才能快速解除Ceph网络变动危机呢？ 在Ceph底层的RADOS集群中，有两种节点，一种是为数众多的、负责完成数据存储和维护功能的OSD（Object Storage Device），另一种则是若干个负">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> Ceph修改OSD和Monitor的网络 | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              Ceph修改OSD和Monitor的网络
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2016-08-11T17:31:17+08:00" content="2016-08-11">
+            2016-08-11
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/ceph/" itemprop="url" rel="index">
+                  <span itemprop="name">ceph</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>随着Ceph应用的不断深入，不少企业在部署完Ceph集群并运行一段时间后，会遇到机房网络变动或集群网络升级的情况，这时我们都期望能用最简便高效的方法解决Ceph网络变化带来的问题。那么，如何处理才能快速解除Ceph网络变动危机呢？</p>
+<p>在Ceph底层的RADOS集群中，有两种节点，一种是为数众多的、负责完成数据存储和维护功能的<code>OSD（Object Storage Device）</code>，另一种则是若干个负责完成系统状态检测和维护的<code>monitor</code>。OSD和monitor之间相互传输节点状态信息，共同得出系统的总体工作状态，并形成一个全局系统状态记录数据结构。所以，只需要修改这两种节点的网络，就可以解决因机房网络变化或集群网络升级而引起的诸多问题。</p>
+<p>本文基于Ceph的官方文档和作者的实践，为大家讲述正确修改<code>Ceph OSD</code>和<code>Monitor</code>网络的方法。希望能够帮助大家在尽量减少对现有Ceph集群影响的情况下，通过修改Ceph的OSD和Monitor网络实现迁移。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">本文使用的Ceph版本：Hammer 0.94.5                   </span><br><span class="line">测试系统环境：Ubuntu 14.04</span><br></pre></td></tr></table></figure>
+<h2 id="修改OSD网络"><a href="#修改OSD网络" class="headerlink" title="修改OSD网络"></a>修改OSD网络</h2><p>由于Ceph OSD的网络配置是启动时读取ceph.conf配置动态加载的，所以修改OSD的网络比较简单，步骤如下：</p>
+<ol>
+<li><p>修改ceph.conf中pubulic/cluster network信息</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">public network =172.16.1.0/24</span><br><span class="line">cluster network =172.16.1.0/24</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>把ceph.conf更新到所有OSD节点测配合</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ceph-deploy --overwrite-conf config push &lt;node1&gt; &lt;node2&gt; &lt;node3&gt;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>重启所有的osd daemon</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">restart ceph-all</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>检查OSD使用的网络</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># netstat -nap | grep ceph-osd</span></span><br><span class="line">tcp        0     0 172.16.1.16:844            0.0.0.0:*          LISTEN       23412/ceph-osd</span><br><span class="line">tcp        0     0 172.16.1.16:812            0.0.0.0:*          LISTEN       19423/ceph-osd</span><br><span class="line">tcp        0     0 172.16.1.16:845            0.0.0.0:*          LISTEN        23412/ceph-osd</span><br><span class="line">tcp        0     0 172.16.1.16:813            0.0.0.0:*          LISTEN        19529/ceph-osd</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="修改Monitor的网络"><a href="#修改Monitor的网络" class="headerlink" title="修改Monitor的网络"></a>修改Monitor的网络</h2><p>因为Ceph的Monitor是集群中非常重要的模块，它们需要维护一组合理有效的Monitor节点信息，这些节点之间彼此能发现，通过选举达成一致的状态，来保证整个Ceph系统处于一个可用的一致状态。</p>
+<p>不同于别的Ceph Daemon通过ceph.conf文件中的配置来与Monitor通信，Monitors之间则通过独立的monitor map来彼此发现，在monitor map中有monitor的ip信息，所以单独通过修改ceph.conf文件的方法来修改Monitor的网络是行不通的。</p>
+<p>下面是修改monitor网络的两种方法：</p>
+<h3 id="方法1"><a href="#方法1" class="headerlink" title="方法1"></a>方法1</h3><p>依次添加新的monitor node(使用新的网络)，再删除旧的monitor node<br><strong>注: 新的monitor网络跟旧的monitor的网络必须是互通的，否则该方法失效。</strong></p>
+<h4 id="添加新的monitor节点步骤如下："><a href="#添加新的monitor节点步骤如下：" class="headerlink" title="添加新的monitor节点步骤如下："></a>添加新的monitor节点步骤如下：</h4><ol>
+<li><p>在新的monitor节点创建默认文件夹</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ssh &#123;new-mon-host&#125;</span><br><span class="line">sudo mkdir /var/lib/ceph/mon/ceph-&#123;mon-id&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>获取monitors的keyring文件，若内部集群没配置认证，该步会出错，忽略即可</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ceph auth get mon. -o &#123;tmp&#125;/&#123;key-filename&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>获取monitor map文件</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ceph mon getmap -o &#123;tmp&#125;/&#123;map-filename&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>在新的monitor节点生产monitor所需数据信息</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo ceph-mon -i &#123;mon-id&#125; --mkfs --monmap &#123;tmp&#125;/&#123;map-filename&#125; --keyring &#123;tmp&#125;/&#123;key-filename&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>添加新的monitor到monitor集群，绑定新的ip地址和port</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ceph-mon -i &#123;mon-id&#125; --public-addr &#123;ip:port&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h4 id="删除旧的monitor节点步骤如下："><a href="#删除旧的monitor节点步骤如下：" class="headerlink" title="删除旧的monitor节点步骤如下："></a>删除旧的monitor节点步骤如下：</h4><ol>
+<li><p>在旧的monitor节点停止该monitor</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">service ceph -a stop mon.&#123;mon-id&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>把该monitor从集群中移除</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ceph mon remove &#123;mon-id&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h3 id="方法2"><a href="#方法2" class="headerlink" title="方法2"></a>方法2</h3><p>修改monitor map里的信息，更新后重启所有monitors<br><strong>注：因为该方法一般是通过整体修改monitor map里的网络信息，然后重启monitors，所以会短暂影响Ceph集群的服务</strong></p>
+<p>步骤如下：</p>
+<ol>
+<li><p>获取现在的monitor map</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ceph mon getmap -o &#123;tmp&#125;/&#123;filename&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>查看当前的monitor map信息</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">$ monmaptool--<span class="built_in">print</span>&#123;tmp&#125;/&#123;filename&#125;</span><br><span class="line"></span><br><span class="line"> monmaptool: monmap file &#123;tmp&#125;/&#123;filename&#125;</span><br><span class="line"> epoch  1</span><br><span class="line"> fsid    224e376d-c5fe-4504-96bb-ea6332a19e61</span><br><span class="line"> last_changed    2012-12-17    02:46:41.591248</span><br><span class="line"> created    2012-12-17    02:46:41.591248</span><br><span class="line"> 0:10.0.0.1:6789/0 mon.a</span><br><span class="line">    1:10.0.0.2:6789/0 mon.b</span><br><span class="line">    2:10.0.0.3:6789/0 mon.c</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>删除现有的monitors信息</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ monmaptool --rm a --rm b --rm c &#123;tmp&#125;/&#123;filename&#125;</span><br><span class="line"></span><br><span class="line">  monmaptool: monmap file&#123;tmp&#125;/&#123;filename&#125;</span><br><span class="line">  monmaptool: removing a</span><br><span class="line">  monmaptool: removing b</span><br><span class="line">  monmaptool: removing c</span><br><span class="line">  monmaptool: writing epoch 1 to &#123;tmp&#125;/&#123;filename&#125; (0 monitors)</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>添加新的monitors信息</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ monmaptool --add a 10.1.0.1:6789--add b 10.1.0.2:6789--add c 10.1.0.3:6789&#123;tmp&#125;/&#123;filename&#125;</span><br><span class="line"></span><br><span class="line">monmaptool: monmap file&#123;tmp&#125;/&#123;filename&#125;</span><br><span class="line">monmaptool: writing epoch 1to &#123;tmp&#125;/&#123;filename&#125; (3 monitors)</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>检查新的monitors信息</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">$ monmaptool --<span class="built_in">print</span>&#123;tmp&#125;/&#123;filename&#125;</span><br><span class="line"></span><br><span class="line">monmaptool: monmap file&#123;tmp&#125;/&#123;filename&#125;</span><br><span class="line">epoch 1 fsid 224e376d-c5fe-4504-96bb-ea6332a19e61</span><br><span class="line">last_changed     2012-12-17    02:46:41.591248</span><br><span class="line">created     2012-12-17    02:46:41.591248</span><br><span class="line">0: 10.1.0.1:6789/0mon.a</span><br><span class="line">1: 10.1.0.2:6789/0mon.b</span><br><span class="line">2: 10.1.0.3:6789/0mon.c</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>copy修改后的{tmp}/{filename}文件到所有monitor节点</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">scp &#123;tmp&#125;/&#123;filename&#125; monitors:~/</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>停止所有的monitor</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">stop ceph-mon-all</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>注入新的monitor map信息</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ceph-mon -i &#123;mon-id&#125; --inject-monmap &#123;tmp&#125;/&#123;filename&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>启动所有的monitor</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">start ceph-mon-all</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>在Ceph的应用中，网络一直是很重要的一块，整个Ceph集群的性能多半情况下会受到网络性能的影响，所以在部署Ceph前，我们需要规划好Ceph使用的网络，包括public和cluster网络。</p>
+<p>一般OSD之间数据传输的cluster网络，我们会使用万兆网络，提升数据传输带宽，降低IO延迟；而Monitor，Client使用的public网络，因为数据量比较小，则可以使用普通的千兆网络。</p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag">#ceph</a>
+          
+            <a href="/tags/osd/" rel="tag">#osd</a>
+          
+            <a href="/tags/monitor/" rel="tag">#monitor</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/08/12/2016-08-12-Ceph-used-in-cloudin/" rel="prev">Ceph在云英的实践</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/08/03/2016-08-03-ceph-rbd-migration/" rel="next">Ceph RBD设备分区迁移方案</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#引言"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#修改OSD网络"><span class="nav-number">2.</span> <span class="nav-text">修改OSD网络</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#修改Monitor的网络"><span class="nav-number">3.</span> <span class="nav-text">修改Monitor的网络</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#方法1"><span class="nav-number">3.1.</span> <span class="nav-text">方法1</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#添加新的monitor节点步骤如下："><span class="nav-number">3.1.1.</span> <span class="nav-text">添加新的monitor节点步骤如下：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#删除旧的monitor节点步骤如下："><span class="nav-number">3.1.2.</span> <span class="nav-text">删除旧的monitor节点步骤如下：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#方法2"><span class="nav-number">3.2.</span> <span class="nav-text">方法2</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#结语"><span class="nav-number">4.</span> <span class="nav-text">结语</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

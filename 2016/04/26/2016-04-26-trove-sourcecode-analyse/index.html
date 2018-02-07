@@ -1,0 +1,826 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="openstack,trove," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="Trove代码版本：Kilo Trove数据库代码Trove相关数据库表格的代码在：trove/db/sqlalchemy/migrate_repo/versions/目录下： 12345001_base_schema.py002_service_images.py...032_clusters.py033_datastore_parameters.py 创建表格函数：create_tables(">
+<meta name="keywords" content="openstack,trove">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Trove源码分析">
+<meta property="og:url" content="http://www.ictfox.cn/2016/04/26/2016-04-26-trove-sourcecode-analyse/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="Trove代码版本：Kilo Trove数据库代码Trove相关数据库表格的代码在：trove/db/sqlalchemy/migrate_repo/versions/目录下： 12345001_base_schema.py002_service_images.py...032_clusters.py033_datastore_parameters.py 创建表格函数：create_tables(">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2017-07-16T14:53:27.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Trove源码分析">
+<meta name="twitter:description" content="Trove代码版本：Kilo Trove数据库代码Trove相关数据库表格的代码在：trove/db/sqlalchemy/migrate_repo/versions/目录下： 12345001_base_schema.py002_service_images.py...032_clusters.py033_datastore_parameters.py 创建表格函数：create_tables(">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> Trove源码分析 | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              Trove源码分析
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2016-04-26T12:31:17+08:00" content="2016-04-26">
+            2016-04-26
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/openstack/" itemprop="url" rel="index">
+                  <span itemprop="name">openstack</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><p>Trove代码版本：Kilo</p>
+<h2 id="Trove数据库代码"><a href="#Trove数据库代码" class="headerlink" title="Trove数据库代码"></a>Trove数据库代码</h2><p>Trove相关数据库表格的代码在：<code>trove/db/sqlalchemy/migrate_repo/versions/</code>目录下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">001_base_schema.py</span><br><span class="line">002_service_images.py</span><br><span class="line">...</span><br><span class="line">032_clusters.py</span><br><span class="line">033_datastore_parameters.py</span><br></pre></td></tr></table></figure>
+<p>创建表格函数：<code>create_tables(...)</code></p>
+<h2 id="Trove-Create"><a href="#Trove-Create" class="headerlink" title="Trove Create"></a>Trove Create</h2><p>trove/instance/service.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">InstanceController</span><span class="params">(wsgi.Controller)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">create</span><span class="params">(self, req, body, tenant_id)</span>:</span></span><br><span class="line">        instance = models.Instance.create(context, name, flavor_id,</span><br><span class="line">                                          image_id, databases, users,</span><br><span class="line">                                          datastore, datastore_version,</span><br><span class="line">                                          volume_size, backup_id,</span><br><span class="line">                                          availability_zone, nics,</span><br><span class="line">                                          configuration, slave_of_id,</span><br><span class="line">                                          replica_count=replica_count)</span><br></pre></td></tr></table></figure>
+<p>trove/instance/models.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Instance</span><span class="params">(BuiltInstance)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">create</span><span class="params">(cls, context, name, flavor_id, image_id, databases, users,</span></span></span><br><span class="line"><span class="function"><span class="params">               datastore, datastore_version, volume_size, backup_id,</span></span></span><br><span class="line"><span class="function"><span class="params">               availability_zone=None, nics=None, configuration_id=None,</span></span></span><br><span class="line"><span class="function"><span class="params">               slave_of_id=None, cluster_config=None, replica_count=None)</span>:</span></span><br><span class="line">        client = create_nova_client(context)</span><br><span class="line">        ...</span><br><span class="line">        <span class="function"><span class="keyword">def</span> <span class="title">_create_resources</span><span class="params">()</span>:</span></span><br><span class="line">            <span class="keyword">for</span> instance_index <span class="keyword">in</span> range(<span class="number">0</span>, instance_count):</span><br><span class="line">                db_info = DBInstance.create(name=name, flavor_id=flavor_id,</span><br><span class="line">                                            tenant_id=context.tenant,</span><br><span class="line">                                            volume_size=volume_size,</span><br><span class="line">                                            datastore_version_id=</span><br><span class="line">                                            datastore_version.id,</span><br><span class="line">                                            task_status=InstanceTasks.BUILDING,</span><br><span class="line">                                            configuration_id=configuration_id,</span><br><span class="line">                                            slave_of_id=slave_of_id,</span><br><span class="line">                                            cluster_id=cluster_id,</span><br><span class="line">                                            shard_id=shard_id,</span><br><span class="line">                                            type=instance_type)</span><br><span class="line">            ...</span><br><span class="line">            task_api.API(context).create_instance(</span><br><span class="line">                instance_id, instance_name, flavor, image_id, databases, users,</span><br><span class="line">                datastore_version.manager, datastore_version.packages,</span><br><span class="line">                volume_size, backup_id, availability_zone, root_password,</span><br><span class="line">                nics, overrides, slave_of_id, cluster_config)</span><br><span class="line"></span><br><span class="line">            <span class="keyword">return</span> SimpleInstance(context, db_info, service_status,</span><br><span class="line">                                  root_password)</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/api.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">API</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">create_instance</span><span class="params">(self, instance_id, name, flavor,</span></span></span><br><span class="line"><span class="function"><span class="params">                        image_id, databases, users, datastore_manager,</span></span></span><br><span class="line"><span class="function"><span class="params">                        packages, volume_size, backup_id=None,</span></span></span><br><span class="line"><span class="function"><span class="params">                        availability_zone=None, root_password=None,</span></span></span><br><span class="line"><span class="function"><span class="params">                        nics=None, overrides=None, slave_of_id=None,</span></span></span><br><span class="line"><span class="function"><span class="params">                        cluster_config=None)</span>:</span></span><br><span class="line">        cctxt = self.client.prepare(version=self.version_cap)</span><br><span class="line">        cctxt.cast(self.context, <span class="string">"create_instance"</span>,</span><br><span class="line">                   instance_id=instance_id, name=name,</span><br><span class="line">                   flavor=self._transform_obj(flavor),</span><br><span class="line">                   image_id=image_id,</span><br><span class="line">                   databases=databases,</span><br><span class="line">                   users=users,</span><br><span class="line">                   datastore_manager=datastore_manager,</span><br><span class="line">                   packages=packages,</span><br><span class="line">                   volume_size=volume_size,</span><br><span class="line">                   backup_id=backup_id,</span><br><span class="line">                   availability_zone=availability_zone,</span><br><span class="line">                   root_password=root_password,</span><br><span class="line">                   nics=nics,</span><br><span class="line">                   overrides=overrides,</span><br><span class="line">                   slave_of_id=slave_of_id,</span><br><span class="line">                   cluster_config=cluster_config)</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/manager.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Manager</span><span class="params">(periodic_task.PeriodicTasks)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">create_instance</span><span class="params">(self, context, instance_id, name, flavor,</span></span></span><br><span class="line"><span class="function"><span class="params">                        image_id, databases, users, datastore_manager,</span></span></span><br><span class="line"><span class="function"><span class="params">                        packages, volume_size, backup_id, availability_zone,</span></span></span><br><span class="line"><span class="function"><span class="params">                        root_password, nics, overrides, slave_of_id,</span></span></span><br><span class="line"><span class="function"><span class="params">                        cluster_config)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> slave_of_id:</span><br><span class="line">            self._create_replication_slave(context, instance_id, name,</span><br><span class="line">                                           flavor, image_id, databases, users,</span><br><span class="line">                                           datastore_manager, packages,</span><br><span class="line">                                           volume_size,</span><br><span class="line">                                           availability_zone, root_password,</span><br><span class="line">                                           nics, overrides, slave_of_id,</span><br><span class="line">                                           backup_id)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            <span class="keyword">if</span> type(instance_id) <span class="keyword">in</span> [list]:</span><br><span class="line">                <span class="keyword">raise</span> AttributeError(_(</span><br><span class="line">                    <span class="string">"Cannot create multiple non-replica instances."</span>))</span><br><span class="line">            instance_tasks = FreshInstanceTasks.load(context, instance_id)</span><br><span class="line">            instance_tasks.create_instance(flavor, image_id, databases, users,</span><br><span class="line">                                           datastore_manager, packages,</span><br><span class="line">                                           volume_size, backup_id,</span><br><span class="line">                                           availability_zone, root_password,</span><br><span class="line">                                           nics, overrides, cluster_config)</span><br><span class="line">            timeout = (CONF.restore_usage_timeout <span class="keyword">if</span> backup_id</span><br><span class="line">                       <span class="keyword">else</span> CONF.usage_timeout)</span><br><span class="line">            instance_tasks.wait_for_instance(timeout, flavor)</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/models.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">FreshInstanceTasks</span><span class="params">(FreshInstance, NotifyMixin, ConfigurationMixin)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">create_instance</span><span class="params">(self, flavor, image_id, databases, users,</span></span></span><br><span class="line"><span class="function"><span class="params">                        datastore_manager, packages, volume_size,</span></span></span><br><span class="line"><span class="function"><span class="params">                        backup_id, availability_zone, root_password, nics,</span></span></span><br><span class="line"><span class="function"><span class="params">                        overrides, cluster_config, snapshot=None)</span>:</span></span><br><span class="line">        ...</span><br><span class="line">        <span class="keyword">if</span> use_heat:</span><br><span class="line">            volume_info = self._create_server_volume_heat(</span><br><span class="line">                flavor,</span><br><span class="line">                image_id,</span><br><span class="line">                datastore_manager,</span><br><span class="line">                volume_size,</span><br><span class="line">                availability_zone,</span><br><span class="line">                nics,</span><br><span class="line">                files)</span><br><span class="line">        <span class="keyword">elif</span> use_nova_server_volume:</span><br><span class="line">            volume_info = self._create_server_volume(</span><br><span class="line">                flavor[<span class="string">'id'</span>],</span><br><span class="line">                image_id,</span><br><span class="line">                security_groups,</span><br><span class="line">                datastore_manager,</span><br><span class="line">                volume_size,</span><br><span class="line">                availability_zone,</span><br><span class="line">                nics,</span><br><span class="line">                files)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            volume_info = self._create_server_volume_individually(</span><br><span class="line">                flavor[<span class="string">'id'</span>],</span><br><span class="line">                image_id,</span><br><span class="line">                security_groups,</span><br><span class="line">                datastore_manager,</span><br><span class="line">                volume_size,</span><br><span class="line">                availability_zone,</span><br><span class="line">                nics,</span><br><span class="line">                files)</span><br><span class="line"></span><br><span class="line">        self._guest_prepare(flavor[<span class="string">'ram'</span>], volume_info,</span><br><span class="line">                            packages, databases, users, backup_info,</span><br><span class="line">                            config.config_contents, root_password,</span><br><span class="line">                            config_overrides.config_contents,</span><br><span class="line">                            cluster_config, snapshot)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_create_server_volume_individually</span><span class="params">(self, flavor_id, image_id,</span></span></span><br><span class="line"><span class="function"><span class="params">                                           security_groups, datastore_manager,</span></span></span><br><span class="line"><span class="function"><span class="params">                                           volume_size, availability_zone,</span></span></span><br><span class="line"><span class="function"><span class="params">                                           nics, files)</span>:</span></span><br><span class="line">        volume_info = self._build_volume_info(datastore_manager,</span><br><span class="line">                                              volume_size=volume_size)</span><br><span class="line">        block_device_mapping = volume_info[<span class="string">'block_device'</span>]</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            server = self._create_server(flavor_id, image_id, security_groups,</span><br><span class="line">                                         datastore_manager,</span><br><span class="line">                                         block_device_mapping,</span><br><span class="line">                                         availability_zone, nics, files)</span><br><span class="line">            server_id = server.id</span><br><span class="line">            <span class="comment"># Save server ID.</span></span><br><span class="line">            self.update_db(compute_instance_id=server_id)</span><br><span class="line">        ...</span><br><span class="line">        <span class="keyword">return</span> volume_info</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_build_volume_info</span><span class="params">(self, datastore_manager, volume_size=None)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> volume_support:</span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                volume_info = self._create_volume(</span><br><span class="line">                    volume_size, datastore_manager)</span><br><span class="line">        ...</span><br><span class="line">        <span class="keyword">return</span> volume_info</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_create_server</span><span class="params">(self, flavor_id, image_id, security_groups,</span></span></span><br><span class="line"><span class="function"><span class="params">                       datastore_manager, block_device_mapping,</span></span></span><br><span class="line"><span class="function"><span class="params">                       availability_zone, nics, files=&#123;&#125;)</span>:</span></span><br><span class="line">        server = self.nova_client.servers.create(</span><br><span class="line">            name, image_id, flavor_id, files=files, userdata=userdata,</span><br><span class="line">            security_groups=security_groups, block_device_mapping=bdmap,</span><br><span class="line">            availability_zone=availability_zone, nics=nics,</span><br><span class="line">            config_drive=config_drive)</span><br><span class="line">        <span class="keyword">return</span> server</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_guest_prepare</span><span class="params">(self, flavor_ram, volume_info,</span></span></span><br><span class="line"><span class="function"><span class="params">                       packages, databases, users, backup_info=None,</span></span></span><br><span class="line"><span class="function"><span class="params">                       config_contents=None, root_password=None,</span></span></span><br><span class="line"><span class="function"><span class="params">                       overrides=None, cluster_config=None, snapshot=None)</span>:</span></span><br><span class="line">        LOG.debug(<span class="string">"Entering guest_prepare"</span>)</span><br><span class="line">        <span class="comment"># Now wait for the response from the create to do additional work</span></span><br><span class="line">        self.guest.prepare(flavor_ram, packages, databases, users,</span><br><span class="line">                           device_path=volume_info[<span class="string">'device_path'</span>],</span><br><span class="line">                           mount_point=volume_info[<span class="string">'mount_point'</span>],</span><br><span class="line">                           backup_info=backup_info,</span><br><span class="line">                           config_contents=config_contents,</span><br><span class="line">                           root_password=root_password,</span><br><span class="line">                           overrides=overrides,</span><br><span class="line">                           cluster_config=cluster_config,</span><br><span class="line">                           snapshot=snapshot)</span><br></pre></td></tr></table></figure>
+<h2 id="Trove-Delete"><a href="#Trove-Delete" class="headerlink" title="Trove Delete"></a>Trove Delete</h2><p>trove/instance/service.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">InstanceController</span><span class="params">(wsgi.Controller)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">delete</span><span class="params">(self, req, tenant_id, id)</span>:</span></span><br><span class="line">        instance.delete()</span><br></pre></td></tr></table></figure>
+<p>trove/instance/models.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BaseInstance</span><span class="params">(SimpleInstance)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">delete</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="function"><span class="keyword">def</span> <span class="title">_delete_resources</span><span class="params">()</span>:</span></span><br><span class="line">            task_api.API(self.context).delete_instance(self.id)</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/api.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">API</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">delete_instance</span><span class="params">(self, instance_id)</span>:</span></span><br><span class="line">        cctxt = self.client.prepare(version=self.version_cap)</span><br><span class="line">        cctxt.cast(self.context, <span class="string">"delete_instance"</span>, instance_id=instance_id)</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/manager.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Manager</span><span class="params">(periodic_task.PeriodicTasks)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">delete_instance</span><span class="params">(self, context, instance_id)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            instance_tasks = models.BuiltInstanceTasks.load(context,</span><br><span class="line">                                                            instance_id)</span><br><span class="line">            instance_tasks.delete_async()</span><br><span class="line">        <span class="keyword">except</span> exception.UnprocessableEntity:</span><br><span class="line">            instance_tasks = models.FreshInstanceTasks.load(context,</span><br><span class="line">                                                            instance_id)</span><br><span class="line">            instance_tasks.delete_async()</span><br></pre></td></tr></table></figure>
+<p>trove/instance/models.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BaseInstance</span><span class="params">(SimpleInstance)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">delete_async</span><span class="params">(self)</span>:</span></span><br><span class="line">        deleted_at = datetime.utcnow()</span><br><span class="line">        self._delete_resources(deleted_at)</span><br><span class="line">        LOG.debug(<span class="string">"Setting instance %s to be deleted."</span>, self.id)</span><br><span class="line">        self.update_db(deleted=<span class="keyword">True</span>, deleted_at=deleted_at,</span><br><span class="line">                       task_status=InstanceTasks.NONE)</span><br><span class="line">        self.set_servicestatus_deleted()</span><br><span class="line">        <span class="comment"># Delete associated security group</span></span><br><span class="line">        <span class="keyword">if</span> CONF.trove_security_groups_support:</span><br><span class="line">            SecurityGroup.delete_for_instance(self.db_info.id,</span><br><span class="line">                                              self.context)</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/models.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BuiltInstanceTasks</span><span class="params">(BuiltInstance, NotifyMixin, ConfigurationMixin)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_delete_resources</span><span class="params">(self, deleted_at)</span>:</span></span><br><span class="line">        server_id = self.db_info.compute_instance_id</span><br><span class="line">        old_server = self.nova_client.servers.get(server_id</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            self.guest.stop_db()</span><br><span class="line">        ...</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="keyword">if</span> use_heat:</span><br><span class="line">                <span class="comment"># Delete the server via heat</span></span><br><span class="line">                heatclient = create_heat_client(self.context)</span><br><span class="line">                name = <span class="string">'trove-%s'</span> % self.id</span><br><span class="line">                heatclient.stacks.delete(name)</span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                self.server.delete()</span><br><span class="line">        ...</span><br><span class="line">        <span class="comment"># If volume has been resized it must be manually removed in cinder</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="keyword">if</span> self.volume_id:</span><br><span class="line">                volume_client = create_cinder_client(self.context)</span><br><span class="line">                volume = volume_client.volumes.get(self.volume_id)</span><br><span class="line">                <span class="keyword">if</span> volume.status == <span class="string">"available"</span>:</span><br><span class="line">                    LOG.info(_(<span class="string">"Deleting volume %(v)s for instance: %(i)s."</span>)</span><br><span class="line">                             % &#123;<span class="string">'v'</span>: self.volume_id, <span class="string">'i'</span>: self.id&#125;)</span><br><span class="line">                    volume.delete()</span><br></pre></td></tr></table></figure>
+<h2 id="Trove-resize-volume"><a href="#Trove-resize-volume" class="headerlink" title="Trove resize volume"></a>Trove resize volume</h2><p>trove/instance/service.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">InstanceController</span><span class="params">(wsgi.Controller)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">action</span><span class="params">(self, req, body, tenant_id, id)</span>:</span></span><br><span class="line">        _actions = &#123;</span><br><span class="line">            <span class="string">'restart'</span>: self._action_restart,</span><br><span class="line">            <span class="string">'resize'</span>: self._action_resize,</span><br><span class="line">            <span class="string">'reset_password'</span>: self._action_reset_password,</span><br><span class="line">            <span class="string">'promote_to_replica_source'</span>:</span><br><span class="line">            self._action_promote_to_replica_source,</span><br><span class="line">            <span class="string">'eject_replica_source'</span>: self._action_eject_replica_source,</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_action_resize</span><span class="params">(self, instance, body)</span>:</span></span><br><span class="line">        options = &#123;</span><br><span class="line">            <span class="string">'volume'</span>: self._action_resize_volume,</span><br><span class="line">            <span class="string">'flavorRef'</span>: self._action_resize_flavor</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_action_resize_volume</span><span class="params">(self, instance, volume)</span>:</span></span><br><span class="line">        instance.resize_volume(volume[<span class="string">'size'</span>])</span><br><span class="line">        <span class="keyword">return</span> wsgi.Result(<span class="keyword">None</span>, <span class="number">202</span>)</span><br></pre></td></tr></table></figure>
+<p>trove/instance/models.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Instance</span><span class="params">(BuiltInstance)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">resize_volume</span><span class="params">(self, new_size)</span>:</span></span><br><span class="line">        <span class="function"><span class="keyword">def</span> <span class="title">_resize_resources</span><span class="params">()</span>:</span></span><br><span class="line">            self.validate_can_perform_action()</span><br><span class="line">            ...</span><br><span class="line">            self.update_db(task_status=InstanceTasks.RESIZING)</span><br><span class="line">            task_api.API(self.context).resize_volume(new_size, self.id)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> self.volume_size:</span><br><span class="line">            <span class="keyword">raise</span> exception.BadRequest(_(<span class="string">"Instance %s has no volume."</span>)</span><br><span class="line">                                       % self.id)</span><br><span class="line">        new_size_l = long(new_size)</span><br><span class="line">        validate_volume_size(new_size_l)</span><br><span class="line">        <span class="keyword">return</span> run_with_quotas(self.tenant_id,</span><br><span class="line">                               &#123;<span class="string">'volumes'</span>: new_size_l - self.volume_size&#125;,</span><br><span class="line">                               _resize_resources)</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/api.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">API</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">resize_volume</span><span class="params">(self, new_size, instance_id)</span>:</span></span><br><span class="line">        cctxt = self.client.prepare(version=self.version_cap)</span><br><span class="line">        cctxt.cast(self.context, <span class="string">"resize_volume"</span>,</span><br><span class="line">                   new_size=new_size,</span><br><span class="line">                   instance_id=instance_id)</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/manager.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Manager</span><span class="params">(periodic_task.PeriodicTasks)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">resize_volume</span><span class="params">(self, context, instance_id, new_size)</span>:</span></span><br><span class="line">        instance_tasks = models.BuiltInstanceTasks.load(context, instance_id)</span><br><span class="line">        instance_tasks.resize_volume(new_size)</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/models.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BuiltInstanceTasks</span><span class="params">(BuiltInstance, NotifyMixin, ConfigurationMixin)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">resize_volume</span><span class="params">(self, new_size)</span>:</span></span><br><span class="line">        action = ResizeVolumeAction(self, self.volume_size, new_size)</span><br><span class="line">        action.execute()</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/models.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ResizeVolumeAction</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">execute</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> self.instance.server.status == InstanceStatus.ACTIVE:</span><br><span class="line">            self._resize_active_volume()</span><br><span class="line">            self.instance.reset_task_status()</span><br><span class="line">            <span class="comment"># send usage event for size reported by cinder</span></span><br><span class="line">            volume = self.instance.volume_client.volumes.get(</span><br><span class="line">                self.instance.volume_id)</span><br><span class="line">            launched_time = timeutils.isotime(self.instance.updated)</span><br><span class="line">            modified_time = timeutils.isotime(self.instance.updated)</span><br><span class="line">            self.instance.send_usage_event(<span class="string">'modify_volume'</span>,</span><br><span class="line">                                           old_volume_size=self.old_size,</span><br><span class="line">                                           launched_at=launched_time,</span><br><span class="line">                                           modify_at=modified_time,</span><br><span class="line">                                           volume_size=volume.size)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_resize_active_volume</span><span class="params">(self)</span>:</span></span><br><span class="line">        LOG.debug(<span class="string">"Begin _resize_active_volume for id: %(id)s"</span> % &#123;</span><br><span class="line">                  <span class="string">'id'</span>: self.instance.id&#125;)</span><br><span class="line">        self._stop_db()</span><br><span class="line">        self._unmount_volume(recover_func=self._recover_restart)</span><br><span class="line">        self._detach_volume(recover_func=self._recover_mount_restart)</span><br><span class="line">        self._extend(recover_func=self._recover_full)</span><br><span class="line">        self._verify_extend()</span><br><span class="line">        <span class="comment"># if anything fails after this point, recovery is futile</span></span><br><span class="line">        self._attach_volume(recover_func=self._fail)</span><br><span class="line">        self._resize_fs(recover_func=self._fail)</span><br><span class="line">        self._mount_volume(recover_func=self._fail)</span><br><span class="line">        self.instance.restart()</span><br><span class="line">        LOG.debug(<span class="string">"End _resize_active_volume for id: %(id)s"</span> % &#123;</span><br><span class="line">                  <span class="string">'id'</span>: self.instance.id&#125;)</span><br></pre></td></tr></table></figure>
+<h2 id="Trove-resize-flavor"><a href="#Trove-resize-flavor" class="headerlink" title="Trove resize flavor"></a>Trove resize flavor</h2><p>trove/instance/service.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">InstanceController</span><span class="params">(wsgi.Controller)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">action</span><span class="params">(self, req, body, tenant_id, id)</span>:</span></span><br><span class="line">        _actions = &#123;</span><br><span class="line">            <span class="string">'restart'</span>: self._action_restart,</span><br><span class="line">            <span class="string">'resize'</span>: self._action_resize,</span><br><span class="line">            <span class="string">'reset_password'</span>: self._action_reset_password,</span><br><span class="line">            <span class="string">'promote_to_replica_source'</span>:</span><br><span class="line">            self._action_promote_to_replica_source,</span><br><span class="line">            <span class="string">'eject_replica_source'</span>: self._action_eject_replica_source,</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_action_resize</span><span class="params">(self, instance, body)</span>:</span></span><br><span class="line">        options = &#123;</span><br><span class="line">            <span class="string">'volume'</span>: self._action_resize_volume,</span><br><span class="line">            <span class="string">'flavorRef'</span>: self._action_resize_flavor</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_action_resize_flavor</span><span class="params">(self, instance, flavorRef)</span>:</span></span><br><span class="line">        new_flavor_id = utils.get_id_from_href(flavorRef)</span><br><span class="line">        instance.resize_flavor(new_flavor_id)</span><br><span class="line">        <span class="keyword">return</span> wsgi.Result(<span class="keyword">None</span>, <span class="number">202</span>)</span><br></pre></td></tr></table></figure>
+<p>trove/instance/models.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Instance</span><span class="params">(BuiltInstance)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">resize_flavor</span><span class="params">(self, new_flavor_id)</span>:</span></span><br><span class="line">        self.validate_can_perform_action()</span><br><span class="line">        ...</span><br><span class="line">        <span class="comment"># Set the task to RESIZING and begin the async call before returning.</span></span><br><span class="line">        self.update_db(task_status=InstanceTasks.RESIZING)</span><br><span class="line">        LOG.debug(<span class="string">"Instance %s set to RESIZING."</span>, self.id)</span><br><span class="line">        task_api.API(self.context).resize_flavor(self.id, old_flavor,</span><br><span class="line">                                                 new_flavor)</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/api.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">API</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">resize_flavor</span><span class="params">(self, instance_id, old_flavor, new_flavor)</span>:</span></span><br><span class="line">        cctxt = self.client.prepare(version=self.version_cap)</span><br><span class="line">        cctxt.cast(self.context, <span class="string">"resize_flavor"</span>,</span><br><span class="line">                   instance_id=instance_id,</span><br><span class="line">                   old_flavor=self._transform_obj(old_flavor),</span><br><span class="line">                   new_flavor=self._transform_obj(new_flavor))</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/manager.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Manager</span><span class="params">(periodic_task.PeriodicTasks)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">resize_flavor</span><span class="params">(self, context, instance_id, old_flavor, new_flavor)</span>:</span></span><br><span class="line">        instance_tasks = models.BuiltInstanceTasks.load(context, instance_id)</span><br><span class="line">        instance_tasks.resize_flavor(old_flavor, new_flavor)</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/models.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BuiltInstanceTasks</span><span class="params">(BuiltInstance, NotifyMixin, ConfigurationMixin)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">resize_flavor</span><span class="params">(self, old_flavor, new_flavor)</span>:</span></span><br><span class="line">        action = ResizeAction(self, old_flavor, new_flavor)</span><br><span class="line">        action.execute()</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/models.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ResizeAction</span><span class="params">(ResizeActionBase)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_initiate_nova_action</span><span class="params">(self)</span>:</span></span><br><span class="line">        self.instance.server.resize(self.new_flavor_id)</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ResizeActionBase</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_assert_processes_are_ok</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="string">"""Checks the procs; if anything is wrong, reverts the operation."""</span></span><br><span class="line">        <span class="comment"># Tell the guest to turn back on, and make sure it can start.</span></span><br><span class="line">        self._assert_guest_is_ok()</span><br><span class="line">        LOG.debug(<span class="string">"Nova guest is ok."</span>)</span><br><span class="line">        self._assert_datastore_is_ok()</span><br><span class="line">        LOG.debug(<span class="string">"Datastore is ok."</span>)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_confirm_nova_action</span><span class="params">(self)</span>:</span></span><br><span class="line">        LOG.debug(<span class="string">"Instance %s calling Compute confirm resize..."</span></span><br><span class="line">                  % self.instance.id)</span><br><span class="line">        self.instance.server.confirm_resize()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">execute</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            self._assert_datastore_is_offline()</span><br><span class="line">            self._perform_nova_action()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_perform_nova_action</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            LOG.debug(<span class="string">"Initiating nova action"</span>)</span><br><span class="line">            self._initiate_nova_action()</span><br><span class="line">            LOG.debug(<span class="string">"Waiting for nova action"</span>)</span><br><span class="line">            self._wait_for_nova_action()</span><br><span class="line">            LOG.debug(<span class="string">"Asserting nova status is ok"</span>)</span><br><span class="line">            self._assert_nova_status_is_ok()</span><br><span class="line">            need_to_revert = <span class="keyword">True</span></span><br><span class="line">            LOG.debug(<span class="string">"* * * REVERT BARRIER PASSED * * *"</span>)</span><br><span class="line">            LOG.debug(<span class="string">"Asserting nova action success"</span>)</span><br><span class="line">            self._assert_nova_action_was_successful()</span><br><span class="line">            LOG.debug(<span class="string">"Asserting processes are OK"</span>)</span><br><span class="line">            self._assert_processes_are_ok()</span><br><span class="line">            LOG.debug(<span class="string">"Confirming nova action"</span>)</span><br><span class="line">            self._confirm_nova_action()</span><br></pre></td></tr></table></figure>
+<h2 id="Trove-Backup"><a href="#Trove-Backup" class="headerlink" title="Trove Backup"></a>Trove Backup</h2><p>trove/backup/models.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Backup</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">create</span><span class="params">(cls, context, instance, name, description=None, parent_id=None)</span>:</span></span><br><span class="line">        <span class="function"><span class="keyword">def</span> <span class="title">_create_resources</span><span class="params">()</span>:</span></span><br><span class="line">            api.API(context).create_backup(backup_info, instance_id)</span><br></pre></td></tr></table></figure>
+<p>trove/guestagent/api.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">API</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">create_backup</span><span class="params">(self, backup_info)</span>:</span></span><br><span class="line">        self._cast(<span class="string">"create_backup"</span>, self.version_cap, backup_info=backup_info)</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/api.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">API</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">create_backup</span><span class="params">(self, backup_info, instance_id)</span>:</span></span><br><span class="line">        cctxt = self.client.prepare(version=self.version_cap)</span><br><span class="line">        cctxt.cast(self.context, <span class="string">"create_backup"</span>,</span><br><span class="line">                   backup_info=backup_info,</span><br><span class="line">                   instance_id=instance_id)</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/manager.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Manager</span><span class="params">(periodic_task.PeriodicTasks)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">create_backup</span><span class="params">(self, context, backup_info, instance_id)</span>:</span></span><br><span class="line">        instance_tasks = models.BuiltInstanceTasks.load(context, instance_id)</span><br><span class="line">        instance_tasks.create_backup(backup_info)</span><br></pre></td></tr></table></figure>
+<p>trove/taskmanager/models.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BuiltInstanceTasks</span><span class="params">(BuiltInstance, NotifyMixin, ConfigurationMixin)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">create_backup</span><span class="params">(self, backup_info)</span>:</span></span><br><span class="line">        LOG.info(_(<span class="string">"Initiating backup for instance %s."</span>) % self.id)</span><br><span class="line">        self.guest.create_backup(backup_info)</span><br></pre></td></tr></table></figure>
+<p>trove/guestagent/datastore/mysql/manager.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Manager</span><span class="params">(periodic_task.PeriodicTasks)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">create_backup</span><span class="params">(self, context, backup_info)</span>:</span></span><br><span class="line">        backup.backup(context, backup_info)</span><br></pre></td></tr></table></figure>
+<p>trove/guestagent/backup/<strong>init</strong>.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">backup</span><span class="params">(context, backup_info)</span>:</span></span><br><span class="line">    <span class="keyword">return</span> AGENT.execute_backup(context, backup_info)</span><br></pre></td></tr></table></figure>
+<p>trove/guestagent/backup/backupagent.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BackupAgent</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">execute_backup</span><span class="params">(self, context, backup_info,</span></span></span><br><span class="line"><span class="function"><span class="params">                       runner=RUNNER, extra_opts=EXTRA_OPTS,</span></span></span><br><span class="line"><span class="function"><span class="params">                       incremental_runner=INCREMENTAL_RUNNER)</span>:</span></span><br><span class="line">        storage = get_storage_strategy(</span><br><span class="line">            CONF.storage_strategy,</span><br><span class="line">            CONF.storage_namespace)(context)</span><br><span class="line">     ...</span><br><span class="line">        self.stream_backup_to_storage(backup_info, runner, storage,</span><br><span class="line">                                      parent_metadata, extra_opts)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">mysql.backup_incremental_strategy = &#123;<span class="string">'InnoBackupEx'</span>: <span class="string">'InnoBackupExIncremental'</span>&#125;</span><br><span class="line">mysql.backup_namespace         = trove.guestagent.strategies.backup.mysql_impl</span><br><span class="line">mysql.backup_strategy          = InnoBackupEx</span><br><span class="line">mysql.device_path              = /dev/vdb</span><br><span class="line">mysql.mount_point              = /var/lib/mysql</span><br><span class="line">mysql.replication_namespace    = trove.guestagent.strategies.replication.mysql_gtid</span><br><span class="line">mysql.replication_strategy     = MysqlGTIDReplication</span><br><span class="line">mysql.restore_namespace        = trove.guestagent.strategies.restore.mysql_impl</span><br></pre></td></tr></table></figure>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/openstack/" rel="tag">#openstack</a>
+          
+            <a href="/tags/trove/" rel="tag">#trove</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/05/04/2016-05-04-ceph-daemon-core-dump/" rel="prev">ceph daemon core dump方法</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/04/18/2016-04-18-linux-fstab-uuid/" rel="next">linux fstab配置</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Trove数据库代码"><span class="nav-number">1.</span> <span class="nav-text">Trove数据库代码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Trove-Create"><span class="nav-number">2.</span> <span class="nav-text">Trove Create</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Trove-Delete"><span class="nav-number">3.</span> <span class="nav-text">Trove Delete</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Trove-resize-volume"><span class="nav-number">4.</span> <span class="nav-text">Trove resize volume</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Trove-resize-flavor"><span class="nav-number">5.</span> <span class="nav-text">Trove resize flavor</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Trove-Backup"><span class="nav-number">6.</span> <span class="nav-text">Trove Backup</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,867 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="ceph,radosgw," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="需求实现对象存储的跨区灾备，提供应用的高可用。 概述针对对象存储的跨区灾备，在Jewel版本之前，需要通过独立的radosgw-agent进程来实现，配置步骤参考：对象存储跨机房容灾调研 但在Jewel版本中，RGW直接通过radosgw进程实现对象存储的跨区灾备，不需要额外的radosgw-agent进程，同时一些概念也有所变化；例如替换region为zonegroup，提出新的realm，pe">
+<meta name="keywords" content="ceph,radosgw">
+<meta property="og:type" content="article">
+<meta property="og:title" content="对象存储跨区灾备 - RGW MultiSite">
+<meta property="og:url" content="http://www.ictfox.cn/2017/06/12/2017-06-12-ceph-radosgw-multisite/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="需求实现对象存储的跨区灾备，提供应用的高可用。 概述针对对象存储的跨区灾备，在Jewel版本之前，需要通过独立的radosgw-agent进程来实现，配置步骤参考：对象存储跨机房容灾调研 但在Jewel版本中，RGW直接通过radosgw进程实现对象存储的跨区灾备，不需要额外的radosgw-agent进程，同时一些概念也有所变化；例如替换region为zonegroup，提出新的realm，pe">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.ictfox.cn/images/ceph-radosgw-multisite1.jpg">
+<meta property="og:updated_time" content="2017-08-10T14:04:10.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="对象存储跨区灾备 - RGW MultiSite">
+<meta name="twitter:description" content="需求实现对象存储的跨区灾备，提供应用的高可用。 概述针对对象存储的跨区灾备，在Jewel版本之前，需要通过独立的radosgw-agent进程来实现，配置步骤参考：对象存储跨机房容灾调研 但在Jewel版本中，RGW直接通过radosgw进程实现对象存储的跨区灾备，不需要额外的radosgw-agent进程，同时一些概念也有所变化；例如替换region为zonegroup，提出新的realm，pe">
+<meta name="twitter:image" content="http://www.ictfox.cn/images/ceph-radosgw-multisite1.jpg">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> 对象存储跨区灾备 - RGW MultiSite | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              对象存储跨区灾备 - RGW MultiSite
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2017-06-12T21:31:37+08:00" content="2017-06-12">
+            2017-06-12
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/ceph/" itemprop="url" rel="index">
+                  <span itemprop="name">ceph</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><h2 id="需求"><a href="#需求" class="headerlink" title="需求"></a>需求</h2><p>实现对象存储的跨区灾备，提供应用的高可用。</p>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>针对对象存储的跨区灾备，在Jewel版本之前，需要通过独立的radosgw-agent进程来实现，配置步骤参考：<a href="http://www.yangguanjun.com/2017/05/09/rgw-multi-region/" target="_blank" rel="noopener">对象存储跨机房容灾调研</a></p>
+<p>但在<code>Jewel</code>版本中，RGW直接通过<code>radosgw进程</code>实现对象存储的跨区灾备，不需要额外的<code>radosgw-agent</code>进程，同时一些概念也有所变化；例如替换<code>region</code>为<code>zonegroup</code>，提出新的<code>realm</code>，<code>period</code>概念等；</p>
+<h3 id="配置参考"><a href="#配置参考" class="headerlink" title="配置参考"></a>配置参考</h3><p><a href="http://docs.ceph.com/docs/jewel/radosgw/multisite/" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/radosgw/multisite/</a></p>
+<p><a href="https://access.redhat.com/documentation/en/red-hat-ceph-storage/2/paged/object-gateway-guide-for-red-hat-enterprise-linux/chapter-8-multi-site" target="_blank" rel="noopener">https://access.redhat.com/documentation/en/red-hat-ceph-storage/2/paged/object-gateway-guide-for-red-hat-enterprise-linux/chapter-8-multi-site</a></p>
+<p>ceph官网的配置<code>multisite</code>的文档不完善，还有一些错误；参考RedHat的文档比较好</p>
+<h2 id="环境"><a href="#环境" class="headerlink" title="环境"></a>环境</h2><p>Ceph版本：Jewel 10.2.3</p>
+<p>Ceph Cluster：两个Ceph Cluster集群（虚拟机搭建）</p>
+<h2 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h2><h3 id="前提"><a href="#前提" class="headerlink" title="前提"></a>前提</h3><p>两个Ceph Cluster集群，每个上面选择一台机器提供radosgw服务；</p>
+<table>
+<thead>
+<tr>
+<th>cluster</th>
+<th>节点</th>
+<th>radosgw节点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ceph集群1</td>
+<td>ceph21, ceph22, ceph23</td>
+<td>ceph21</td>
+</tr>
+<tr>
+<td>Ceph集群2</td>
+<td>ceph31, ceph32, ceph33</td>
+<td>ceph31</td>
+</tr>
+</tbody>
+</table>
+<h3 id="规划"><a href="#规划" class="headerlink" title="规划"></a>规划</h3><p>对<code>RGW MULTISITE</code>来说，在一个<code>realm</code>里，需要配置一个<code>master zonegroup</code>，一个或多个<code>secondary zonegroups</code>（貌似可以配置多个独立的<code>zonegroup</code>）；在一个<code>zonegroup</code>中需要配置一个<code>master zone</code>，一个或多个<code>secondary zones</code>；<br><img src="/images/ceph-radosgw-multisite1.jpg" alt="radosgw multisite"></p>
+<p>而在我们的应用中，我们只需要北京的两个sites做灾备，所以我们的配置如下：</p>
+<p>配置一个<code>realm</code>，包含一个<code>master zonegroup</code>，里面配置ceph集群1作为<code>master zone</code>，ceph集群2作为<code>secondary zone</code>；</p>
+<h3 id="步骤"><a href="#步骤" class="headerlink" title="步骤"></a>步骤</h3><h4 id="ceph21节点配置master-zone"><a href="#ceph21节点配置master-zone" class="headerlink" title="ceph21节点配置master zone"></a>ceph21节点配置master zone</h4><ol>
+<li><p>创建需要的pools</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">root@ceph21:~/mikeyang/rgw<span class="comment"># cat rgwPoolCreate.sh</span></span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">ceph osd pool create .rgw.root 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.control 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.data.root 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.gc 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.log 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.intent-log 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.usage 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.users.keys 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.users.email 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.users.swift 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.users.uid 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.buckets.index 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.buckets.data 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.meta 32 32</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>创建realm，zonegroup和master zone</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># create realm, zonegroup and zone</span></span><br><span class="line">radosgw-admin realm create --rgw-realm=cloudin --default</span><br><span class="line">radosgw-admin zonegroup create --rgw-zonegroup=bj --endpoints=http://&lt;self-ip&gt;:80 --rgw-realm=cloudin --master --default</span><br><span class="line">radosgw-admin zone create --rgw-zonegroup=bj --rgw-zone=bj-zone02 --endpoints=http://&lt;self-ip&gt;:80 --default --master</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>删除default的zonegrou，zone，更新period</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># remove default zonegroup and zone, which maybe not needed</span></span><br><span class="line">radosgw-admin zonegroup remove --rgw-zonegroup=default --rgw-zone=default</span><br><span class="line">radosgw-admin period update --commit</span><br><span class="line">radosgw-admin zone delete --rgw-zone=default</span><br><span class="line">radosgw-admin period update --commit</span><br><span class="line">radosgw-admin zonegroup delete --rgw-zonegroup=default</span><br><span class="line">radosgw-admin period update --commit</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>创建同步需要的user</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin user create --uid=zone.user --display-name=<span class="string">"Zone User"</span> --system</span><br><span class="line">radosgw-admin zone modify --rgw-zone=bj-zone02 --access-key=&#123;system-key&#125; --secret=&#123;secret&#125;</span><br><span class="line">radosgw-admin period update --commit</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>注释：–access-key={system-key} –secret={secret}，对应user create中的access-key, secret</p>
+</blockquote>
+</li>
+</ol>
+<ol>
+<li><p>修改ceph.conf，启动radosgw</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/ceph/ceph.conf</span><br><span class="line">[client.rgw.ceph21]</span><br><span class="line">   host = ceph21</span><br><span class="line">   rgw_frontends = <span class="string">"civetweb port=80"</span></span><br><span class="line">   rgw_zone=bj-zone02</span><br><span class="line"> </span><br><span class="line">service radosgw start id=rgw.ceph21</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h4 id="ceph31节点配置secondary-zone"><a href="#ceph31节点配置secondary-zone" class="headerlink" title="ceph31节点配置secondary zone"></a>ceph31节点配置secondary zone</h4><ol>
+<li><p>创建需要的pools</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">root@ceph31:~/mikeyang/rgw<span class="comment"># cat rgwPoolCreate.sh</span></span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">ceph osd pool create .rgw.root 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.control 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.data.root 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.gc 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.log 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.intent-log 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.usage 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.users.keys 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.users.email 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.users.swift 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.users.uid 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.buckets.index 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.buckets.data 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.meta 32 32</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>获取master zone的realm，zonegroup，period信息</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin realm pull --url=http://&lt;master-zone-ip&gt;:80 --access-key=&#123;system-key&#125; --secret=&#123;secret&#125;</span><br><span class="line">radosgw-admin realm default --rgw-realm=cloudin</span><br><span class="line">radosgw-admin period pull --url=http://&lt;master-zone-ip&gt;:80 --access-key=&#123;system-key&#125; --secret=&#123;secret&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>注释：–access-key={system-key} –secret={secret}，这部分是master zone的同步user的access-key, secret</p>
+</blockquote>
+</li>
+<li><p>创建secondary zone</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin zone create --rgw-zonegroup=bj --rgw-zone=bj-zone03 --endpoints=http://&lt;self-ip&gt;:80 --access-key=&#123;system-key&#125; --secret=&#123;secret&#125;</span><br><span class="line">radosgw-admin zone delete --rgw-zone=default</span><br><span class="line">radosgw-admin period update --commit</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>注释：–access-key={system-key} –secret={secret}，这部分是master zone的同步user的access-key, secret</p>
+</blockquote>
+</li>
+<li><p>修改ceph.conf，启动radosgw</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/ceph/ceph.conf</span><br><span class="line">[client.rgw.ceph31]</span><br><span class="line">   host = ceph31</span><br><span class="line">   rgw_frontends = <span class="string">"civetweb port=80"</span></span><br><span class="line">   rgw_zone=bj-zone03</span><br><span class="line"> </span><br><span class="line">service radosgw start id=rgw.ceph31</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h4 id="检查集群状态"><a href="#检查集群状态" class="headerlink" title="检查集群状态"></a>检查集群状态</h4><ol>
+<li><p>master zone节点检查</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">root@ceph21:~/mikeyang/rgw<span class="comment"># radosgw-admin sync status</span></span><br><span class="line">2016-10-26 11:18:45.124701 7fd18c502900  0 error <span class="keyword">in</span> read_id <span class="keyword">for</span> id  : (2) No such file or directory</span><br><span class="line">2016-10-26 11:18:45.125156 7fd18c502900  0 error <span class="keyword">in</span> read_id <span class="keyword">for</span> id  : (2) No such file or directory</span><br><span class="line">          realm 0b64b20e-2a90-4fc4-a1d6-57fc67457564 (cloudin)</span><br><span class="line">      zonegroup 1bfc8ccd-01ae-477e-a332-af4cb00d3f20 (bj)</span><br><span class="line">           zone 9f621425-cd68-4d2f-b3e7-e85814caef2c (bj-zone02)</span><br><span class="line">  metadata sync no sync (zone is master)</span><br><span class="line">      data sync <span class="built_in">source</span>: 249b96bd-8f86-4326-80e0-7fceca78dec1 (bj-zone03)</span><br><span class="line">                        syncing</span><br><span class="line">                        full sync: 0/128 shards</span><br><span class="line">                        incremental sync: 128/128 shards</span><br><span class="line">                        data is caught up with <span class="built_in">source</span></span><br><span class="line">root@ceph21:~/mikeyang/rgw<span class="comment">#</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>secondary zone节点检查</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">root@ceph31:~/mikeyang/rgw<span class="comment"># radosgw-admin sync status</span></span><br><span class="line">2016-10-26 11:19:41.715683 7fa016bef900  0 error <span class="keyword">in</span> read_id <span class="keyword">for</span> id  : (2) No such file or directory</span><br><span class="line">2016-10-26 11:19:41.716289 7fa016bef900  0 error <span class="keyword">in</span> read_id <span class="keyword">for</span> id  : (2) No such file or directory</span><br><span class="line">          realm 0b64b20e-2a90-4fc4-a1d6-57fc67457564 (cloudin)</span><br><span class="line">      zonegroup 1bfc8ccd-01ae-477e-a332-af4cb00d3f20 (bj)</span><br><span class="line">           zone 249b96bd-8f86-4326-80e0-7fceca78dec1 (bj-zone03)</span><br><span class="line">  metadata sync syncing</span><br><span class="line">                full sync: 0/64 shards</span><br><span class="line">                metadata is caught up with master</span><br><span class="line">                incremental sync: 64/64 shards</span><br><span class="line">      data sync <span class="built_in">source</span>: 9f621425-cd68-4d2f-b3e7-e85814caef2c (bj-zone02)</span><br><span class="line">                        syncing</span><br><span class="line">                        full sync: 0/128 shards</span><br><span class="line">                        incremental sync: 128/128 shards</span><br><span class="line">                        data is caught up with <span class="built_in">source</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>注释：上述输出中有两条error log输出，这个是radosgw的一个bug，还没修复，对正确性没有影响。</p>
+</blockquote>
+</li>
+</ol>
+<h2 id="数据迁移"><a href="#数据迁移" class="headerlink" title="数据迁移"></a>数据迁移</h2><p>之前说过，<code>Jewel</code>版本的radosgw对应的pool和使用方式都跟<code>Hammer</code>有不少区别，所以在从<code>Hammer</code>升级到<code>Jewel</code>后，需要考虑之前的对象存储数据迁移；</p>
+<p>鉴于我们现在对象存储仅仅<code>RDS</code>在使用，数据量也不大，所以在中断对象存储服务的情况下，迁移是比较容易完成的，步骤如下：</p>
+<ol>
+<li><p>导出现有的user信息；</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">openstack@BJBGP02-02-01:~$ radosgw-admin metadata list user</span><br><span class="line">[</span><br><span class="line">    <span class="string">"cloudInS3User"</span></span><br><span class="line">]</span><br><span class="line">openstack@BJBGP02-02-01:~$ radosgw-admin user info --uid=cloudInS3User</span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"user_id"</span>: <span class="string">"cloudInS3User"</span>,</span><br><span class="line">    <span class="string">"display_name"</span>: <span class="string">"user for s3"</span>,</span><br><span class="line">    <span class="string">"email"</span>: <span class="string">""</span>,</span><br><span class="line">    <span class="string">"suspended"</span>: 0,</span><br><span class="line">    <span class="string">"max_buckets"</span>: 1000,</span><br><span class="line">    <span class="string">"auid"</span>: 0,</span><br><span class="line">    <span class="string">"subusers"</span>: [],</span><br><span class="line">    <span class="string">"keys"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"user"</span>: <span class="string">"cloudInS3User"</span>,</span><br><span class="line">            <span class="string">"access_key"</span>: <span class="string">"N8JYDX1HCAM55XDWGL10"</span>,</span><br><span class="line">            <span class="string">"secret_key"</span>: <span class="string">"uRpR6EbR9YkyjfvdQmuJq0VgEx1a0KONl0NCKlJ9"</span></span><br><span class="line">        &#125;</span><br><span class="line">    ],</span><br><span class="line">    <span class="string">"swift_keys"</span>: [],</span><br><span class="line">    <span class="string">"caps"</span>: [],</span><br><span class="line">    <span class="string">"op_mask"</span>: <span class="string">"read, write, delete"</span>,</span><br><span class="line">    <span class="string">"default_placement"</span>: <span class="string">""</span>,</span><br><span class="line">    <span class="string">"placement_tags"</span>: [],</span><br><span class="line">    <span class="string">"bucket_quota"</span>: &#123;</span><br><span class="line">        <span class="string">"enabled"</span>: <span class="literal">false</span>,</span><br><span class="line">        <span class="string">"max_size_kb"</span>: -1,</span><br><span class="line">        <span class="string">"max_objects"</span>: -1</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"user_quota"</span>: &#123;</span><br><span class="line">        <span class="string">"enabled"</span>: <span class="literal">false</span>,</span><br><span class="line">        <span class="string">"max_size_kb"</span>: -1,</span><br><span class="line">        <span class="string">"max_objects"</span>: -1</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"temp_url_keys"</span>: []</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p> 当前系统只有一个用于RDS备份的user：cloudInS3User</p>
+</li>
+<li><p>导出现有user下的bucket信息；</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">openstack@BJBGP02-02-01:~$ radosgw-admin metadata list bucket</span><br><span class="line">[</span><br><span class="line">    <span class="string">"database_backups"</span></span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>导出现有bucket下的对象；</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">	ictfox@YangGuanjun-MacBook-Pro:~$ s3cmd ls s3://database_backups</span><br><span class="line">	2016-09-01 08:22    276864   s3://database_backups/03f55add-fda5-404e-99b2-04b34b32ec56.xbstream.gz.enc</span><br><span class="line">	2016-09-05 03:14    279232   s3://database_backups/147a2c80-0f7d-4ecd-9c4a-e9a48b7cd703.xbstream.gz.enc</span><br><span class="line">...</span><br><span class="line">	2016-09-01 09:38    278320   s3://database_backups/dbfee332-5f4e-4596-bef6-63797a24d9e0.xbstream.gz.enc</span><br><span class="line">	2016-08-31 09:54    276144   s3://database_backups/f703131f-7dd7-43a6-9b20-7fe33a9fbe59.xbstream.gz.enc</span><br></pre></td></tr></table></figure>
+<p> 然后通过命令把bucket下的对象保存下来：<code>s3cmd get s3://database_backups/OBJECT LOCAL_FILE</code></p>
+</li>
+<li><p>radosgw升级后恢复数据</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># radosgw-admin user create --uid="cloudInS3User" --display-name="user for s3" --access-key=N8JYDX1HCAM55XDWGL10 --secret=uRpR6EbR9YkyjfvdQmuJq0VgEx1a0KONl0NCKlJ9</span></span><br></pre></td></tr></table></figure>
+<p> 通过测试的RDS实例创建一备份，会自动创建bucket: database_backups<br> 然后恢复第3步中备份下来的各个对象文件</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># s3cmd put FILE [FILE...] s3://database_backups/</span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag">#ceph</a>
+          
+            <a href="/tags/radosgw/" rel="tag">#radosgw</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/06/15/2017-06-15-cephfs-stripe/" rel="prev">cephfs的stripe配置</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/06/08/2017-06-08-cephfs-client-debug/" rel="next">cephfs kernel client debug</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#需求"><span class="nav-number">1.</span> <span class="nav-text">需求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">2.</span> <span class="nav-text">概述</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#配置参考"><span class="nav-number">2.1.</span> <span class="nav-text">配置参考</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#环境"><span class="nav-number">3.</span> <span class="nav-text">环境</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#配置"><span class="nav-number">4.</span> <span class="nav-text">配置</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#前提"><span class="nav-number">4.1.</span> <span class="nav-text">前提</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#规划"><span class="nav-number">4.2.</span> <span class="nav-text">规划</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#步骤"><span class="nav-number">4.3.</span> <span class="nav-text">步骤</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#ceph21节点配置master-zone"><span class="nav-number">4.3.1.</span> <span class="nav-text">ceph21节点配置master zone</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ceph31节点配置secondary-zone"><span class="nav-number">4.3.2.</span> <span class="nav-text">ceph31节点配置secondary zone</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#检查集群状态"><span class="nav-number">4.3.3.</span> <span class="nav-text">检查集群状态</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据迁移"><span class="nav-number">5.</span> <span class="nav-text">数据迁移</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

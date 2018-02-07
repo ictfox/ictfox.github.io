@@ -1,0 +1,792 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="tools," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="概述最近有需求要分析定位下开发的文件存储网关的内存泄露问题，对比了几款后选择了valgrind这款工具，功能很是强大，这里我还只使用了一些基本的功能，记录如下。 Valgrind支持很多工具: Memcheck，Addrcheck，Cachegrind，Massif，Helgrind和Callgrind等。 官网：http://valgrind.org/ 安装1234567$ wget ftp:/">
+<meta name="keywords" content="tools">
+<meta property="og:type" content="article">
+<meta property="og:title" content="valgrind简介和使用">
+<meta property="og:url" content="http://www.ictfox.cn/2017/12/29/2017-12-29-valgrind-intro-usage/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述最近有需求要分析定位下开发的文件存储网关的内存泄露问题，对比了几款后选择了valgrind这款工具，功能很是强大，这里我还只使用了一些基本的功能，记录如下。 Valgrind支持很多工具: Memcheck，Addrcheck，Cachegrind，Massif，Helgrind和Callgrind等。 官网：http://valgrind.org/ 安装1234567$ wget ftp:/">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2017-12-29T00:41:47.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="valgrind简介和使用">
+<meta name="twitter:description" content="概述最近有需求要分析定位下开发的文件存储网关的内存泄露问题，对比了几款后选择了valgrind这款工具，功能很是强大，这里我还只使用了一些基本的功能，记录如下。 Valgrind支持很多工具: Memcheck，Addrcheck，Cachegrind，Massif，Helgrind和Callgrind等。 官网：http://valgrind.org/ 安装1234567$ wget ftp:/">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> valgrind简介和使用 | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              valgrind简介和使用
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2017-12-29T08:40:17+08:00" content="2017-12-29">
+            2017-12-29
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/tools/" itemprop="url" rel="index">
+                  <span itemprop="name">tools</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>最近有需求要分析定位下开发的文件存储网关的内存泄露问题，对比了几款后选择了<code>valgrind</code>这款工具，功能很是强大，这里我还只使用了一些基本的功能，记录如下。</p>
+<p><code>Valgrind</code>支持很多工具: <code>Memcheck</code>，<code>Addrcheck</code>，<code>Cachegrind</code>，<code>Massif</code>，<code>Helgrind</code>和<code>Callgrind</code>等。</p>
+<p>官网：<a href="http://valgrind.org/" target="_blank" rel="noopener">http://valgrind.org/</a></p>
+<h2 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ wget ftp://sourceware.org/pub/valgrind/valgrind-3.13.0.tar.bz2</span><br><span class="line">$ bzip2 -d valgrind-3.13.0.tar.bz2</span><br><span class="line">$ tar -xf valgrind-3.13.0.tar</span><br><span class="line">$ <span class="built_in">cd</span> valgrind-3.13.0/</span><br><span class="line">$ ./configure</span><br><span class="line">$ make</span><br><span class="line">$ sudo make install</span><br></pre></td></tr></table></figure>
+<h2 id="使用与分析"><a href="#使用与分析" class="headerlink" title="使用与分析"></a>使用与分析</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">$ valgrind --<span class="built_in">help</span></span><br><span class="line">usage: valgrind [options] prog-and-args</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">常用的一些options有：</span><br><span class="line">--trace-children=no|yes   Valgrind-ise child processes (follow execve)? [no]</span><br><span class="line">--<span class="built_in">log</span>-file=&lt;file&gt;         <span class="built_in">log</span> messages to &lt;file&gt;</span><br><span class="line">--leak-check=no|summary|full     search <span class="keyword">for</span> memory leaks at <span class="built_in">exit</span>?  [summary]</span><br><span class="line"></span><br><span class="line">--show-reachable=yes             same as --show-leak-kinds=all</span><br><span class="line">    --show-reachable=no --show-possibly-lost=yes</span><br><span class="line">                                     same as --show-leak-kinds=definite,possible</span><br><span class="line">    --show-reachable=no --show-possibly-lost=no</span><br><span class="line">                                     same as --show-leak-kinds=definite</span><br></pre></td></tr></table></figure>
+<p>常用命令格式：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ /usr/<span class="built_in">local</span>/bin/valgrind --<span class="built_in">log</span>-file=mylog ./file-gateway</span><br></pre></td></tr></table></figure>
+<p><code>valgrind</code>的<code>memcheck</code>组件支持的内存泄露检查大概有：</p>
+<ol>
+<li>读写非法的内存</li>
+<li>访问未初始化的内存</li>
+<li>访问已经释放了的内存</li>
+<li>申请的内存没有释放</li>
+<li>重复释放内存</li>
+<li>释放非法内存</li>
+<li><code>source</code>和<code>destination</code>内存的重叠</li>
+</ol>
+<h3 id="uninitialised-byte-s"><a href="#uninitialised-byte-s" class="headerlink" title="uninitialised byte(s)"></a>uninitialised byte(s)</h3><p>检查出程序中未初始化而访问的变量</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">==1350634== Thread 14:</span><br><span class="line">==1350634== Syscall param setxattr(value) points to uninitialised byte(s)</span><br><span class="line">==1350634==    at 0x6D9EB8A: setxattr (<span class="keyword">in</span> /usr/lib64/libc-2.17.so)</span><br><span class="line">==1350634==    by 0x487268: VFS::file_setxattr(std::string, std::string, void*, int) (vfs.cc:64)</span><br><span class="line">==1350634==    by 0x488066: FileGwVFS::file_setxattr(std::string, std::string, void*, int) (vfs.cc:175)</span><br><span class="line">==1350634==    by 0x459583: FileGateway::set_file_xattr(std::string, sgwd_xattr*) (file_gateway.cc:742)</span><br><span class="line">==1350634==    by 0x463706: FileGwRedisWorkItem::update_file_xattr_status(gateway_file_status) (redis_work_item.cc:703)</span><br><span class="line">==1350634==    by 0x4641B1: FileGwRedisWorkItem::file_upload() (redis_work_item.cc:793)</span><br><span class="line">==1350634==    by 0x45F89E: FileGwRedisWorkItem::process() (redis_work_item.cc:190)</span><br><span class="line">==1350634==    by 0x486532: WorkThread::process_work_item() (work_thread.cc:49)</span><br><span class="line">==1350634==    by 0x486850: ShardedWorkThread::entry() (work_thread.cc:112)</span><br><span class="line">==1350634==    by 0x481B58: Thread::_entry_func(void*) (thread.cc:74)</span><br><span class="line">==1350634==    by 0x4E3DDC4: start_thread (<span class="keyword">in</span> /usr/lib64/libpthread-2.17.so)</span><br><span class="line">==1350634==    by 0x6D9FCEC: <span class="built_in">clone</span> (<span class="keyword">in</span> /usr/lib64/libc-2.17.so)</span><br><span class="line">==1350634==  Address 0x115d95a4 is on thread 14<span class="string">'s stack</span></span><br><span class="line"><span class="string">==1350634==  in frame #4, created by FileGwRedisWorkItem::update_file_xattr_status(gateway_file_status) (redis_work_item.cc:697)</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">==1350634== Thread 19:</span><br><span class="line">==1350634== Conditional jump or move depends on uninitialised value(s)</span><br><span class="line">==1350634==    at 0x465155: FileGwRedisWorkItem::callback(void*) (redis_work_item.cc:946)</span><br><span class="line">==1350634==    by 0x481021: FileGwS3WorkItem::postProcess() (s3_work_item.cc:244)</span><br><span class="line">==1350634==    by 0x486551: WorkThread::process_work_item() (work_thread.cc:50)</span><br><span class="line">==1350634==    by 0x48666E: WorkThread::entry() (work_thread.cc:78)</span><br><span class="line">==1350634==    by 0x481B58: Thread::_entry_func(void*) (thread.cc:74)</span><br><span class="line">==1350634==    by 0x4E3DDC4: start_thread (<span class="keyword">in</span> /usr/lib64/libpthread-2.17.so)</span><br><span class="line">==1350634==    by 0x6D9FCEC: <span class="built_in">clone</span> (<span class="keyword">in</span> /usr/lib64/libc-2.17.so)</span><br></pre></td></tr></table></figure>
+<h3 id="Invalid-read-write"><a href="#Invalid-read-write" class="headerlink" title="Invalid read/write"></a>Invalid read/write</h3><p>读取非法地址，通常是继续访问释放后的内存空间</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">==1346085== Thread 14:</span><br><span class="line">==1346085== Invalid <span class="built_in">read</span> of size 4</span><br><span class="line">==1346085==    at 0x4E40BB0: pthread_mutex_unlock (<span class="keyword">in</span> /usr/lib64/libpthread-2.17.so)</span><br><span class="line">==1346085==    by 0x4559FC: __gthread_mutex_unlock(pthread_mutex_t*) (gthr-default.h:778)</span><br><span class="line">==1346085==    by 0x45B6C1: std::mutex::unlock() (mutex:152)</span><br><span class="line">==1346085==    by 0x489CA8: std::lock_guard&lt;std::mutex&gt;::~lock_guard() (mutex:420)</span><br><span class="line">==1346085==    by 0x4895BB: WorkItemCompletion::finish() (thread_work_item.cc:47)</span><br><span class="line">==1346085==    by 0x48971E: ThreadWorkItem::postProcess() (thread_work_item.cc:70)</span><br><span class="line">==1346085==    by 0x45F721: RedisWorkItem::postProcess() (redis_work_item.cc:139)</span><br><span class="line">==1346085==    by 0x45FFED: FileGwRedisWorkItem::postProcess() (redis_work_item.cc:234)</span><br><span class="line">==1346085==    by 0x486761: WorkThread::process_work_item() (work_thread.cc:50)</span><br><span class="line">==1346085==    by 0x486A60: ShardedWorkThread::entry() (work_thread.cc:112)</span><br><span class="line">==1346085==    by 0x481D68: Thread::_entry_func(void*) (thread.cc:74)</span><br><span class="line">==1346085==    by 0x4E3DDC4: start_thread (<span class="keyword">in</span> /usr/lib64/libpthread-2.17.so)</span><br><span class="line">==1346085==  Address 0xabd3788 is 24 bytes inside a block of size 88 free<span class="string">'d</span></span><br><span class="line"><span class="string">==1346085==    at 0x4C2B1CD: operator delete(void*) (vg_replace_malloc.c:576)</span></span><br><span class="line"><span class="string">==1346085==    by 0x489253: WorkItemCompletion::~WorkItemCompletion() (thread_work_item.cc:29)</span></span><br><span class="line"><span class="string">==1346085==    by 0x4572E4: FileGateway::issue_filegw_redis_workitem(FileOp*, FileInfo*, bool, bool, void (*)(void*), void*) (file_gateway.cc:298)</span></span><br><span class="line"><span class="string">==1346085==    by 0x457D31: FileGateway::do_read(FileOp*) (file_gateway.cc:455)</span></span><br><span class="line"><span class="string">==1346085==    by 0x455298: GatewayWorkItem::process() (gateway_work_item.cc:74)</span></span><br><span class="line"><span class="string">==1346085==    by 0x486742: WorkThread::process_work_item() (work_thread.cc:49)</span></span><br><span class="line"><span class="string">==1346085==    by 0x48687E: WorkThread::entry() (work_thread.cc:78)</span></span><br><span class="line"><span class="string">==1346085==    by 0x481D68: Thread::_entry_func(void*) (thread.cc:74)</span></span><br><span class="line"><span class="string">==1346085==    by 0x4E3DDC4: start_thread (in /usr/lib64/libpthread-2.17.so)</span></span><br><span class="line"><span class="string">==1346085==    by 0x6D9FCEC: clone (in /usr/lib64/libc-2.17.so)</span></span><br><span class="line"><span class="string">==1346085==  Block was alloc'</span>d at</span><br><span class="line">==1346085==    at 0x4C2A243: operator new(unsigned long) (vg_replace_malloc.c:334)</span><br><span class="line">==1346085==    by 0x457171: FileGateway::issue_filegw_redis_workitem(FileOp*, FileInfo*, bool, bool, void (*)(void*), void*) (file_gateway.cc:286)</span><br><span class="line">==1346085==    by 0x457D31: FileGateway::do_read(FileOp*) (file_gateway.cc:455)</span><br><span class="line">==1346085==    by 0x455298: GatewayWorkItem::process() (gateway_work_item.cc:74)</span><br><span class="line">==1346085==    by 0x486742: WorkThread::process_work_item() (work_thread.cc:49)</span><br><span class="line">==1346085==    by 0x48687E: WorkThread::entry() (work_thread.cc:78)</span><br><span class="line">==1346085==    by 0x481D68: Thread::_entry_func(void*) (thread.cc:74)</span><br><span class="line">==1346085==    by 0x4E3DDC4: start_thread (<span class="keyword">in</span> /usr/lib64/libpthread-2.17.so)</span><br><span class="line">==1346085==    by 0x6D9FCEC: <span class="built_in">clone</span> (<span class="keyword">in</span> /usr/lib64/libc-2.17.so)</span><br></pre></td></tr></table></figure>
+<h3 id="SUMMARY"><a href="#SUMMARY" class="headerlink" title="SUMMARY"></a>SUMMARY</h3><p>在<code>valgrind</code>最后会有内存分析的总结</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">==1366931== HEAP SUMMARY:</span><br><span class="line">==1366931==     <span class="keyword">in</span> use at <span class="built_in">exit</span>: 41,110 bytes <span class="keyword">in</span> 1,019 blocks</span><br><span class="line">==1366931==   total heap usage: 1,275,222 allocs, 1,274,203 frees, 334,495,820 bytes allocated</span><br><span class="line">==1366931==</span><br><span class="line">==1366931== LEAK SUMMARY:</span><br><span class="line">==1366931==    definitely lost: 11,632 bytes <span class="keyword">in</span> 191 blocks</span><br><span class="line">==1366931==    indirectly lost: 80 bytes <span class="keyword">in</span> 2 blocks</span><br><span class="line">==1366931==      possibly lost: 608 bytes <span class="keyword">in</span> 1 blocks</span><br><span class="line">==1366931==    still reachable: 28,790 bytes <span class="keyword">in</span> 825 blocks</span><br><span class="line">==1366931==                       of <span class="built_in">which</span> reachable via heuristic:</span><br><span class="line">==1366931==                         stdstring          : 145 bytes <span class="keyword">in</span> 4 blocks</span><br><span class="line">==1366931==         suppressed: 0 bytes <span class="keyword">in</span> 0 blocks</span><br><span class="line">==1366931== Rerun with --leak-check=full to see details of leaked memory</span><br><span class="line">==1366931==</span><br><span class="line">==1366931== For counts of detected and suppressed errors, rerun with: -v</span><br><span class="line">==1366931== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)</span><br></pre></td></tr></table></figure>
+<p><code>LEAK SUMMARY</code>：内存泄露信息的总结，详细信息从前面的log中查找</p>
+<ul>
+<li><code>definitely lost</code>: 肯定丢失的内存，这部分必须处理</li>
+<li><code>indirectly lost</code>: 间接丢失的内存，可能是一个<code>structure</code>里指向的内存</li>
+<li><code>possibly lost</code>: 可能丢失的部分，这是由于C/C++语言指针处理的特点造成的，可能不太准确</li>
+<li><code>still reachable</code>: 程序可能是ok的，可以配置<code>--show-reachable=no</code>不显示这部分</li>
+</ul>
+<p><strong>若想显示泄露内存的详细信息，使用参数<code>--leak-check=full</code></strong></p>
+<p><code>/usr/local/bin/valgrind --leak-check=full --log-file=mylog  ./flle-gateway</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">==1373210== HEAP SUMMARY:</span><br><span class="line">==1373210==     <span class="keyword">in</span> use at <span class="built_in">exit</span>: 30,758 bytes <span class="keyword">in</span> 843 blocks</span><br><span class="line">==1373210==   total heap usage: 405,641 allocs, 404,798 frees, 44,538,821 bytes allocated</span><br><span class="line">==1373210==</span><br><span class="line">==1373210== 608 bytes <span class="keyword">in</span> 1 blocks are possibly lost <span class="keyword">in</span> loss record 605 of 613</span><br><span class="line">==1373210==    at 0x4C2B9B5: calloc (vg_replace_malloc.c:711)</span><br><span class="line">==1373210==    by 0x4011DE4: _dl_allocate_tls (<span class="keyword">in</span> /usr/lib64/ld-2.17.so)</span><br><span class="line">==1373210==    by 0x4E3E960: pthread_create@@GLIBC_2.2.5 (<span class="keyword">in</span> /usr/lib64/libpthread-2.17.so)</span><br><span class="line">==1373210==    by 0x489969: libsgsvc_init (<span class="keyword">in</span> /home/yangguanjun3/storage-file-gateway/userspace/build/storage-flle-gw)</span><br><span class="line">==1373210==    by 0x456B06: FileGateway::init_netlink() (file_gateway.cc:218)</span><br><span class="line">==1373210==    by 0x456CA4: FileGateway::init() (file_gateway.cc:234)</span><br><span class="line">==1373210==    by 0x4537A2: main (main.cc:79)</span><br><span class="line">==1373210==</span><br><span class="line">==1373210== 1,360 bytes <span class="keyword">in</span> 17 blocks are definitely lost <span class="keyword">in</span> loss record 611 of 613</span><br><span class="line">==1373210==    at 0x4C29C23: malloc (vg_replace_malloc.c:299)</span><br><span class="line">==1373210==    by 0x4785C7: Aws::Utils::Stream::PreallocatedStreamBuf* Aws::New&lt;Aws::Utils::Stream::PreallocatedStreamBuf, Aws::Utils::Array&lt;unsigned char&gt;*, unsigned long&gt;(char const*, Aws::Utils::Array&lt;unsigned char&gt;*&amp;&amp;, unsigned long&amp;&amp;) (AWSMemory.h:70)</span><br><span class="line">==1373210==    by 0x473446: S3BackendStorage::put_object_from_file_slice(std::basic_string&lt;char, std::char_traits&lt;char&gt;, Aws::Allocator&lt;char&gt; &gt;, std::basic_string&lt;char, std::char_traits&lt;char&gt;, Aws::Allocator&lt;char&gt; &gt;, std::string const&amp;, unsigned long, unsigned long) (s3_storage.cc:294)</span><br><span class="line">==1373210==    by 0x480110: FileGwS3WorkItem::file_upload() (s3_work_item.cc:147)</span><br><span class="line">==1373210==    by 0x480C0D: FileGwS3WorkItem::process() (s3_work_item.cc:221)</span><br><span class="line">==1373210==    by 0x486316: WorkThread::process_work_item() (work_thread.cc:49)</span><br><span class="line">==1373210==    by 0x486452: WorkThread::entry() (work_thread.cc:78)</span><br><span class="line">==1373210==    by 0x48193C: Thread::_entry_func(void*) (thread.cc:74)</span><br><span class="line">==1373210==    by 0x4E3DDC4: start_thread (<span class="keyword">in</span> /usr/lib64/libpthread-2.17.so)</span><br><span class="line">==1373210==    by 0x6D9FCEC: <span class="built_in">clone</span> (<span class="keyword">in</span> /usr/lib64/libc-2.17.so)</span><br><span class="line">==1373210==</span><br><span class="line">==1373210== LEAK SUMMARY:</span><br><span class="line">==1373210==    definitely lost: 1,360 bytes <span class="keyword">in</span> 17 blocks</span><br><span class="line">==1373210==    indirectly lost: 0 bytes <span class="keyword">in</span> 0 blocks</span><br><span class="line">==1373210==      possibly lost: 608 bytes <span class="keyword">in</span> 1 blocks</span><br><span class="line">==1373210==    still reachable: 28,790 bytes <span class="keyword">in</span> 825 blocks</span><br><span class="line">==1373210==                       of <span class="built_in">which</span> reachable via heuristic:</span><br><span class="line">==1373210==                         stdstring          : 145 bytes <span class="keyword">in</span> 4 blocks</span><br><span class="line">==1373210==         suppressed: 0 bytes <span class="keyword">in</span> 0 blocks</span><br><span class="line">==1373210== Reachable blocks (those to <span class="built_in">which</span> a pointer was found) are not shown.</span><br><span class="line">==1373210== To see them, rerun with: --leak-check=full --show-leak-kinds=all</span><br><span class="line">==1373210==</span><br><span class="line">==1373210== For counts of detected and suppressed errors, rerun with: -v</span><br><span class="line">==1373210== ERROR SUMMARY: 2 errors from 2 contexts (suppressed: 0 from 0)</span><br></pre></td></tr></table></figure>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://valgrind.org/docs/manual/manual.html" target="_blank" rel="noopener">http://valgrind.org/docs/manual/manual.html</a><br><a href="http://www.oschina.net/translate/valgrind-memcheck" target="_blank" rel="noopener">http://www.oschina.net/translate/valgrind-memcheck</a><br><a href="https://www.ibm.com/developerworks/cn/linux/l-cn-valgrind/" target="_blank" rel="noopener">https://www.ibm.com/developerworks/cn/linux/l-cn-valgrind/</a></p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/tools/" rel="tag">#tools</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/01/30/2018-01-30-lvm-with-cache/" rel="prev">LVM之Cache加速</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/12/20/2017-12-20-ceph-radosgw-where-to-store-data/" rel="next">Ceph radosgw where to store data?</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安装"><span class="nav-number">2.</span> <span class="nav-text">安装</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使用与分析"><span class="nav-number">3.</span> <span class="nav-text">使用与分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#uninitialised-byte-s"><span class="nav-number">3.1.</span> <span class="nav-text">uninitialised byte(s)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Invalid-read-write"><span class="nav-number">3.2.</span> <span class="nav-text">Invalid read/write</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SUMMARY"><span class="nav-number">3.3.</span> <span class="nav-text">SUMMARY</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

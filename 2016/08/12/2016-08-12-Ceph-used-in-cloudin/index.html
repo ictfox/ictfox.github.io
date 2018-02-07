@@ -1,0 +1,973 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="ceph,openstack,grafana," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="以下是在云英工作时候做的一个Ceph实践的分享，原文链接为：http://www.sdnlab.com/17584.html 概述大家好，我是云英负责存储的研发工程师，杨冠军，很高兴今天能在这里跟大家一起讨论分享下Ceph和Ceph在云英的实践。首先我先介绍下，Ceph是什么，我们为什么选择Ceph？ Ceph是最近开源系统中很火的一个项目，基于Sage Weil的一片博士论文发展而来的一个分布式">
+<meta name="keywords" content="ceph,openstack,grafana">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Ceph在云英的实践">
+<meta property="og:url" content="http://www.ictfox.cn/2016/08/12/2016-08-12-Ceph-used-in-cloudin/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="以下是在云英工作时候做的一个Ceph实践的分享，原文链接为：http://www.sdnlab.com/17584.html 概述大家好，我是云英负责存储的研发工程师，杨冠军，很高兴今天能在这里跟大家一起讨论分享下Ceph和Ceph在云英的实践。首先我先介绍下，Ceph是什么，我们为什么选择Ceph？ Ceph是最近开源系统中很火的一个项目，基于Sage Weil的一片博士论文发展而来的一个分布式">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.ictfox.cn/images/ceph-used-in-cloudin1.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/ceph-used-in-cloudin2.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/ceph-used-in-cloudin3.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/ceph-used-in-cloudin4.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/ceph-used-in-cloudin5.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/ceph-used-in-cloudin6.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/ceph-used-in-cloudin7.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/ceph-used-in-cloudin8.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/ceph-used-in-cloudin9.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/ceph-used-in-cloudin10.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/ceph-used-in-cloudin11.jpg">
+<meta property="og:updated_time" content="2017-05-21T08:12:18.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Ceph在云英的实践">
+<meta name="twitter:description" content="以下是在云英工作时候做的一个Ceph实践的分享，原文链接为：http://www.sdnlab.com/17584.html 概述大家好，我是云英负责存储的研发工程师，杨冠军，很高兴今天能在这里跟大家一起讨论分享下Ceph和Ceph在云英的实践。首先我先介绍下，Ceph是什么，我们为什么选择Ceph？ Ceph是最近开源系统中很火的一个项目，基于Sage Weil的一片博士论文发展而来的一个分布式">
+<meta name="twitter:image" content="http://www.ictfox.cn/images/ceph-used-in-cloudin1.jpg">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> Ceph在云英的实践 | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              Ceph在云英的实践
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2016-08-12T17:31:17+08:00" content="2016-08-12">
+            2016-08-12
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/ceph/" itemprop="url" rel="index">
+                  <span itemprop="name">ceph</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><p>以下是在云英工作时候做的一个Ceph实践的分享，原文链接为：<a href="http://www.sdnlab.com/17584.html" target="_blank" rel="noopener">http://www.sdnlab.com/17584.html</a></p>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>大家好，我是云英负责存储的研发工程师，杨冠军，很高兴今天能在这里跟大家一起讨论分享下Ceph和Ceph在云英的实践。<br>首先我先介绍下，Ceph是什么，我们为什么选择Ceph？</p>
+<p>Ceph是最近开源系统中很火的一个项目，基于Sage Weil的一片博士论文发展而来的一个分布式文件系统，可提供PB级，动态可扩展，数据安全可靠的存储服务。Ceph提供分布式存储服务包括：块存储RBD，对象存储RADOSGW和CephFS三种，基本覆盖了绝大部分企业对存储的需求，所以越来越多企业加入到使用Ceph的行列。在国内也有越来越多的个人和企业参与到Ceph的研发中，贡献自己的力量。</p>
+<h2 id="Ceph架构"><a href="#Ceph架构" class="headerlink" title="Ceph架构"></a>Ceph架构</h2><p>下面我们来看下Ceph系统的整体架构：<br><img src="/images/ceph-used-in-cloudin1.jpg" alt="arch"></p>
+<p>如上图所示，有如下几部分：</p>
+<ol>
+<li>RADOS: Ceph的核心模块，提供固定大小的Object存储</li>
+<li>LIBRADOS: RADOS的library，提供C, C++, Java, Python, Ruby, PHP的API访问RADOS</li>
+<li>RADOSGW: Rados GateWay，基于bucket策略，提供一个兼容S3和Swift的的REST gateway</li>
+<li>RBD: 提供可靠的分布式块存储服务，结合Openstack，应用非常之广</li>
+<li>CEPH FS：提供POSIX协议的文件系统服务</li>
+</ol>
+<p>从上面可以看出，RADOS是Ceph的核心，它主要由MDS + OSD组成，下图描述的即是一个个笑脸(object)如何存储到OSDs中：<br><img src="/images/ceph-used-in-cloudin2.jpg" alt="arch"></p>
+<p>Client端会跟Monitors通信，获取Cluster Maps信息，然后通过固定的算法算出每个Object存储的OSD位置，直接与OSD通信，写入Object数据。</p>
+<p>这里Ceph的一大优势很好的体现出来：<strong>无需元数据服务器节点，所有都是“无需查表，算算就好”！</strong></p>
+<h2 id="Ceph主要特性"><a href="#Ceph主要特性" class="headerlink" title="Ceph主要特性"></a>Ceph主要特性</h2><p>前面我们提到了Ceph是一个动态可扩展，数据安全可靠的存储服务，现在我们逐一来讨论下Ceph作为一个分布式系统必须的三种特性：</p>
+<h3 id="高扩展性"><a href="#高扩展性" class="headerlink" title="高扩展性"></a>高扩展性</h3><p>针对集群的扩容需求，Ceph支持OSD和Monitor集群的动态可扩容，并通过两层Map机制[(pool, object) -&gt; (pool, PG) -&gt; OSD set)来有效的隔离了集群扩容对上层client的影响，提供了很好的扩展性。这样我们可以利用大量的低配置设备轻松的搭建出PB甚至EB级的存储系统。<br><img src="/images/ceph-used-in-cloudin3.jpg" alt="arch"></p>
+<p>上图描述了Client段的一个File如何经过多层的映射，写入到OSDs中的，也正是这多层映射和CRUSH算法，保证了Ceph的高扩展性。在PG数不变的情况下，底层OSD的扩展对Client端是完全透明的。</p>
+<h3 id="高可靠性"><a href="#高可靠性" class="headerlink" title="高可靠性"></a>高可靠性</h3><p>针对数据的安全可靠，Ceph会在集群中存储同一数据的多个副本（或者其他类型的冗余，例如erasure code），来保证在某些设备故障后，用户存入的数据还可用，针对用户不同的高可用需求，Ceph可以很方便的设置Pool的数据冗余规则，另外通过Ceph Crushmap，用户也可以方便的设置各个备份之间存储位置的逻辑关系，比如达到多个副本跨机房、跨机架、跨机器等目的，提高集群的数据可靠性。</p>
+<p>另外Ceph能自动探测到OSD/Monitor/MDS的故障，并自行恢复，有效减少了单设备节点的稳定性对集群的影响。</p>
+<p>下图是Ceph中一个写IO的流程，保证数据的强一致性：<br><img src="/images/ceph-used-in-cloudin4.jpg" alt="arch"></p>
+<p>从图中可以明显的看出，Ceph的写会由Client发给Primary OSD，由Primary OSD发送副本给Replica OSD上，而只有所有的副本都写完成后，写IO才算完成，保证了数据的一致性和高可靠性。</p>
+<h3 id="高性能"><a href="#高性能" class="headerlink" title="高性能"></a>高性能</h3><p>Ceph中通过文件切分和CRUSH算法，保证数据chunk分布基本均衡，同时Ceph的无元数据信息的设计(CephFS除外)，保证了Client可以根据cluster map，通过固定算法确定数据的位置信息，避免了单个元数据节点的性能瓶颈，可以提供非常高的并行化IO性能。<br><img src="/images/ceph-used-in-cloudin5.jpg" alt="arch"></p>
+<p>如上图所示，Client端数据经过切分为Objects后，可以同时与多个OSDs交互，写入数据。</p>
+<h2 id="Ceph在云英的实践"><a href="#Ceph在云英的实践" class="headerlink" title="Ceph在云英的实践"></a>Ceph在云英的实践</h2><p>前面大致介绍了Ceph系统的原理和架构，那我们为什么选择Ceph呢？<br>对比现有的一些其他的分布式存储系统，Ceph有如下优点：</p>
+<ol>
+<li>完全的开源系统</li>
+<li>能提供块存储，对象存储和文件系统存储的统一架构</li>
+<li>设计理念先进，是个高扩展，高可用，高性能的分布式文件系统</li>
+<li>与Openstack完美结合，社区支持好</li>
+<li>Ceph社区活跃度很大</li>
+</ol>
+<p>总之，作为一个比较完善的分布式存储系统，Ceph能满足绝大多数企业的存储需求，同时它也提供了足够多的配置选项，给用户根据需求定制化自己的存储系统。</p>
+<p>上面大致介绍了Ceph的原理架构和设计理念，下面我们来介绍下Ceph在云英的具体实践，给大家一个真实的感受。</p>
+<p>首先说一下云英，云英的全称是北京云英传奇技术有限公司。我们是一家专注于为创客和行业客户提供云计算服务的公司，我们提供的有公有云和私有云服务，包括IAAS和PAAS层产品，网址为 <a href="www.cloudin.cn">www.cloudin.cn</a></p>
+<p>在云计算的技术上我们选择了<code>openstack + ceph</code>的架构，基于之上实现了我们自己的逻辑和特色功能，包括云监控，自动化运维，RDS等服务。针对这么多应用，绝大部分服务的数据都依靠Ceph系统提供可靠的存储服务，在应用实践中，针对我们自己的系统架构和机房部署，我们对Ceph也进行了部分调优和优化，达到了我们的应用需求。</p>
+<p>下面我们来介绍下Ceph存储在云英的应用，大致可以分为如下几种：</p>
+<ol>
+<li>RBD块存储服务</li>
+<li>CephFS提供服务器间数据共享</li>
+<li>RADOSGW提供对象存储服务</li>
+<li>Ceph的性能测试</li>
+<li>Ceph的优化</li>
+<li>Ceph的监控</li>
+</ol>
+<p>首先我们先介绍下第一项:</p>
+<h3 id="RBD块存储服务"><a href="#RBD块存储服务" class="headerlink" title="RBD块存储服务"></a>RBD块存储服务</h3><p>我们的块存储服务主要给Openstack组件使用，分为如下几类：  </p>
+<ol>
+<li>Glance镜像存储  </li>
+<li>Nova instance数据存储  </li>
+<li>Cinder volume存储  </li>
+<li>Backup服务  </li>
+</ol>
+<p>应用中，把Openstack的Glance组件image和Nova instance数据一起存储到Ceph集群中，可以很好的避免Openstack创建虚拟机时的image复制，并且利用Ceph RBD的snapshot功能，基本可以实现秒级创建Nova instance。</p>
+<p>同样利用RBD的snapshot功能，可以有效的减少Cinder Volume，Nova instance的备份创建时间和空间占用。</p>
+<p>另外因为Ceph底层是一个共享存储，所以基于此可以便利的实现Nova instance的热迁移功能，缩短了虚拟机热迁移导致的服务停顿时间。</p>
+<p>整个应用场景如下图所示，Ceph作为了一个统一存储，对Openstack各个组件提供服务：</p>
+<p><img src="/images/ceph-used-in-cloudin6.jpg" alt="arch"></p>
+<h3 id="CephFS提供服务器间数据共享"><a href="#CephFS提供服务器间数据共享" class="headerlink" title="CephFS提供服务器间数据共享"></a>CephFS提供服务器间数据共享</h3><p>CephFS是基于Rados实现的PB级分布式文件系统，这里引入了一个新的组件MDS(Meta Data Server)，它主要为兼容POSIX文件系统提供元数据，如目录和文件元数据。同时，MDS会将元数据也存在RADOS(Ceph Cluster)中。元数据存储在RADOS中后，元数据本身也达到了并行化，大大加强了文件操作的速度。需要注意的是MDS并不会直接为Client提供文件数据，而只是为Client提供元数据的操作。</p>
+<p><img src="/images/ceph-used-in-cloudin7.jpg" alt="arch"></p>
+<p>在我们的生产环境中，遇到过服务器间共享数据的需求。之前的思路可以通过NFS来实现，现在基于CephFS，可以轻松的满足需求。虽说我们用的版本Hammer中，Ceph官方没说CephFS完善到可用于生产环境，但也是经过大规模测试后的版本，据说在雅虎也有大规模使用的集群，另外我们共享的数据对可靠性没那么大要求，IO量也不是很大，所以CephFS已经能很好的满足我们的需求了。</p>
+<p>最近Ceph发布的JEWEL版本是官方声称的第一个CephFS稳定版本，如果对CephFS有强烈需求的话，可以部署最新的JEWEL版本。<br>另外部署中最好使用单MDS的方式，虽说Ceph支持MDS集群和很多很酷的特性，比如负载均衡，动态子树迁移，故障恢复等，但MDS集群还不是Ceph官方的推荐。</p>
+<h3 id="RADOSGW提供对象存储服务"><a href="#RADOSGW提供对象存储服务" class="headerlink" title="RADOSGW提供对象存储服务"></a>RADOSGW提供对象存储服务</h3><p>RadosGW是基于Librados之上实现的，它主要提供兼容S3、Swfit的RESTful接口。同时RadosGW提供了Bucket的命名空间(类似于文件夹)和账户支持，并且具备用于账单目的使用记录。相对的，它增加了Http协议的负载。<br>RadosGW使得Ceph Cluster有了分布式对象存储的能力，如上面提到的Amazon S3和Swift等。企业也可以直接使用其作为数据存储或备份等用途。</p>
+<p><img src="/images/ceph-used-in-cloudin8.jpg" alt="arch"></p>
+<p>RADOSGW在云英主要应用于以下两方面</p>
+<h4 id="1-RDS的数据备份存储"><a href="#1-RDS的数据备份存储" class="headerlink" title="1. RDS的数据备份存储"></a>1. RDS的数据备份存储</h4><p>RDS服务是云英提供的一项的MySQL服务，我们保证了MySQL的高可用和性能，用户只需创建自己的RDS服务即可使用，而不用麻烦的自己搭建MySQL服务并配置其高可用等特性。<br>在RDS服务中，用户会有创建MySQL备份的需求，而这种备份是最适合对象存储的，我们自己实现了RDS的S3备份接口，把RDS的备份数据上传到兼容S3的RADOSGW中。这样使用统一的Ceph系统，我们就不需要再搭建一套Swift对象存储系统了，简化了公司的运维成本。</p>
+<h4 id="2-对象存储服务"><a href="#2-对象存储服务" class="headerlink" title="2. 对象存储服务"></a>2. 对象存储服务</h4><p>Object Storage Service是很重要的一项存储服务，越来越多的应用都开始使用便利的对象存储来存储数据。Openstack源生的对象存储服务系统是Swift，对比Ceph，Swift可以便利的搭建部署，但它也有自己的劣势，我们也不想同时维护两套存储系统，所以我们就选择RADOSGW提供兼容S3和Swift的对象存储服务。</p>
+<h3 id="Ceph的性能测试"><a href="#Ceph的性能测试" class="headerlink" title="Ceph的性能测试"></a>Ceph的性能测试</h3><p>为了做到心中有数，我们需要在现有硬件配置条件下，测试Ceph的性能，看是否满足我们的期望。<br>结合网上的参考，Ceph性能测试可分为如下几类：</p>
+<ol>
+<li>RADOS性能测试<br> rados bench 命令<br> rados load-gen 命令</li>
+<li>rbd块设备性能测试<br> rbd bench-write 命令</li>
+<li>fio工具测试<br> fio + rbd ioengine 测试<br> fio + libaio 测试</li>
+</ol>
+<p>在云英的应用中，Ceph主要提供的是rbd块设备，所以经过评估，我们选择了比较贴合实际应用的方式，使用fio + libaio的测试方法来测试虚拟机中云硬盘的性能。<br>为此我们写了一系列的测试脚本来自动化测试和分析测试结果，结合Ceph的参数优化，给出实际的性能参考。</p>
+<p>测试统计结果样本如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">device: /dev/rbd1</span><br><span class="line">ioengine: libaio size: 1000 runtime: 300</span><br><span class="line">models: randread randwrite</span><br><span class="line">mixread: 50</span><br><span class="line">blocks: 4</span><br><span class="line">iodepth: 2</span><br><span class="line">numjobs: 1</span><br><span class="line">processes: 1 2 4</span><br><span class="line">rate: , ratemin:</span><br><span class="line">rate_iops: 100, rate_iops_min:</span><br><span class="line">host: 10.10.0.12 10.10.0.13 10.10.0.14 10.10.0.15</span><br><span class="line">hosts,model,mixread,bs,iodepth,numjobs,r-bw(KB/s),r-iops,r-avglat(msec),w-bw(KB/s),w-iops,w-avglat(msec)</span><br><span class="line">1,randread,/,4,2,1,1329.03,331,24.13,0,0,0</span><br><span class="line">1,randwrite,/,4,2,1,0,0,0,1437.01,356,15.14</span><br><span class="line">2,randread,/,4,2,1,3187.00,792,2.41,0,0,0</span><br><span class="line">2,randwrite,/,4,2,1,0,0,0,3175.73,792,13.54</span><br><span class="line">4,randread,/,4,2,1,6399.24,1591,1.72,0,0,0</span><br><span class="line">4,randwrite,/,4,2,1,0,0,0,6344.70,1582,15.95</span><br></pre></td></tr></table></figure>
+<p>上述测试结果可以方便的导出到excel，制作成表格进行分析对比：<br><img src="/images/ceph-used-in-cloudin9.jpg" alt="arch"></p>
+<p>当然，测试并不是一帆风顺的，测试中的我们也会遇到一些问题，也会做一些调整，这里分享下常见的几个注意事项：</p>
+<ol>
+<li>云硬盘需要先dd一遍后再测试</li>
+<li>每轮测试前清空虚拟机的缓存数据</li>
+<li>每轮测试前清空物理服务器的缓存数据</li>
+<li>每轮测试中通过iostat命令搜集磁盘负载数据</li>
+<li>测试获取顺序读写的bandwidth和随机读写的iops</li>
+<li>独占系统，防止产生干扰</li>
+<li>每轮测试后分析测试数据，找到系统评价和优化可能性</li>
+</ol>
+<h3 id="Ceph的优化"><a href="#Ceph的优化" class="headerlink" title="Ceph的优化"></a>Ceph的优化</h3><p>我们前面说过，Ceph提供了很多的配置参数来允许用户订制自己的分布式存储系统，在赋予用户这个便利性的同时，也意味着如果用户想获取自己系统的最大性能时，必须自己进行分析调优。</p>
+<p>Ceph是一个复杂的系统，官方的默认配置能保证系统基本运行，但是不能贴合用户实际需求，达到最大化用户物理系统性能的要求。虽说现在也已经有了一些朋友分享Ceph的配置参考和调优，但对每个用户来说都不是拿来主义。他们只是提供了一种优化的参考，具体的效果如何还需要用户贴合自己的实际测试结果来调整。</p>
+<p>对于云英来说，我们的物理机配置是相当前卫的，用于Ceph系统的物理机硬件配置大致如下：</p>
+<ol>
+<li>200G+内存</li>
+<li>32核Intel Xeon处理器</li>
+<li>1:3的SSD和SATA配比，SSD分区做Journal，SATA盘做OSD</li>
+<li>PCIE的存储卡提供超高性能存储Pool</li>
+<li>万兆网卡提供Ceph的Cluster Network通信</li>
+<li>千兆网卡提供Ceph的Public Network通信</li>
+</ol>
+<p>参考网上朋友的Ceph配置和调优参数后，结合我们的经验和测试分析，我们做了适合自己的独特优化，对比各种调优项前后，很好的达到我们的要求。</p>
+<p>依据我们的经验，可以在以下几个方面做Ceph的性能调优：</p>
+<ol>
+<li><p>BIOS设置：</p>
+<ul>
+<li>开启CPU的Hyper-Threading</li>
+<li>关闭CPU节能</li>
+<li>关闭NUMA</li>
+</ul>
+</li>
+<li><p>Linux参数调优</p>
+<ul>
+<li>CPU设置为performance模式</li>
+<li>调整内核的pid_max限制</li>
+<li>调整SATA/SSD IO Scheduler</li>
+<li>调整磁盘的read_ahead_kb大小</li>
+</ul>
+</li>
+<li><p>XFS相关</p>
+<ul>
+<li>xfs mkfs options</li>
+<li>xfs mount options</li>
+</ul>
+</li>
+<li><p>filestore调整</p>
+<ul>
+<li>filestore fd cache size</li>
+<li>filestore omap header cache size</li>
+<li>filestore queue相关参数</li>
+<li>filestore wbthrottle相关参数</li>
+<li>object size</li>
+</ul>
+</li>
+<li><p>journal</p>
+<ul>
+<li>性能高的SSD分区做journal</li>
+<li>journal size &gt; 5G</li>
+<li>journal queue</li>
+</ul>
+</li>
+<li><p>osd相关</p>
+<ul>
+<li>osd上PG总数限制</li>
+<li>osd op threads</li>
+<li>osd recovery threads</li>
+</ul>
+</li>
+<li><p>crushmap优化</p>
+<ul>
+<li>给osd划分合理的pools</li>
+<li>故障域切分，降低数据丢失概率</li>
+</ul>
+</li>
+</ol>
+<h3 id="Ceph的监控"><a href="#Ceph的监控" class="headerlink" title="Ceph的监控"></a>Ceph的监控</h3><p>对于一个大型系统来说，完善的监控很重要，我们不可能时刻靠人工来发现系统的问题。<br>针对Ceph系统，我们调研了很多种方案，主要有如下几种：</p>
+<ol>
+<li>Ceph官方的Calamari（已一年多没有提交）</li>
+<li>Intel的VSM</li>
+<li>Ceph-Dash</li>
+<li>Inkscope</li>
+<li>定制化的Diamond + Grafana</li>
+<li>Ceph Collectd + Grafana</li>
+</ol>
+<p>最后选择了适合我们的，方便我们扩展的一种。即：Diamond + Graphite + Grafana，下面介绍一下这些组件：</p>
+<ol>
+<li>Diamond是一个客户端性能收集工具，Python编写，易与扩展。</li>
+<li>Graphite是一个Python编写的企业级开源监控工具，采用django框架。</li>
+<li>Grafana是功能齐全的度量仪表盘和图形编辑器，支持Graphite，InfluxDB和OpenTSDB。</li>
+</ol>
+<p>部署后，我们可以在Grafana的前端订制我们自己的监控项，类似下图：<br><img src="/images/ceph-used-in-cloudin10.jpg" alt="arch"><br><img src="/images/ceph-used-in-cloudin11.jpg" alt="arch"></p>
+<p>另外，Ceph进程的监控，集群状态的监控，我们通过自己写的脚本，完美的集成到Zabbix系统，实现了Ceph系统有问题的实时通知。</p>
+<p>我们的脚本监控主要有如下几个方面：</p>
+<ol>
+<li>Ceph状态和空间使用率的监控</li>
+<li>OSD状态的监控和自动拉起</li>
+<li>Monitor状态的监控和自动拉起</li>
+<li>PG状态的监控和报警</li>
+<li>Slow Requests的监控和报警</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>总之，Ceph是一个大型的完善的分布式系统，对它的研究和优化是一个持续的过程，在后续我们会继续深入研究Ceph系统，学习其精髓，优化其应用，也会继续分享我们的心得。</p>
+<h2 id="Q-amp-A"><a href="#Q-amp-A" class="headerlink" title="Q&amp;A"></a>Q&amp;A</h2><p><strong>Q1:有多大存储规模？</strong></p>
+<p>A1:我们有两个机房，每个机房是一个独立的Ceph集群。每个集群里有200多个OSD，裸容量约为1PB。</p>
+<p><strong>Q2：主要还是块服务？对象用于备份？</strong></p>
+<p>A2：我们的应用方式主要是结合Openstack提供云硬盘服务，所以主要是块存储服务。<br>现在用于对象存储的有RDS的数据备份，还有马上准备推出的兼容S3的对象存储服务。</p>
+<p><strong>Q3：2个集群之间啥关系？互备？</strong></p>
+<p>A3：现在两个集群是独立的，没有打通作为互备。后续对于对象存储，我们有这个计划。</p>
+<p><strong>Q4：分享中提到调整磁盘read ahead大小和线程pid个数，只是告诉我们，去调整，但是我们不知道，调整多大？有什么参照关系？？比如是osd，两倍？ </strong></p>
+<p>A4：应用中我们会调整SATA磁盘的read_ahead_kb到8K-16K，提高OSD的性能。<br>PID的个数是linux 内核最大线程的个数，应用中我们会根据物理服务器上OSD的个数去调大这个值，避免因为PID个数的限制，导致服务OSD的线程数不够。当然如果每个服务器上的OSD个数较少，这个值可以不用调整的。</p>
+<p><strong>Q5：200个osd，也就是200块盘？</strong></p>
+<p>A5：200个OSD对应200多块盘，Ceph推荐的也是一块SATA盘对应一个OSD，SSD盘就不一定是这个对应关系了，这取决于SSD盘的性能。</p>
+<p><strong>Q6：i/o能达到多少M连续的文件实测完？最多支持多少块硬盘 支持混插不？支持异地双活不？</strong></p>
+<p>A6：Ceph系统IO的吞吐量跟系统的规模有关系，我们最后得到的性能约为所有OSD磁盘性能/备份个数后的40% — 60%左右。<br>Ceph对磁盘个数没有限制，越多的磁盘就对应越大的Ceph集群，在提升系统容量的同时，也会带来一系列问题。现在据说最大的一个Ceph集群有3000多个OSDs。<br>另外Ceph对OSD的磁盘没特殊要求，支持不同配置、不同容量的磁盘。但是针对商业使用，还是推荐相同的配置硬盘，方便做crushmap的划分。<br>异地双活的方式，是需要上层技术支持的。Ceph本身没有异地双活。。但Ceph的对象存储功能 - RADOSGW，可以配置不同Region的备份，支持异地备份。</p>
+<p><strong>Q7：ceph稳定吗，云英有没有遇到过比较大的ceph故障？</strong></p>
+<p>A7：我们使用的是Ceph官方支持的Hammer版本，还是比较稳定的。相对的CephFS，推荐使用最新的Jewel版本，这个是第一个官方声明的CephFS稳定版本。<br>在云英的使用中，我们会遇到一些小故障，但Ceph都能很好的处理这些小故障，因为它是自修复的，不会影响上层应用的访问。我们也通过一些监控及时发现这些故障，人为查看修复它们。<br>Ceph是个分布式文件系统，每份数据都有多个备份，Monitors也是个主备的集群，正常不会出现大的故障，触发是维护人员的误操作等等。所以迄今为止我们还没有遇到过大的故障。</p>
+<p><strong>Q8：性能优化从哪着手？</strong></p>
+<p>A8：性能优化的问题，这个网上有些推荐，我们也是基于这些和自己对Ceph的理解，结合测试的结果和遇到的问题，进行分析后再做的具体优化调整。通过一些对比测试，可以分析出是SSD上的journal性能瓶颈？还是SATA盘的IO瓶颈？还是CPU处理能力的瓶颈？<br>总之，Ceph的优化可以从client端发起IO到OSD写下数据这个path上分析后进行优化。</p>
+<p><strong>Q9：pid个数和osd有什么样关系？比如说我有两块osd，那么建议将pid设置成4。类似这样关系，是什么样规则？</strong></p>
+<p>A9：我们用的是ubuntu系统，内核默认的pid_max应该是32768。而每个OSD会占用很多线程来处理数据，为了防止这个值影响OSD的启动和性能，我们调整为一个很大的值。</p>
+<p><strong>Q10：分享中提到写完所有副本才算完成，假如中间有一个副本写入失败了，需要回退之前的吗？之前写入成功的吗？</strong></p>
+<p>A10：写的操作是client发送Primary OSD的，它再发送给Replica OSDs，如果有IO写失败，写操作会hang住。Ceph的写机制没有超时设置，Ceph也不会回退写，所以在对应IO写失败的OSD被mark为down状态前，写操作是不会返回给客户端的。而在OSD被mark为down以后，Ceph会启动恢复机制，数据副本会写入新的OSD里。同时Ceph也有scrub机制，能保证PG sets里的数据一致性。</p>
+<p><strong>Q11：有个问题，cephfs 本身有服务器共享功能，那openstack 的Manila 项目是不是感觉就多余了？你们现在有做cephfs与Manila 的对接嘛</strong></p>
+<p>A11：Manila提供的是云上的文件共享，通过driver的方式连接多种存储后端，而Cephfs是实现POSIX语义的分布式文件系统，它通过native driver给Manila对接使用，所以这两个项目是不重复的。<br>我们还没做Manila与CephFS的对接，回头我们会考虑把这个提上日程。</p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag">#ceph</a>
+          
+            <a href="/tags/openstack/" rel="tag">#openstack</a>
+          
+            <a href="/tags/grafana/" rel="tag">#grafana</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/08/29/2016-08-29-rgw-admin-ops-api/" rel="prev">如何使用radosgw admin ops api?</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/08/11/2016-08-11-Ceph-modify-osd-monitor-network/" rel="next">Ceph修改OSD和Monitor的网络</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Ceph架构"><span class="nav-number">2.</span> <span class="nav-text">Ceph架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Ceph主要特性"><span class="nav-number">3.</span> <span class="nav-text">Ceph主要特性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#高扩展性"><span class="nav-number">3.1.</span> <span class="nav-text">高扩展性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#高可靠性"><span class="nav-number">3.2.</span> <span class="nav-text">高可靠性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#高性能"><span class="nav-number">3.3.</span> <span class="nav-text">高性能</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Ceph在云英的实践"><span class="nav-number">4.</span> <span class="nav-text">Ceph在云英的实践</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#RBD块存储服务"><span class="nav-number">4.1.</span> <span class="nav-text">RBD块存储服务</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CephFS提供服务器间数据共享"><span class="nav-number">4.2.</span> <span class="nav-text">CephFS提供服务器间数据共享</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RADOSGW提供对象存储服务"><span class="nav-number">4.3.</span> <span class="nav-text">RADOSGW提供对象存储服务</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-RDS的数据备份存储"><span class="nav-number">4.3.1.</span> <span class="nav-text">1. RDS的数据备份存储</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-对象存储服务"><span class="nav-number">4.3.2.</span> <span class="nav-text">2. 对象存储服务</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Ceph的性能测试"><span class="nav-number">4.4.</span> <span class="nav-text">Ceph的性能测试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Ceph的优化"><span class="nav-number">4.5.</span> <span class="nav-text">Ceph的优化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Ceph的监控"><span class="nav-number">4.6.</span> <span class="nav-text">Ceph的监控</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Q-amp-A"><span class="nav-number">6.</span> <span class="nav-text">Q&amp;A</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

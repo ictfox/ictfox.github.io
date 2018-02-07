@@ -1,0 +1,800 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mala">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+  <link href='//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="学无止境" />
+
+
+
+  <meta name="keywords" content="openstack,trove," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="本文是基于Trove Kilo版本部署的 配置环境变量source /opt/osdeploy/admin_openrc.sh 下载源码12git clone https://github.com/openstack/trove.git /opt/openstack/trovegit clone https://github.com/openstack/python-troveclient.git">
+<meta name="keywords" content="openstack,trove">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Openstack DBBS Trove部署">
+<meta property="og:url" content="http://www.ictfox.cn/2016/03/28/2016-03-28-trove-deploy/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="本文是基于Trove Kilo版本部署的 配置环境变量source /opt/osdeploy/admin_openrc.sh 下载源码12git clone https://github.com/openstack/trove.git /opt/openstack/trovegit clone https://github.com/openstack/python-troveclient.git">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2017-07-16T14:23:28.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Openstack DBBS Trove部署">
+<meta name="twitter:description" content="本文是基于Trove Kilo版本部署的 配置环境变量source /opt/osdeploy/admin_openrc.sh 下载源码12git clone https://github.com/openstack/trove.git /opt/openstack/trovegit clone https://github.com/openstack/python-troveclient.git">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mala',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> Openstack DBBS Trove部署 | ictfox blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">ForTech</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            <i class="menu-item-icon icon-next-about"></i> <br />
+            About
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              Openstack DBBS Trove部署
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          Posted on
+          <time itemprop="dateCreated" datetime="2016-03-28T10:31:17+08:00" content="2016-03-28">
+            2016-03-28
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; In
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/openstack/" itemprop="url" rel="index">
+                  <span itemprop="name">openstack</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><p>本文是基于Trove Kilo版本部署的</p>
+<h2 id="配置环境变量"><a href="#配置环境变量" class="headerlink" title="配置环境变量"></a>配置环境变量</h2><p>source /opt/osdeploy/admin_openrc.sh</p>
+<h2 id="下载源码"><a href="#下载源码" class="headerlink" title="下载源码"></a>下载源码</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/openstack/trove.git /opt/openstack/trove</span><br><span class="line">git <span class="built_in">clone</span> https://github.com/openstack/python-troveclient.git /opt/openstack/python-troveclient</span><br></pre></td></tr></table></figure>
+<h2 id="安装-troveclient"><a href="#安装-troveclient" class="headerlink" title="安装 troveclient"></a>安装 troveclient</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /opt/openstack/python-troveclient</span><br><span class="line">git checkout stable/kilo</span><br><span class="line">python setup.py egg_info</span><br><span class="line">pip install -r python_troveclient.egg-info/requires.txt</span><br><span class="line">python setup.py develop</span><br></pre></td></tr></table></figure>
+<h2 id="安装-trove-kilo版本"><a href="#安装-trove-kilo版本" class="headerlink" title="安装 trove kilo版本"></a>安装 trove kilo版本</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /opt/openstack/trove</span><br><span class="line">git checkout stable/kilo</span><br><span class="line">python setup.py egg_info</span><br><span class="line">pip install -r trove.egg-info/requires.txt</span><br><span class="line">python setup.py develop</span><br></pre></td></tr></table></figure>
+<p><strong>问题</strong></p>
+<p>IOError: [Errno 2] No such file or directory: ‘/opt/openstack/.venv/build/oslo.serialization/oslo.serialization-2.2.0.dist-info/METADATA’</p>
+<p><strong>解决</strong></p>
+<p>把build下面的所有东西都删除就行了。rm -rf /opt/openstack/.venv/build/*</p>
+<h2 id="创建用户"><a href="#创建用户" class="headerlink" title="创建用户"></a>创建用户</h2><p>创建trove用户，trove用户添加admin角色，创建trove服务，给 trove 服务添加 api 访问地址</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">openstack user create --password 22116ccf32a trove</span><br><span class="line">openstack role add --project service --user trove admin</span><br><span class="line">openstack service create --name trove --description <span class="string">"OpenStack Trove"</span> database</span><br><span class="line">openstack endpoint create --publicurl <span class="string">'http://10.10.1.1:8779/v1.0/$(tenant_id)s'</span> --internalurl <span class="string">'http://10.10.1.1:8779/v1.0/$(tenant_id)s'</span> --adminurl <span class="string">'http://10.10.1.1:8779/v1.0/$(tenant_id)s'</span> --region RegionOne database</span><br></pre></td></tr></table></figure>
+<h2 id="创建trove相关目录，并修改权限"><a href="#创建trove相关目录，并修改权限" class="headerlink" title="创建trove相关目录，并修改权限"></a>创建trove相关目录，并修改权限</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mkdir /opt/etc/trove; chown openstack:openstack /opt/etc/trove</span><br><span class="line">mkdir /var/<span class="built_in">log</span>/cloud/openstack/trove; chown openstack:openstack /var/<span class="built_in">log</span>/cloud/openstack/trove</span><br><span class="line">mkdir /var/lib/trove; chown openstack:openstack /var/lib/trove</span><br></pre></td></tr></table></figure>
+<h2 id="使用mysql作为trove后端db"><a href="#使用mysql作为trove后端db" class="headerlink" title="使用mysql作为trove后端db"></a>使用mysql作为trove后端db</h2><p>在mysql的机器上执行：（查看/opt/etc/nova/nova.conf找到mysql服务所在机器）</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mysql -uroot -p</span><br><span class="line">&gt; create database trove default character <span class="built_in">set</span> utf8;</span><br><span class="line">&gt; grant all on trove.* to <span class="string">'trove'</span>@<span class="string">'%'</span> identified by <span class="string">'trove'</span>;</span><br></pre></td></tr></table></figure>
+<p>注：需要输入mysql的密码</p>
+<h2 id="拷贝trove相关配置到-opt-etc-trove目录"><a href="#拷贝trove相关配置到-opt-etc-trove目录" class="headerlink" title="拷贝trove相关配置到/opt/etc/trove目录"></a>拷贝trove相关配置到/opt/etc/trove目录</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">cp /opt/openstack/trove/etc/trove/api-paste.ini /opt/etc/trove/api-paste.ini</span><br><span class="line">cp /opt/openstack/trove/etc/trove/trove.conf.sample /opt/etc/trove/trove.conf</span><br><span class="line">cp /opt/openstack/trove/etc/trove/trove-taskmanager.conf.sample /opt/etc/trove/trove-taskmanager.conf</span><br><span class="line">cp /opt/openstack/trove/etc/trove/trove-conductor.conf.sample /opt/etc/trove/trove-conductor.conf</span><br><span class="line">cp -r /opt/openstack/trove/etc/trove/cloudinit/ /opt/etc/trove/</span><br></pre></td></tr></table></figure>
+<h2 id="修改-opt-etc-trove目录里的conf文件"><a href="#修改-opt-etc-trove目录里的conf文件" class="headerlink" title="修改/opt/etc/trove目录里的conf文件"></a>修改/opt/etc/trove目录里的conf文件</h2><ol>
+<li><p>trove.conf</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">rabbit_hosts = 127.0.0.1:5672</span><br><span class="line">rabbit_userid=openstack</span><br><span class="line">rabbit_password=iafdhewak2</span><br><span class="line"></span><br><span class="line">trove_auth_url = http://127.0.0.1:5000/v2.0</span><br><span class="line">nova_compute_url = http://127.0.0.1:8774/v2</span><br><span class="line">cinder_url = http://127.0.0.1:8776/v2</span><br><span class="line">neutron_url = http://127.0.0.1:9696/</span><br><span class="line"></span><br><span class="line">log_dir = /var/<span class="built_in">log</span>/openstack/trove</span><br><span class="line">log_file = trove-api.log</span><br><span class="line"></span><br><span class="line">connection = mysql://trove:trove@127.0.0.1/trove</span><br><span class="line"></span><br><span class="line">[keystone_authtoken]</span><br><span class="line">auth_uri = http://127.0.0.1:5000</span><br><span class="line">auth_url = http://127.0.0.1:35357</span><br><span class="line">auth_plugin = password</span><br><span class="line">project_domain_id = default</span><br><span class="line">user_domain_id = default</span><br><span class="line">project_name = service</span><br><span class="line">username = trove</span><br><span class="line">password = 221***6d42d8ca</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>trove-taskmanager.conf</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">rabbit_host=127.0.0.1</span><br><span class="line">rabbit_userid=openstack</span><br><span class="line">rabbit_password=iafdhewak2</span><br><span class="line"></span><br><span class="line">trove_auth_url = http://127.0.0.1:5000/v2.0</span><br><span class="line">nova_compute_url = http://127.0.0.1:8774/v2</span><br><span class="line">cinder_url = http://127.0.0.1:8776/v2</span><br><span class="line">swift_url = http://127.0.0.1:8080/v1/AUTH_</span><br><span class="line">neutron_url = http://127.0.0.1:9696/</span><br><span class="line"></span><br><span class="line">log_dir = /var/<span class="built_in">log</span>/openstack/trove</span><br><span class="line">log_file = trove-taskmanager.log</span><br><span class="line"></span><br><span class="line"><span class="comment"># ================= Guestagent related ========================</span></span><br><span class="line">guest_config = /opt/etc/trove/trove-guestagent.conf</span><br><span class="line">injected_config_location = /etc/trove/conf.d</span><br><span class="line">cloudinit_location = /opt/etc/trove/cloudinit</span><br><span class="line"></span><br><span class="line">connection = mysql://trove:trove@127.0.0.1/trove</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>trove-conductor.conf</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">trove_auth_url = http://127.0.0.1:5000/v2.0</span><br><span class="line">rabbit_host = 127.0.0.1</span><br><span class="line">rabbit_userid = openstack</span><br><span class="line">rabbit_password = iafdhewak2</span><br><span class="line">connection = mysql://trove:trove@127.0.0.1/trove</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>trove-guestagent.conf</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">rabbit_hosts = 192.168.1.3:5672</span><br><span class="line">rabbit_userid = openstack</span><br><span class="line">rabbit_password = iafdhewak2</span><br><span class="line">swift_url = http://192.168.1.3:8080/v1/AUTH_</span><br><span class="line">os_region_name = RegionOne</span><br><span class="line">swift_service_type = object-store</span><br><span class="line">datastore_registry_ext = mysql:trove.guestagent.datastore.mysql.manager.Manager, percona:trove.guestagent.datastore.mysql.manager.Manager</span><br><span class="line">ignore_users = os_admin</span><br><span class="line">ignore_dbs = lost+found, mysql, information_schema, performance_schema</span><br><span class="line">root_grant = ALL</span><br><span class="line">root_grant_option = True</span><br><span class="line"></span><br><span class="line">storage_strategy = SwiftStorage</span><br><span class="line">storage_namespace = trove.guestagent.strategies.storage.swift</span><br><span class="line">backup_swift_container = database_backups</span><br><span class="line"></span><br><span class="line">[keystone_authtoken]</span><br><span class="line">auth_uri = http://192.168.1.3:5000</span><br><span class="line">auth_url = http://192.168.1.3:35357</span><br><span class="line">auth_plugin = password</span><br><span class="line">project_name = service</span><br><span class="line">project_domain_id = default</span><br><span class="line">user_domain_id = default</span><br><span class="line">username = trove</span><br><span class="line">password = 221***6d42d8ca</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="添加包含mysql的ubuntu镜像到glance里"><a href="#添加包含mysql的ubuntu镜像到glance里" class="headerlink" title="添加包含mysql的ubuntu镜像到glance里"></a>添加包含mysql的ubuntu镜像到glance里</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">glance --debug image-create --name <span class="string">"mysql-ubuntu"</span>  --file ~/mysql.qcow2 --disk-format qcow2 --container-format bare --is-public True --progress</span><br><span class="line"></span><br><span class="line">(.venv)openstack@cloud01:~$ glance image-list</span><br><span class="line">+--------------------------------------+---------------------+-------------+------------------+-----------+--------+</span><br><span class="line">| ID                                   | Name                | Disk Format | Container Format | Size      | Status |</span><br><span class="line">+--------------------------------------+---------------------+-------------+------------------+-----------+--------+</span><br><span class="line">| 0ad5a403-09fa-4be3-81f8-74caac155be0 | mysql-ubuntu        | qcow2       | bare             | 533397504 | active |</span><br><span class="line">+--------------------------------------+---------------------+-------------+------------------+-----------+--------+</span><br></pre></td></tr></table></figure>
+<h2 id="初始化trove-database"><a href="#初始化trove-database" class="headerlink" title="初始化trove database"></a>初始化trove database</h2><p>因为mysql外键的问题，可能需要执行括号内的额外步骤：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[mysql -uroot -ppwd -e<span class="string">"use trove;SET GLOBAL foreign_key_checks=0;"</span>]</span><br><span class="line">trove-manage --config-file=/opt/etc/trove/trove.conf db_sync</span><br><span class="line">[mysql -uroot -ppwd -e<span class="string">"use trove;SET GLOBAL foreign_key_checks=1;"</span>]</span><br></pre></td></tr></table></figure>
+<h2 id="初始化Trove-Datastores"><a href="#初始化Trove-Datastores" class="headerlink" title="初始化Trove Datastores"></a>初始化Trove Datastores</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> DATASTORE_TYPE=<span class="string">"mysql"</span></span><br><span class="line"><span class="built_in">export</span> DATASTORE_VERSION=<span class="string">"5.6"</span></span><br><span class="line"><span class="built_in">export</span> PACKAGES=<span class="string">"mysql-server-5.6"</span></span><br><span class="line"><span class="built_in">export</span> IMAGEID=<span class="string">"0ad5a403-09fa-4be3-81f8-74caac155be0"</span></span><br><span class="line">trove-manage --config-file /opt/etc/trove/trove.conf datastore_update <span class="variable">$&#123;DATASTORE_TYPE&#125;</span> <span class="string">""</span></span><br><span class="line">trove-manage --config-file /opt/etc/trove/trove.conf datastore_version_update <span class="variable">$&#123;DATASTORE_TYPE&#125;</span> <span class="variable">$&#123;DATASTORE_VERSION&#125;</span> <span class="variable">$&#123;DATASTORE_TYPE&#125;</span> <span class="variable">$&#123;IMAGEID&#125;</span> <span class="variable">$&#123;PACKAGES&#125;</span> 1</span><br><span class="line">trove-manage --config-file /opt/etc/trove/trove.conf datastore_update <span class="variable">$&#123;DATASTORE_TYPE&#125;</span> <span class="variable">$&#123;DATASTORE_VERSION&#125;</span></span><br><span class="line">trove datastore-version-show <span class="variable">$&#123;DATASTORE_VERSION&#125;</span> --datastore <span class="variable">$&#123;DATASTORE_TYPE&#125;</span></span><br></pre></td></tr></table></figure>
+<h2 id="重启trove-service"><a href="#重启trove-service" class="headerlink" title="重启trove service"></a>重启trove service</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">service trove-api restart; service trove-taskmanager restart; service trove-conductor restart;</span><br></pre></td></tr></table></figure>
+<h2 id="配置datastore的默认值"><a href="#配置datastore的默认值" class="headerlink" title="配置datastore的默认值"></a>配置datastore的默认值</h2><p>修改trove.conf，在[default]字段添加：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">default_datastore = mysql</span><br></pre></td></tr></table></figure>
+<p>查看datastore mysql的default version值：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">$ trove datastore-show mysql</span><br><span class="line">...</span><br><span class="line">| default_version | 9b8987aa-282b-46b9-af19-900aadfa8d9b |</span><br><span class="line">...</span><br><span class="line">$ trove datastore-version-list mysql</span><br><span class="line">+--------------------------------------+------+</span><br><span class="line">| ID                                   | Name |</span><br><span class="line">+--------------------------------------+------+</span><br><span class="line">| 1832c3bd-3233-45ef-b6fe-c00fc6b4750e | 5.7  |</span><br><span class="line">| 9b8987aa-282b-46b9-af19-900aadfa8d9b | 5.6  |</span><br><span class="line">+--------------------------------------+------+</span><br></pre></td></tr></table></figure>
+<h2 id="配置mysql-5-6版本的config-parameters"><a href="#配置mysql-5-6版本的config-parameters" class="headerlink" title="配置mysql, 5.6版本的config parameters"></a>配置mysql, 5.6版本的config parameters</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">trove-manage --config-file /opt/etc/trove/trove.conf db_load_datastore_config_parameters mysql 5.6 /opt/openstack/trove/trove/templates/mysql/validation-rules.json</span><br><span class="line"></span><br><span class="line">$ openstack endpoint show trove</span><br><span class="line">+--------------+------------------------------------------+</span><br><span class="line">| Field        | Value                                    |</span><br><span class="line">+--------------+------------------------------------------+</span><br><span class="line">| adminurl     | http://127.0.0.1:8779/v1.0/$(tenant_id)s |</span><br><span class="line">| enabled      | True                                     |</span><br><span class="line">| id           | 677e119b1309446590e174f1f2fb2d80         |</span><br><span class="line">| internalurl  | http://127.0.0.1:8779/v1.0/$(tenant_id)s |</span><br><span class="line">| publicurl    | http://127.0.0.1:8779/v1.0/$(tenant_id)s |</span><br><span class="line">| region       | RegionOne                                |</span><br><span class="line">| service_id   | 4f456705ce124c62918f29b4b70b5ed1         |</span><br><span class="line">| service_name | trove                                    |</span><br><span class="line">| service_type | database                                 |</span><br><span class="line">+--------------+------------------------------------------+</span><br><span class="line">(.venv)openstack@cloud01:~$ trove datastore-list</span><br><span class="line">+--------------------------------------+-------+</span><br><span class="line">| ID                                   | Name  |</span><br><span class="line">+--------------------------------------+-------+</span><br><span class="line">| 2f2c8eee-cac5-4a52-9f89-9c39a140f611 | mysql |</span><br><span class="line">+--------------------------------------+-------+</span><br><span class="line">(.venv)openstack@cloud01:~$ trove create myFirstDB 1 --size 2 --databases trovedb --users ictfox:ictfox --datastore_version 5.6 --datastore mysql</span><br><span class="line">+-------------------+--------------------------------------+</span><br><span class="line">| Property          | Value                                |</span><br><span class="line">+-------------------+--------------------------------------+</span><br><span class="line">| created           | 2016-01-22T11:41:48                  |</span><br><span class="line">| datastore         | mysql                                |</span><br><span class="line">| datastore_version | 5.6                                  |</span><br><span class="line">| flavor            | 2                                    |</span><br><span class="line">| id                | 31dbea3e-1117-407e-82f0-cdf7ecd3ac3b |</span><br><span class="line">| name              | myFirstDB                            |</span><br><span class="line">| status            | BUILD                                |</span><br><span class="line">| updated           | 2016-01-22T11:41:48                  |</span><br><span class="line">| volume            | 2                                    |</span><br><span class="line">+-------------------+--------------------------------------+</span><br></pre></td></tr></table></figure>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="http://docs.openstack.org/kilo/config-reference/content/ch_configuring-trove.html" target="_blank" rel="noopener">http://docs.openstack.org/kilo/config-reference/content/ch_configuring-trove.html</a><br><a href="http://docs.openstack.org/developer/trove/dev/manual_install.html" target="_blank" rel="noopener">http://docs.openstack.org/developer/trove/dev/manual_install.html</a><br><a href="https://github.com/openstack/trove/blob/master/doc/source/dev/manual_install.rst" target="_blank" rel="noopener">https://github.com/openstack/trove/blob/master/doc/source/dev/manual_install.rst</a><br><a href="https://www.youtube.com/watch?v=zk42zzc_38o" target="_blank" rel="noopener">https://www.youtube.com/watch?v=zk42zzc_38o</a><br><a href="http://blog.csdn.net/myproudcodelife/article/details/39839891" target="_blank" rel="noopener">http://blog.csdn.net/myproudcodelife/article/details/39839891</a></p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/openstack/" rel="tag">#openstack</a>
+          
+            <a href="/tags/trove/" rel="tag">#trove</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/04/06/2016-04-06-trove-glance-image-creation/" rel="prev">创建trove使用的glance image</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/03/18/2016-03-18-trove-introduction/" rel="next">Openstack DBBS Trove Introduction</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div>
+      
+        <style type="text/css">
+
+    .donate_bar {
+        text-align: center;
+        margin-top : 5%;
+    }
+
+    .donate_bar.hidden {
+        display:none;
+    }
+/*
+    .donate_bar a.btn_donate {
+        display: inline-block;
+        width: 82px;
+        height: 82px;
+        margin-left:auto;
+        margin-right:auto;
+
+        background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat;
+        _background: url("http://img.t.sinajs.cn/t5/style/images/apps_PRF/e_media/btn_reward.gif") no-repeat; 
+
+        -webkit-transition: background 0s;
+        -moz-transition: background 0s;
+        -o-transition: background 0s;
+        -ms-transition: background 0s;
+        transition: background 0s;
+    }
+*/
+    .donate_bar a.btn_donate:hover { 
+        // background-position: 0px -82px;
+        color: #87daff;
+    }
+
+    .donate_bar .donate_txt {
+        display: block;
+        color: #9d9d9d;
+        font: 14px/2 "Microsoft Yahei";
+    }
+
+    .bold { 
+        font-weight: bold; 
+    }
+
+    .post-donate a {
+        border-bottom: 0px;
+    }
+
+    #donate_guide table {
+        border: none;
+    }
+
+    #donate_guide td {
+        border-bottom: none;
+        border-right: none;
+        // background: #333333;
+        valign: top;
+    }
+
+</style>
+
+
+
+    
+
+    <div class ="post-donate">
+        <div id="donate_board" class="donate_bar center">
+              <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏">赏</a>
+              <span id="donate_txt" class="donate_txt">
+                   
+                        仅仅是一个功能
+                   
+              </span>
+            <br>
+        </div>  
+  
+        <div id="donate_guide" class="donate_bar center hidden">
+            <!--
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                    style="float:left;margin-left:25%;margin-right:10px;">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                </a> 
+              
+
+            
+                <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                    style="margin-right:30%">
+                    <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                </a>
+            
+            -->
+            <table>
+                <tr>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="支付宝打赏" class="fancybox" rel="article0" 
+                                style="float:left;margin-left:25%;margin-right:10px;">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/alipay.jpg" title="" height="164px" width="164px">
+                            </a> 
+                         
+                    </td>
+                    <td>
+                        
+                            <a href="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="微信打赏" class="fancybox" rel="article0"
+                                style="margin-right:30%">
+                                <img src="http://o7keinrz4.bkt.clouddn.com/wechat.jpg" title="" height="164px" width="164px">
+                            </a>
+                        
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+
+        <script type="text/javascript">
+            document.getElementById('btn_donate').onclick = function() {
+                $('#donate_board').addClass('hidden');
+                // $('#donate_guide').removeClass('hidden');
+                $('#donate_guide').show(2000);
+            }
+
+        </script>
+    </div>
+
+    
+
+
+      
+    </div>
+
+    <div class="post-spread">
+      
+        <div class="bdsharebuttonbox">
+	<a href="#" class="bds_more" data-cmd="more"></a>
+	<a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>
+	<a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+	<a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>
+	<a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+	<a href="#" class="bds_tqq" data-cmd="tqq" title="分享到腾讯微博"></a>
+	<a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+</div>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+
+        
+          <div class="comments" id="comments">
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table Of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/default_avatar.jpg" alt="ictfox" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">ictfox</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">学无止境</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">71</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">10</span>
+              <span class="site-state-item-name">categories</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">48</span>
+              <span class="site-state-item-name">tags</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        <div class="links-of-friendly motion-element">
+          
+        </div>
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#配置环境变量"><span class="nav-number">1.</span> <span class="nav-text">配置环境变量</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#下载源码"><span class="nav-number">2.</span> <span class="nav-text">下载源码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安装-troveclient"><span class="nav-number">3.</span> <span class="nav-text">安装 troveclient</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安装-trove-kilo版本"><span class="nav-number">4.</span> <span class="nav-text">安装 trove kilo版本</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建用户"><span class="nav-number">5.</span> <span class="nav-text">创建用户</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建trove相关目录，并修改权限"><span class="nav-number">6.</span> <span class="nav-text">创建trove相关目录，并修改权限</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使用mysql作为trove后端db"><span class="nav-number">7.</span> <span class="nav-text">使用mysql作为trove后端db</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#拷贝trove相关配置到-opt-etc-trove目录"><span class="nav-number">8.</span> <span class="nav-text">拷贝trove相关配置到/opt/etc/trove目录</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#修改-opt-etc-trove目录里的conf文件"><span class="nav-number">9.</span> <span class="nav-text">修改/opt/etc/trove目录里的conf文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#添加包含mysql的ubuntu镜像到glance里"><span class="nav-number">10.</span> <span class="nav-text">添加包含mysql的ubuntu镜像到glance里</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#初始化trove-database"><span class="nav-number">11.</span> <span class="nav-text">初始化trove database</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#初始化Trove-Datastores"><span class="nav-number">12.</span> <span class="nav-text">初始化Trove Datastores</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#重启trove-service"><span class="nav-number">13.</span> <span class="nav-text">重启trove service</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#配置datastore的默认值"><span class="nav-number">14.</span> <span class="nav-text">配置datastore的默认值</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#配置mysql-5-6版本的config-parameters"><span class="nav-number">15.</span> <span class="nav-text">配置mysql, 5.6版本的config parameters</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考资料"><span class="nav-number">16.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2018
+  </span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox
+  </span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme by <a class="theme-link" href="http://blog.idhyt.com">idhyt</a>.<a class="theme-link" href="https://github.com/idhyt/hexo-theme-next/tree/magiclamp">Mala</a>
+</div>
+
+<!-- busuanzi -->
+
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+    
+
+  
+
+
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>
