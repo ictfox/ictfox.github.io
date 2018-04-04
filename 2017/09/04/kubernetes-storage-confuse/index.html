@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="rbd,cephfs,volume,kubernetes," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="近日在 Kubernetes 使用 Ceph 的问题中，因为在两地，没有面对面的沟通，导致了理解的差异与不解，后来与本地同事详细沟通后，终于弄明白了之前的隔阂和问题所在，这里做下记录。 问题Kubernetes存储简介Kubernetes 里存储的使用，可分为两类：  PersistentVolume和PersistentVolumeClaims  A PersistentVolume(PV) i">
+<meta name="keywords" content="rbd,cephfs,volume,kubernetes">
+<meta property="og:type" content="article">
+<meta property="og:title" content="kubernetes里存储概念的解疑">
+<meta property="og:url" content="http://www.ictfox.cn/2017/09/04/kubernetes-storage-confuse/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="近日在 Kubernetes 使用 Ceph 的问题中，因为在两地，没有面对面的沟通，导致了理解的差异与不解，后来与本地同事详细沟通后，终于弄明白了之前的隔阂和问题所在，这里做下记录。 问题Kubernetes存储简介Kubernetes 里存储的使用，可分为两类：  PersistentVolume和PersistentVolumeClaims  A PersistentVolume(PV) i">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.ictfox.cn/images/volume-lun-difference.jpg">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.373Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="kubernetes里存储概念的解疑">
+<meta name="twitter:description" content="近日在 Kubernetes 使用 Ceph 的问题中，因为在两地，没有面对面的沟通，导致了理解的差异与不解，后来与本地同事详细沟通后，终于弄明白了之前的隔阂和问题所在，这里做下记录。 问题Kubernetes存储简介Kubernetes 里存储的使用，可分为两类：  PersistentVolume和PersistentVolumeClaims  A PersistentVolume(PV) i">
+<meta name="twitter:image" content="http://www.ictfox.cn/images/volume-lun-difference.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.ictfox.cn/2017/09/04/kubernetes-storage-confuse/"/>
+
+
+
+
+
+  <title>kubernetes里存储概念的解疑 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/09/04/kubernetes-storage-confuse/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">kubernetes里存储概念的解疑</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-09-04T21:01:17+08:00">
+                2017-09-04
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/storage/" itemprop="url" rel="index">
+                    <span itemprop="name">storage</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/09/04/kubernetes-storage-confuse/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/09/04/kubernetes-storage-confuse/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>近日在 Kubernetes 使用 Ceph 的问题中，因为在两地，没有面对面的沟通，导致了理解的差异与不解，后来与本地同事详细沟通后，终于弄明白了之前的隔阂和问题所在，这里做下记录。</p>
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><h3 id="Kubernetes存储简介"><a href="#Kubernetes存储简介" class="headerlink" title="Kubernetes存储简介"></a>Kubernetes存储简介</h3><p>Kubernetes 里存储的使用，可分为两类：</p>
+<ol>
+<li><p>PersistentVolume和PersistentVolumeClaims</p>
+<ul>
+<li>A PersistentVolume(PV) is a piece of storage in the cluster that has been provisioned by an administrator.</li>
+<li>A PersistentVolumeClaims(PVC) is a request for storage by a user.</li>
+</ul>
+</li>
+<li><p>StorageClasses</p>
+<ul>
+<li>A StorageClass provides a way for administrators to describe the “classes” of storage they offer.</li>
+</ul>
+</li>
+</ol>
+<p>PVs支持两种方式的provision: statically or dynamically.</p>
+<ul>
+<li><p>Static</p>
+<p>  A cluster administrator creates a number of PVs.</p>
+</li>
+<li><p>Dynamic</p>
+<p>  Base StorageClasses, when none of the static PVs the administrator created matches a user’s PersistentVolumeClaim, the cluster may try to dynamically provision a volume specially for the PVC.</p>
+</li>
+</ul>
+<p>从是否支持多客户端同时读写，也可分为三类：</p>
+<ol>
+<li>ReadWriteOnce</li>
+<li>ReadOnlyMany </li>
+<li>ReadWriteMany</li>
+</ol>
+<h3 id="Kubernetes存储需求"><a href="#Kubernetes存储需求" class="headerlink" title="Kubernetes存储需求"></a>Kubernetes存储需求</h3><p>Kubernetes 对存储的需求，大致可以总结为两类：</p>
+<ol>
+<li>独立使用的PV</li>
+<li>支持多客户端同时读写的PV</li>
+<li>支持多客户端同时读写 + <code>Dynamic provisioning</code>的PV</li>
+</ol>
+<h3 id="Ceph支持Kubernetes"><a href="#Ceph支持Kubernetes" class="headerlink" title="Ceph支持Kubernetes"></a>Ceph支持Kubernetes</h3><p>使用 Ceph 支持 Kubernetes，是否满足需求？</p>
+<ol>
+<li><p>独立使用的PV</p>
+<p> Ceph RBD支持即可</p>
+</li>
+<li><p>支持多客户端同时读写的PV</p>
+<p> CephFS / RBD + NFS</p>
+</li>
+</ol>
+<p>所以从我的角度理解：Ceph是可以满足Kubernetes对存储的需求的。</p>
+<p>但 Kubernetes 的同事却坚持 Ceph 不能满足需求<code>支持多客户端同时读写的PV</code>，要使用 Glusterfs 。Why？</p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>这个事情在后来我与本地熟悉 Kubernetes 的同事详细沟通后，才终于弄明白之前的隔阂和问题所在。</p>
+<p>下面从两个人所熟悉的知识领域来分析下问题。</p>
+<h3 id="volume概念"><a href="#volume概念" class="headerlink" title="volume概念"></a>volume概念</h3><h4 id="存储角度"><a href="#存储角度" class="headerlink" title="存储角度"></a>存储角度</h4><p>首先说下在存储领域的volume含义，在存储领域也工作了快十年了，以为之前做过NAS和SAN存储，提起volume，我的印象还是一个卷，一个块设备。</p>
+<p>熟悉存储的都知道，块设备是没法做到支持<code>多客户端同时读写</code>的，必须通过分布式文件系统来实现。所以提到volume，我就明确的表示它不会支持多客户端同时读写。</p>
+<p>在网上搜索了下volume的定义，有下面几个不同的说法：</p>
+<ol>
+<li><p>storage volume</p>
+<blockquote>
+<p>A storage volume is an identifiable unit of data storage. It can be a removable hard disk, but it does not have to be a unit that can be physically removed from a computer or storage system.</p>
+</blockquote>
+<p> 参考：<a href="http://searchstorage.techtarget.com/definition/volume" target="_blank" rel="noopener">http://searchstorage.techtarget.com/definition/volume</a></p>
+</li>
+<li><p>LUN与volume的描述</p>
+<p> 这个描述，与我理解的volume不一致 :(  </p>
+<blockquote>
+<p>LUN是对存储设备而言的，volume是对主机而言的。<br>LUN相对于主机来讲就是一个“物理硬盘”，与C盘D盘所在IDC或SCSI硬盘的性属是相同的。在该“物理硬盘”上创建一个或多个分区，再创建文件系统，才可以得到一个VOLUME。此时VOLUME相对于主机是一个逻辑设备。<br><a href="http://blog.csdn.net/liukuan73/article/details/45506441" target="_blank" rel="noopener">http://blog.csdn.net/liukuan73/article/details/45506441</a>  </p>
+</blockquote>
+<p> ==我不赞同上述文章里的说法！后面介绍的才是正确的==</p>
+<p> 可以参考这里的介绍，更加可靠些：</p>
+<blockquote>
+<p>A volume normally refers to a “disk” created via a “volume manager” such as Veritas or a volume created by an operating system such as Windows NT.<br>A LUN refers to a “logical unit number” presented to a host as ==a SCSI ID==. (i.e., LUN number 1 specifies SCSI ID 1 on that port. Therefore, the term volume can be considered software based and LUN considered hardware based.<br><a href="http://searchstorage.techtarget.com/answer/The-difference-between-volume-and-a-LUN" target="_blank" rel="noopener">http://searchstorage.techtarget.com/answer/The-difference-between-volume-and-a-LUN</a></p>
+</blockquote>
+<p> 在另一篇文章里也图形化描述了LUN和volume的区别：<br> <img src="/images/volume-lun-difference.jpg" alt="difference of volume and lun"></p>
+<p> 参考：<a href="https://jmetz.com/2016/11/whats-the-difference-between-a-lun-and-a-volume/" target="_blank" rel="noopener">https://jmetz.com/2016/11/whats-the-difference-between-a-lun-and-a-volume/</a></p>
+</li>
+<li><p>Glusterfs volume</p>
+<p> Glusterfs里对volume的说明  </p>
+<blockquote>
+<p>A volume is a logical collection of bricks where each brick is an export directory on a server in the trusted storage pool.</p>
+</blockquote>
+</li>
+<li><p>其他</p>
+<p> 在LVM和openstack里，volume的概念则与SAN中的一致，都是块设备。</p>
+</li>
+</ol>
+<p>==<strong>所以，以后提到volume还是要看具体的应用场景！！！</strong>==</p>
+<h4 id="Kubernetes角度"><a href="#Kubernetes角度" class="headerlink" title="Kubernetes角度"></a>Kubernetes角度</h4><p>在 Kubernetes 的官网上有这么一段话：</p>
+<blockquote>
+<p>At its core, a volume is just a directory, possibly with some data in it, which is accessible to the containers in a pod. How that directory comes to be, the medium that backs it, and the contents of it are determined by the particular volume type used.</p>
+</blockquote>
+<p>参考： <a href="https://kubernetes.io/docs/concepts/storage/volumes/#background" target="_blank" rel="noopener">https://kubernetes.io/docs/concepts/storage/volumes/#background</a></p>
+<p>所以从上面可知，这里的volume是指后端存储提供的一个目录。</p>
+<p>若volume指一个后端存储提供的目录，那是否支持<code>多客户端同时读写</code>，就看后端提供该目录的实现了。</p>
+<h3 id="provisioning概念"><a href="#provisioning概念" class="headerlink" title="provisioning概念"></a>provisioning概念</h3><h4 id="存储角度-1"><a href="#存储角度-1" class="headerlink" title="存储角度"></a>存储角度</h4><p>存储里有<code>storage provisioning</code>概念，<code>storage provisioning</code>指的是分配空间的处理过程，通常这种空间是服务器磁盘空间，通过存储自动配置可以优化存储局域网（SAN）的性能，分为<code>fat-provisioning</code>和<code>thin-provisioning</code>两种。</p>
+<ol>
+<li><p><code>fat-provisioning</code></p>
+<p> 预先分配，底层存储会预留出对应请求的存储空间。</p>
+</li>
+<li><p><code>thin-provisioning</code></p>
+<p> 实时分配（也称为精简分配），底层存储会根据实时需求动态分配存储空间，而不预先预留出存储空间。</p>
+<p> 有这么一段介绍：  </p>
+<blockquote>
+<p>Thin provisioning (TP) is a method of optimizing the efficiency with which the available space is utilized in storage area networks (SAN).</p>
+</blockquote>
+</li>
+</ol>
+<p>所以存储角度说的provisioning，是SAN系统相关的，不是文件系统相关的。</p>
+<h4 id="Kubernetes角度-1"><a href="#Kubernetes角度-1" class="headerlink" title="Kubernetes角度"></a>Kubernetes角度</h4><p>在 Kubernetes 里，提出<code>Dynamic Provisioning</code>的概念，是在<code>Storageclass</code>里提到的，介绍如下：</p>
+<p><strong>Dynamic</strong>  </p>
+<blockquote>
+<p>When none of the static PVs the administrator created matches a user’s PersistentVolumeClaim, the cluster may try to dynamically provision a volume specially for the PVC. This provisioning is based on StorageClasses: the PVC must request a class and the administrator must have created and configured that class in order for dynamic provisioning to occur. Claims that request the class “” effectively disable dynamic provisioning for themselves.</p>
+</blockquote>
+<p>大致就是用户不用配置很多个PV了，只需要配置好<code>Storageclass</code>，在PVC里指定<code>Storageclass</code>即可，这样 Kubernetes 会自动的从<code>Storageclass</code>里配置好的存储里动态分配出一个指定size的PV，把PVC绑定到PV上。</p>
+<p>参考： <a href="http://blog.kubernetes.io/2016/10/dynamic-provisioning-and-storage-in-kubernetes.html" target="_blank" rel="noopener">http://blog.kubernetes.io/2016/10/dynamic-provisioning-and-storage-in-kubernetes.html</a></p>
+<p>所以 Kubernetes 角度说的provisioning，其实是PV的动态分配，跟存储里的provisioning不一样。</p>
+<blockquote>
+<p>同事当时说成<code>fs provisioning</code>，弄的我很困惑，存储里没有<code>fs provisioning</code>这一说</p>
+</blockquote>
+<h3 id="明确需求"><a href="#明确需求" class="headerlink" title="明确需求"></a>明确需求</h3><p>经过上面的分析，我明确了同事对 Kubernetes 存储的需求是要支持：<code>Storageclass的Dynamic Provisioning</code> + <code>ReadWriteMany</code>。</p>
+<p>查看Kubernetes官方文档，各个后端存储的支持情况为：</p>
+<h4 id="PV"><a href="#PV" class="headerlink" title="PV"></a>PV</h4><table>
+<thead>
+<tr>
+<th>Volume Plugin</th>
+<th>ReadWriteOnce</th>
+<th>ReadOnlyMany</th>
+<th>ReadWriteMany</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AWSElasticBlockStore</td>
+<td>✓</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>AzureFile</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>AzureDisk</td>
+<td>✓</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>==CephFS==</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Cinder</td>
+<td>✓</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>FC</td>
+<td>✓</td>
+<td>✓</td>
+<td>-</td>
+</tr>
+<tr>
+<td>FlexVolume</td>
+<td>✓</td>
+<td>✓</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Flocker</td>
+<td>✓</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>GCEPersistentDisk</td>
+<td>✓</td>
+<td>✓</td>
+<td>-</td>
+</tr>
+<tr>
+<td>==Glusterfs==</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>HostPath</td>
+<td>✓</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>iSCSI</td>
+<td>✓</td>
+<td>✓</td>
+<td>-</td>
+</tr>
+<tr>
+<td>PhotonPersistentDisk</td>
+<td>✓</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Quobyte</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>NFS</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>==RBD==</td>
+<td>✓</td>
+<td>✓</td>
+<td>-</td>
+</tr>
+<tr>
+<td>VsphereVolume</td>
+<td>✓</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>PortworxVolume</td>
+<td>✓</td>
+<td>-</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>ScaleIO</td>
+<td>✓</td>
+<td>✓</td>
+<td>-</td>
+</tr>
+<tr>
+<td>StorageOS</td>
+<td>✓</td>
+<td>-</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h4 id="StorageClasses"><a href="#StorageClasses" class="headerlink" title="StorageClasses"></a>StorageClasses</h4><table>
+<thead>
+<tr>
+<th>Volume Plugin</th>
+<th>Internal Provisioner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AWSElasticBlockStore</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>AzureFile</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>AzureDisk</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>==CephFS==</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Cinder</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>FC</td>
+<td>-</td>
+</tr>
+<tr>
+<td>FlexVolume</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Flocker</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>GCEPersistentDisk</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>==Glusterfs==</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>iSCSI</td>
+<td>-</td>
+</tr>
+<tr>
+<td>PhotonPersistentDisk</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Quobyte</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>NFS</td>
+<td>-</td>
+</tr>
+<tr>
+<td>==RBD==</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>VsphereVolume</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>PortworxVolume</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>ScaleIO</td>
+<td>✓</td>
+</tr>
+</tbody>
+</table>
+<p>对比上面可以得知，Ceph提供的RBD和CephFS都不能满足 Kubernetes 的<code>Storageclass的Dynamic Provisioning</code> + <code>ReadWriteMany</code>的需求，而Glusterfs则可以。</p>
+<blockquote>
+<p>CephFS的Quota现在只有Ceph FUSE客户端支持，kernel client还不支持，这也许就是<code>Storageclass</code>还没支持<code>CephFS</code>的原因吧</p>
+</blockquote>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/rbd/" rel="tag"># rbd</a>
+          
+            <a href="/tags/cephfs/" rel="tag"># cephfs</a>
+          
+            <a href="/tags/volume/" rel="tag"># volume</a>
+          
+            <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/08/30/cephfs-knowledge-share-part1/" rel="next" title="cephfs架构解读与测试分析-part1 ">
+                <i class="fa fa-chevron-left"></i> cephfs架构解读与测试分析-part1 
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/09/12/storage-backup-multisite/" rel="prev" title="金融云存储灾备之两地三中心">
+                金融云存储灾备之两地三中心 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#问题"><span class="nav-number">1.</span> <span class="nav-text">问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Kubernetes存储简介"><span class="nav-number">1.1.</span> <span class="nav-text">Kubernetes存储简介</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Kubernetes存储需求"><span class="nav-number">1.2.</span> <span class="nav-text">Kubernetes存储需求</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Ceph支持Kubernetes"><span class="nav-number">1.3.</span> <span class="nav-text">Ceph支持Kubernetes</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#分析"><span class="nav-number">2.</span> <span class="nav-text">分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#volume概念"><span class="nav-number">2.1.</span> <span class="nav-text">volume概念</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#存储角度"><span class="nav-number">2.1.1.</span> <span class="nav-text">存储角度</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Kubernetes角度"><span class="nav-number">2.1.2.</span> <span class="nav-text">Kubernetes角度</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#provisioning概念"><span class="nav-number">2.2.</span> <span class="nav-text">provisioning概念</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#存储角度-1"><span class="nav-number">2.2.1.</span> <span class="nav-text">存储角度</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Kubernetes角度-1"><span class="nav-number">2.2.2.</span> <span class="nav-text">Kubernetes角度</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#明确需求"><span class="nav-number">2.3.</span> <span class="nav-text">明确需求</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#PV"><span class="nav-number">2.3.1.</span> <span class="nav-text">PV</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#StorageClasses"><span class="nav-number">2.3.2.</span> <span class="nav-text">StorageClasses</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.ictfox.cn/2017/09/04/kubernetes-storage-confuse/';
+          this.page.identifier = '2017/09/04/kubernetes-storage-confuse/';
+          this.page.title = 'kubernetes里存储概念的解疑';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="openstack,trove," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="Trove简介Openstack Trove项目是Openstack开源代码中提供Database As A Service的项目，它的目的是提供一个Database的框架，集成现有常见的关系型数据库、非关系型数据库。 现在Trove项目支持的数据库有：Mysql，Redis，MoogoDB，Cassandra，Couchbase，Couchdb， DB2，Postgresql，Vertica；">
+<meta name="keywords" content="openstack,trove">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Openstack DBBS Trove Introduction">
+<meta property="og:url" content="http://www.ictfox.cn/2016/03/18/trove-introduction/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="Trove简介Openstack Trove项目是Openstack开源代码中提供Database As A Service的项目，它的目的是提供一个Database的框架，集成现有常见的关系型数据库、非关系型数据库。 现在Trove项目支持的数据库有：Mysql，Redis，MoogoDB，Cassandra，Couchbase，Couchdb， DB2，Postgresql，Vertica；">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.ictfox.cn/images/trove-introduction1.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/trove-introduction2.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/trove-introduction3.jpg">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.345Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Openstack DBBS Trove Introduction">
+<meta name="twitter:description" content="Trove简介Openstack Trove项目是Openstack开源代码中提供Database As A Service的项目，它的目的是提供一个Database的框架，集成现有常见的关系型数据库、非关系型数据库。 现在Trove项目支持的数据库有：Mysql，Redis，MoogoDB，Cassandra，Couchbase，Couchdb， DB2，Postgresql，Vertica；">
+<meta name="twitter:image" content="http://www.ictfox.cn/images/trove-introduction1.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.ictfox.cn/2016/03/18/trove-introduction/"/>
+
+
+
+
+
+  <title>Openstack DBBS Trove Introduction | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2016/03/18/trove-introduction/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Openstack DBBS Trove Introduction</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-03-18T10:31:17+08:00">
+                2016-03-18
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/openstack/" itemprop="url" rel="index">
+                    <span itemprop="name">openstack</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2016/03/18/trove-introduction/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2016/03/18/trove-introduction/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="Trove简介"><a href="#Trove简介" class="headerlink" title="Trove简介"></a>Trove简介</h2><p>Openstack Trove项目是Openstack开源代码中提供Database As A Service的项目，它的目的是提供一个Database的框架，集成现有常见的关系型数据库、非关系型数据库。</p>
+<p>现在Trove项目支持的数据库有：Mysql，Redis，MoogoDB，Cassandra，Couchbase，Couchdb， DB2，Postgresql，Vertica；</p>
+<p>上述数据库中，Mysql的支持是最完善和最稳定的，别的数据库多半还在试验阶段，有些仅能提供一些数据库操作的基本功能；</p>
+<p>Trove Docs：<a href="https://docs.openstack.org/developer/trove/" target="_blank" rel="noopener">https://docs.openstack.org/developer/trove/</a><br>Trove Wiki：<a href="https://wiki.openstack.org/wiki/Trove" target="_blank" rel="noopener">https://wiki.openstack.org/wiki/Trove</a><br>Trove源码：<a href="https://github.com/openstack/trove" target="_blank" rel="noopener">https://github.com/openstack/trove</a></p>
+<p>Openstack Trove基于Openstack的别的模块来提供Dbaas的服务，使用到的模块有：Glance，Nova，Cinder，Neutron，Keystone，Swift；</p>
+<p><strong>注释：本文对应的Trove版本为Kilo</strong></p>
+<h2 id="Trove架构"><a href="#Trove架构" class="headerlink" title="Trove架构"></a>Trove架构</h2><p>Openstack Trove的架构如下：<br><img src="/images/trove-introduction1.jpg" alt="trove arch"></p>
+<p>Trove Instance：指的是通过trove命令创建的一个实例，如上图所示，它实际上是一个nova instance，在里面运行了指定的database服务，同时它也会跟glance、cinder、neutron、swift打交道。</p>
+<p>Trove有四个基本的模块，简介如下：</p>
+<h3 id="Trove-API"><a href="#Trove-API" class="headerlink" title="Trove-API"></a>Trove-API</h3><p>Trove的API模块，接受Trove的命令来操作数据库，然后异步交给Trove-Taskmanager执行，中间会保存Trove Instance状态到database中；</p>
+<h3 id="Trove-Taskmanager"><a href="#Trove-Taskmanager" class="headerlink" title="Trove-Taskmanager"></a>Trove-Taskmanager</h3><p>Trove的任务管理模块，主要接受Trove-API发来的请求，Trove执行的主要逻辑都在这里实现，中间会更新Trove Instance状态到database中；</p>
+<h3 id="Trove-Conductor"><a href="#Trove-Conductor" class="headerlink" title="Trove-Conductor"></a>Trove-Conductor</h3><p>Trove的信息接收模块，它接收Trove Instance的心跳信息，把Trove Instance的状态信息保存到trove使用的database中；</p>
+<h3 id="Trove-Guestagent"><a href="#Trove-Guestagent" class="headerlink" title="Trove-Guestagent"></a>Trove-Guestagent</h3><p>Trove的客户端代理模块，它运行在每个Trove Instance上，接收Trove-Taskmanger的命令并执行，上报Trove Instance的状态信息到Trove-Conductor；</p>
+<p><strong>Trove的四个模块之间通信也是使用Rabbitmq，可以使用openstack其他模块使用的Rabbitmq，也可以单独部署Rabbitmq使用；</strong></p>
+<h2 id="Trove命令"><a href="#Trove命令" class="headerlink" title="Trove命令"></a>Trove命令</h2><p>Trove服务都是通过CLI命令或者Restful请求执行的，支持的命令有如下几类：</p>
+<h3 id="1-Instance操作"><a href="#1-Instance操作" class="headerlink" title="1. Instance操作"></a>1. Instance操作</h3><pre><code>* create：创建一个trove实例
+* delete：删除一个trove实例
+* resize-instance：resize trove实例到新的flavor
+* resize-volume：resize trove实例的volume到更大值
+* restart：重启一个trove实例
+* show：显示一个trove实例的detail信息
+* update：更新一个trove实例的信息
+</code></pre><h3 id="2-datastore操作"><a href="#2-datastore操作" class="headerlink" title="2. datastore操作"></a>2. datastore操作</h3><p>datastore的创建和更新是通过 trove-manager 命令生成的；</p>
+<pre><code>* datastore-list：显示有哪些datastore
+* datastore-show：显示一个datastore的detail信息
+* datastore-version-list：显示一个datastore的version list
+* datastore-version-show：显示一个datastore的一个version的detail信息
+</code></pre><h3 id="3-backup操作"><a href="#3-backup操作" class="headerlink" title="3. backup操作"></a>3. backup操作</h3><p>trove提供备份instance到swift的操作，支持全量备份和增量备份，看具体database的实现；</p>
+<pre><code>* backup-create：创建一个instance的backup
+* backup-delete：删除指定ID的backup
+* backup-list：列出可用的所有backups
+* backup-list-instance：列出指定instance的可用的所有backups
+* backup-show：显示指定ID的backu的detail信息
+* backup-copy：从一个backup copy生成一个新的backup
+</code></pre><h3 id="4-cluster操作"><a href="#4-cluster操作" class="headerlink" title="4. cluster操作"></a>4. cluster操作</h3><pre><code>针对有些database才有cluster的概念，比如MoogoDB；
+
+* cluster-create：创建一个新的cluster
+* cluster-delete：删除一个cluster
+* cluster-instances：列出一个cluster的所有instances
+* cluster-list：列出所有的clusters
+* cluster-show：显示指定ID的cluster的detail信息
+</code></pre><h3 id="5-configuration-group操作"><a href="#5-configuration-group操作" class="headerlink" title="5. configuration group操作"></a>5. configuration group操作</h3><p>trove提出了配置组的概念，这是为了是用户可以定制不同instance的配置参数，针对不同的database，支持的配置参数也不相同，详细请参考代码；</p>
+<p>比如mysql支持的配置参数定义在：<code>trove/templates/mysql/validation-rules.json</code></p>
+<p>trove限制每个instance只能配置一个configuration group</p>
+<pre><code>* configuration-create：创建一个新的configuration group
+* configuration-delete：删除一个configuration group
+* configuration-attach：attach一个configuration group到一个trove instance上
+* configuration-detach：detach一个trove instance上的configuration group
+* configuration-default：显示一个trove instance的默认configuration group
+* configuration-instances：显示绑定到一个configuration group上的所有trove instances
+* configuration-list：显示所有的configuration group
+* configuration-show：显示一个configuration group的detail信息
+* configuration-parameter-list：列出指定version的datastore支持的configuration group配置参数
+* configuration-parameter-show：显示指定version的datastore支持的configuration group的某一项配置的详细信息
+* configuration-patch：把新的&lt;values&gt; patch到一个configuration group
+* configuration-update：更新一个configuration group的信息
+</code></pre><h3 id="6-replica操作"><a href="#6-replica操作" class="headerlink" title="6. replica操作"></a>6. replica操作</h3><p>为了支持database的高可用，trove提供命令来创建一个trove instance的replica instance，并根据不同的database做不同的配置；</p>
+<pre><code>通过create命令创建一个instance的replica instance
+trove create [--replica_of &lt;source_instance&gt;] [--replica_count &lt;count&gt;]
+</code></pre><h3 id="7-user操作"><a href="#7-user操作" class="headerlink" title="7. user操作"></a>7. user操作</h3><p>trove支持创建一个instance的user，并支持赋予/收回 user访问databases的权限；</p>
+<pre><code>* user-create：创建一个instance的user
+* user-delete：删除一个instance的user
+* user-grant-access：赋予user访问database（可以同时指定多个）的权限
+* user-revoke-access：收回user访问database的权限
+* user-list：list一个instance的所有users
+* user-show：显示一个instance指定user的detail信息
+* user-show-access：显示一个instance指定user访问database的权限信息
+</code></pre><h3 id="8-database操作"><a href="#8-database操作" class="headerlink" title="8. database操作"></a>8. database操作</h3><p>trove支持在一个trove instance上有多个database；</p>
+<pre><code>* database-create：在一个instance上创建database
+* database-delete：删除一个instance上的database
+* database-list：list一个instance上的所有databases
+</code></pre><h3 id="9-metadata操作"><a href="#9-metadata操作" class="headerlink" title="9. metadata操作"></a>9. metadata操作</h3><p>这部分应该是给trove instance打些特定标签使用的，我们使用中并没用到；</p>
+<h2 id="Trove代码结构"><a href="#Trove代码结构" class="headerlink" title="Trove代码结构"></a>Trove代码结构</h2><p>下载完trove代码后进入trove/目录，看到如下的目录结构：<br><img src="/images/trove-introduction2.jpg" alt="trove arch"></p>
+<p>基本可以通过目录的命名就知道每个目录中代码的作用了，下面列举几个常用目录的代码部分：</p>
+<ol>
+<li><p>cluster</p>
+<p> trove cluster实例的相关代码；</p>
+</li>
+<li><p>conductor</p>
+<p> trove conductor模块的相关代码；</p>
+</li>
+<li><p>taskmanager</p>
+<p> trove taskmanager模块的相关代码，这部分代码比较重要；</p>
+</li>
+<li><p>configuration</p>
+<p> trove configuration group逻辑的相关代码；</p>
+</li>
+<li><p>guestagent</p>
+<p> trove guestagent模块的相关代码，不同数据库的不同实现都在该目录下，目录结构如下：<br> <img src="/images/trove-introduction3.jpg" alt="trove arch"></p>
+</li>
+<li><p>templates</p>
+<p> trove支持的各个database的模板文件，包括配置模板和configuration group模板；</p>
+</li>
+<li><p>backup</p>
+<p> trove backup逻辑的相关代码；</p>
+</li>
+<li><p>datastore</p>
+<p> trove datastore逻辑的相关代码；</p>
+</li>
+<li><p>instance</p>
+<p> trove instance的相关代码；</p>
+</li>
+</ol>
+<h2 id="创建Trove实例的过程"><a href="#创建Trove实例的过程" class="headerlink" title="创建Trove实例的过程"></a>创建Trove实例的过程</h2><p>这里通过trove create一个instance的过程，来描述trove是如何工作的；</p>
+<ol>
+<li><p>通过trove命令触发create操作；</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">usage: trove create &lt;name&gt; &lt;flavor_id&gt;</span><br><span class="line">                    [--size &lt;size&gt;] [--volume_type &lt;<span class="built_in">type</span>&gt;]</span><br><span class="line">                    [--databases &lt;databases&gt; [&lt;databases&gt; ...]]</span><br><span class="line">                    [--users &lt;users&gt; [&lt;users&gt; ...]] [--backup &lt;backup&gt;]</span><br><span class="line">                    [--availability_zone &lt;availability_zone&gt;]</span><br><span class="line">                    [--datastore &lt;datastore&gt;]</span><br><span class="line">                    [--datastore_version &lt;datastore_version&gt;]</span><br><span class="line">                    [--nic &lt;net-id=net-uuid,v4-fixed-ip=ip-addr,port-id=port-uuid&gt;]</span><br><span class="line">                    [--configuration &lt;configuration&gt;]</span><br><span class="line">                    [--replica_of &lt;source_instance&gt;] [--replica_count &lt;count&gt;]</span><br><span class="line">                    [--virtual_ip &lt;vip&gt;] [--vrid &lt;vrid&gt;]</span><br><span class="line">                    [--sec_group_id &lt;sec_group_id&gt;]</span><br><span class="line">                    [--root_password &lt;root_password&gt;]</span><br><span class="line">error: too few arguments</span><br><span class="line">Try <span class="string">'trove help create'</span> <span class="keyword">for</span> more information.</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>trove api收到create一个instance的请求，创建一个trove instance的实例，并把实例状态置为：building，写入database；</p>
+ <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">        <span class="function"><span class="keyword">def</span> <span class="title">_create_resources</span><span class="params">()</span>:</span></span><br><span class="line">...</span><br><span class="line">                db_info = DBInstance.create(name=instance_name,</span><br><span class="line">                                            flavor_id=flavor_id,</span><br><span class="line">                                            tenant_id=context.tenant,</span><br><span class="line">                                            volume_size=volume_size,</span><br><span class="line">                                            datastore_version_id=datastore_version.id,</span><br><span class="line">                                            task_status=InstanceTasks.BUILDING,</span><br><span class="line">                                            configuration_id=configuration_id,</span><br><span class="line">                                            slave_of_id=slave_of_id,</span><br><span class="line">                                            type=volume_type,</span><br><span class="line">                                            virtual_ip_vrid=virtual_ip_vrid)</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>trove api发送异步请求给trove taskmanager，然后返回给用户，此时用户通过trove list命令可以看到trove instance的状态为building；</p>
+ <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">create_instance</span><span class="params">(self, instance_id, name, flavor,</span></span></span><br><span class="line"><span class="function"><span class="params">                    image_id, databases, users, datastore_manager,</span></span></span><br><span class="line"><span class="function"><span class="params">                    packages, volume_size, backup_id=None,</span></span></span><br><span class="line"><span class="function"><span class="params">                    availability_zone=None, root_password=None,</span></span></span><br><span class="line"><span class="function"><span class="params">                    nics=None, overrides=None, slave_of_id=None,</span></span></span><br><span class="line"><span class="function"><span class="params">                    cluster_config=None, volume_type=None)</span>:</span></span><br><span class="line">    LOG.debug(<span class="string">"Making async call to create instance %s "</span> % instance_id)</span><br><span class="line">    cctxt = self.client.prepare(version=self.version_cap)</span><br><span class="line">    cctxt.cast(self.context, <span class="string">"create_instance"</span>,</span><br><span class="line">               instance_id=instance_id, name=name,</span><br><span class="line">               flavor=self._transform_obj(flavor),</span><br><span class="line">               image_id=image_id,</span><br><span class="line">               databases=databases,</span><br><span class="line">               users=users,</span><br><span class="line">               datastore_manager=datastore_manager,</span><br><span class="line">               packages=packages,</span><br><span class="line">               volume_size=volume_size,</span><br><span class="line">               backup_id=backup_id,</span><br><span class="line">               availability_zone=availability_zone,</span><br><span class="line">               root_password=root_password,</span><br><span class="line">               nics=nics,</span><br><span class="line">               overrides=overrides,</span><br><span class="line">               slave_of_id=slave_of_id,</span><br><span class="line">               cluster_config=cluster_config,</span><br><span class="line">               volume_type=volume_type)</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>trove taskmanager根据参数调用cinder接口创建 –size <size> 指定的volume，并等待返回；若出错则置实例状态为特定error；</size></p>
+ <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_build_volume_info</span><span class="params">(self, datastore_manager, volume_size=None,</span></span></span><br><span class="line"><span class="function"><span class="params">                           volume_type=None, master_vol_host=None)</span>:</span></span><br><span class="line">...</span><br><span class="line">        <span class="keyword">if</span> volume_support:</span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                volume_info = self._create_volume(volume_size,</span><br><span class="line">                                                  datastore_manager,</span><br><span class="line">                                                  volume_type,</span><br><span class="line">                                                  master_vol_host)</span><br><span class="line">            <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>trove taskmanager根据参数调用nova接口创建nova instance；会传入 cinder volume信息，glance image信息，网络信息等等；并等待nova instance创建成功返回；若出错则置实例状态为特定error；</p>
+ <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">_create_server</span><span class="params">(self, flavor, image_id, security_groups,</span></span></span><br><span class="line"><span class="function"><span class="params">                   datastore_manager, block_device_mapping,</span></span></span><br><span class="line"><span class="function"><span class="params">                   availability_zone, nics, files=&#123;&#125;)</span>:</span></span><br><span class="line">    userdata = self._prepare_userdata(datastore_manager, flavor)</span><br><span class="line">    name = self.hostname <span class="keyword">or</span> self.name</span><br><span class="line">    bdmap = block_device_mapping</span><br><span class="line">    config_drive = CONF.use_nova_server_config_drive</span><br><span class="line"> </span><br><span class="line">    server = self.nova_client.servers.create(</span><br><span class="line">        name, image_id, flavor[<span class="string">'id'</span>], files=files, userdata=userdata,</span><br><span class="line">        security_groups=security_groups, block_device_mapping=bdmap,</span><br><span class="line">        availability_zone=availability_zone, nics=nics,</span><br><span class="line">        config_drive=config_drive)</span><br><span class="line">    LOG.debug(<span class="string">"Created new compute instance %(server_id)s "</span></span><br><span class="line">              <span class="string">"for instance %(id)s"</span> %</span><br><span class="line">              &#123;<span class="string">'server_id'</span>: server.id, <span class="string">'id'</span>: self.id&#125;)</span><br><span class="line">    <span class="keyword">return</span> server</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>trove taskmanager调用_guest_prepare发请求给trove instance里面的guestagent进程；</p>
+ <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">_guest_prepare</span><span class="params">(self, flavor_ram, volume_info,</span></span></span><br><span class="line"><span class="function"><span class="params">                   packages, databases, users, backup_info=None,</span></span></span><br><span class="line"><span class="function"><span class="params">                   config_contents=None, root_password=None,</span></span></span><br><span class="line"><span class="function"><span class="params">                   overrides=None, cluster_config=None, snapshot=None)</span>:</span></span><br><span class="line">    LOG.debug(<span class="string">"Entering guest_prepare"</span>)</span><br><span class="line">    <span class="comment"># Now wait for the response from the create to do additional work</span></span><br><span class="line">    self.guest.prepare(flavor_ram, packages, databases, users,</span><br><span class="line">                       device_path=volume_info[<span class="string">'device_path'</span>],</span><br><span class="line">                       mount_point=volume_info[<span class="string">'mount_point'</span>],</span><br><span class="line">                       backup_info=backup_info,</span><br><span class="line">                       config_contents=config_contents,</span><br><span class="line">                       root_password=root_password,</span><br><span class="line">                       overrides=overrides,</span><br><span class="line">                       cluster_config=cluster_config,</span><br><span class="line">	                       snapshot=snapshot)</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>trove guestagent收到请求后，会根据不同database中guestagent的实现做不同操作</p>
+<p> 以mysql为例，mysql的guestagent会做如下操作：</p>
+ <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">* stop database</span><br><span class="line">* cinder volume格式化，并mount到指定目录</span><br><span class="line">* 把之前database目录下的东西迁移到cinder volume mount的目录</span><br><span class="line">* start database</span><br><span class="line">* 根据传入的参数决定是否做：create database，create user，enable replica的操作</span><br><span class="line">* 发送消息给trove conductor修改trove instance状态为running</span><br><span class="line"></span><br><span class="line">trove/guestagent/datastore/mysql/manager.py文件：</span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">prepare</span><span class="params">(self, context, packages, databases, memory_mb, users,</span></span></span><br><span class="line"><span class="function"><span class="params">                device_path=None, mount_point=None, backup_info=None,</span></span></span><br><span class="line"><span class="function"><span class="params">                config_contents=None, root_password=None, overrides=None,</span></span></span><br><span class="line"><span class="function"><span class="params">                cluster_config=None, snapshot=None)</span>:</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>trove创建instance的过程完成，此时用户通过trove list命令可以看到trove instance的状态为active；</p>
+</li>
+</ol>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="https://www.openstack.org/summit/openstack-summit-atlanta-2014/session-videos/presentation/introduction-to-openstack-trove-a-multi-database-deployment-with-mongodb-and-mysql" target="_blank" rel="noopener">https://www.openstack.org/summit/openstack-summit-atlanta-2014/session-videos/presentation/introduction-to-openstack-trove-a-multi-database-deployment-with-mongodb-and-mysql</a><br><a href="http://www.slideshare.net/ToruMakabe/openstack-trove" target="_blank" rel="noopener">http://www.slideshare.net/ToruMakabe/openstack-trove</a><br><a href="http://tech.it168.com/a2016/0407/2587/000002587322.shtml" target="_blank" rel="noopener">http://tech.it168.com/a2016/0407/2587/000002587322.shtml</a><br><a href="http://blog.csdn.net/myproudcodelife/article/details/39839891" target="_blank" rel="noopener">http://blog.csdn.net/myproudcodelife/article/details/39839891</a><br><a href="http://www.odbms.org/2016/02/10-things-you-should-know-about-openstack-trove-the-open-source-database-as-a-service/" target="_blank" rel="noopener">http://www.odbms.org/2016/02/10-things-you-should-know-about-openstack-trove-the-open-source-database-as-a-service/</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/openstack/" rel="tag"># openstack</a>
+          
+            <a href="/tags/trove/" rel="tag"># trove</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/12/10/librbd-log-file-configure/" rel="next" title="Ceph配置rbd client端的log file">
+                <i class="fa fa-chevron-left"></i> Ceph配置rbd client端的log file
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/03/28/trove-deploy/" rel="prev" title="Openstack DBBS Trove部署">
+                Openstack DBBS Trove部署 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Trove简介"><span class="nav-number">1.</span> <span class="nav-text">Trove简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Trove架构"><span class="nav-number">2.</span> <span class="nav-text">Trove架构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Trove-API"><span class="nav-number">2.1.</span> <span class="nav-text">Trove-API</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Trove-Taskmanager"><span class="nav-number">2.2.</span> <span class="nav-text">Trove-Taskmanager</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Trove-Conductor"><span class="nav-number">2.3.</span> <span class="nav-text">Trove-Conductor</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Trove-Guestagent"><span class="nav-number">2.4.</span> <span class="nav-text">Trove-Guestagent</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Trove命令"><span class="nav-number">3.</span> <span class="nav-text">Trove命令</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-Instance操作"><span class="nav-number">3.1.</span> <span class="nav-text">1. Instance操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-datastore操作"><span class="nav-number">3.2.</span> <span class="nav-text">2. datastore操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-backup操作"><span class="nav-number">3.3.</span> <span class="nav-text">3. backup操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-cluster操作"><span class="nav-number">3.4.</span> <span class="nav-text">4. cluster操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-configuration-group操作"><span class="nav-number">3.5.</span> <span class="nav-text">5. configuration group操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-replica操作"><span class="nav-number">3.6.</span> <span class="nav-text">6. replica操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-user操作"><span class="nav-number">3.7.</span> <span class="nav-text">7. user操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-database操作"><span class="nav-number">3.8.</span> <span class="nav-text">8. database操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-metadata操作"><span class="nav-number">3.9.</span> <span class="nav-text">9. metadata操作</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Trove代码结构"><span class="nav-number">4.</span> <span class="nav-text">Trove代码结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建Trove实例的过程"><span class="nav-number">5.</span> <span class="nav-text">创建Trove实例的过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考资料"><span class="nav-number">6.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.ictfox.cn/2016/03/18/trove-introduction/';
+          this.page.identifier = '2016/03/18/trove-introduction/';
+          this.page.title = 'Openstack DBBS Trove Introduction';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

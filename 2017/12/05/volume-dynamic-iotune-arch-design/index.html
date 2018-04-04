@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,nova,openstack,cinder," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="当前状况当前我们仅仅通过cinder创建type，指定type的IO限制来限制不同类型的云硬盘的IO值。 具体方案和调研，参考：云硬盘动态限速调研 目的 充分利用系统的资源，在系统负载和Ceph负载小的情况下，动态调整云硬盘的IO值，给用户提供更好的体验。 设计一个框架，能满足云硬盘动态限速的要求；以后也能方便的加入网络的动态限速；  框架设计需求 统一配置选项 模块化设计，能方便添加别的动态限速">
+<meta name="keywords" content="ceph,nova,openstack,cinder">
+<meta property="og:type" content="article">
+<meta property="og:title" content="基于Cinder的云硬盘动态限速框架设计">
+<meta property="og:url" content="http://www.ictfox.cn/2017/12/05/volume-dynamic-iotune-arch-design/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="当前状况当前我们仅仅通过cinder创建type，指定type的IO限制来限制不同类型的云硬盘的IO值。 具体方案和调研，参考：云硬盘动态限速调研 目的 充分利用系统的资源，在系统负载和Ceph负载小的情况下，动态调整云硬盘的IO值，给用户提供更好的体验。 设计一个框架，能满足云硬盘动态限速的要求；以后也能方便的加入网络的动态限速；  框架设计需求 统一配置选项 模块化设计，能方便添加别的动态限速">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.ictfox.cn/images/volume-dynamic-iotune-arch1">
+<meta property="og:image" content="http://www.ictfox.cn/images/volume-dynamic-iotune-arch2">
+<meta property="og:image" content="http://www.ictfox.cn/images/volume-dynamic-iotune-agent">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.378Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="基于Cinder的云硬盘动态限速框架设计">
+<meta name="twitter:description" content="当前状况当前我们仅仅通过cinder创建type，指定type的IO限制来限制不同类型的云硬盘的IO值。 具体方案和调研，参考：云硬盘动态限速调研 目的 充分利用系统的资源，在系统负载和Ceph负载小的情况下，动态调整云硬盘的IO值，给用户提供更好的体验。 设计一个框架，能满足云硬盘动态限速的要求；以后也能方便的加入网络的动态限速；  框架设计需求 统一配置选项 模块化设计，能方便添加别的动态限速">
+<meta name="twitter:image" content="http://www.ictfox.cn/images/volume-dynamic-iotune-arch1">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.ictfox.cn/2017/12/05/volume-dynamic-iotune-arch-design/"/>
+
+
+
+
+
+  <title>基于Cinder的云硬盘动态限速框架设计 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/12/05/volume-dynamic-iotune-arch-design/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">基于Cinder的云硬盘动态限速框架设计</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-12-05T21:41:17+08:00">
+                2017-12-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/openstack/" itemprop="url" rel="index">
+                    <span itemprop="name">openstack</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/12/05/volume-dynamic-iotune-arch-design/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/12/05/volume-dynamic-iotune-arch-design/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="当前状况"><a href="#当前状况" class="headerlink" title="当前状况"></a>当前状况</h2><p>当前我们仅仅通过<code>cinder</code>创建<code>type</code>，指定<code>type</code>的<code>IO限制</code>来限制不同类型的云硬盘的<code>IO值</code>。</p>
+<p>具体方案和调研，参考：<a href="http://www.yangguanjun.com/2017/11/28/volume-dynamic-iotune-invest/" target="_blank" rel="noopener">云硬盘动态限速调研</a></p>
+<h2 id="目的"><a href="#目的" class="headerlink" title="目的"></a>目的</h2><ul>
+<li>充分利用系统的资源，在系统负载和<code>Ceph</code>负载小的情况下，动态调整云硬盘的<code>IO值</code>，给用户提供更好的体验。</li>
+<li>设计一个框架，能满足云硬盘动态限速的要求；以后也能方便的加入网络的动态限速；</li>
+</ul>
+<h2 id="框架设计"><a href="#框架设计" class="headerlink" title="框架设计"></a>框架设计</h2><h3 id="需求"><a href="#需求" class="headerlink" title="需求"></a>需求</h3><ul>
+<li>统一配置选项</li>
+<li>模块化设计，能方便添加别的动态限速需求</li>
+<li>统一调度，各物理节点独立运行模式</li>
+</ul>
+<h3 id="方案1"><a href="#方案1" class="headerlink" title="方案1"></a>方案1</h3><p>分散式架构设计，独立实现，各物理节点独立负责监控负载和动态限速；</p>
+<p><img src="/images/volume-dynamic-iotune-arch1" alt="arch1"></p>
+<p><strong>优点：</strong></p>
+<ul>
+<li>独立实现，比较简洁</li>
+<li>物理节点单独计算负载，通信量减少</li>
+<li><code>Master</code>只需要维护配置项，可在内存中维护该数据</li>
+</ul>
+<p><strong>缺点：</strong></p>
+<ul>
+<li>不能与现有监控系统结合</li>
+</ul>
+<h3 id="方案2"><a href="#方案2" class="headerlink" title="方案2"></a>方案2</h3><p>结合<code>Openstack</code>的设计，<code>Master</code>端集中维护系统负载，存入<code>DB</code>，<code>Master-Agent</code>通过<code>Rabbitmq</code>通信；</p>
+<p><img src="/images/volume-dynamic-iotune-arch2" alt="arch2"></p>
+<p><strong>优点：</strong></p>
+<ul>
+<li>结合<code>Openstack</code>的<code>DB</code>，<code>rabbitmq</code>，<code>rpc通信</code>，<code>wsgi等模块</code></li>
+<li>系统负载信息通过<code>DB</code>统一维护</li>
+<li>方便与现有监控系统集合</li>
+</ul>
+<p><strong>缺点：</strong></p>
+<ul>
+<li>结合<code>Openstack</code>的几个通用模块，代码量和工作量比较大</li>
+<li>系统负载信息集中保存到DB，当前看是没有必要性</li>
+</ul>
+<h3 id="方案选择"><a href="#方案选择" class="headerlink" title="方案选择"></a>方案选择</h3><p>个人倾向 方案1，不需要把<code>openstack</code>的各个模块引入进来，实现会相对简单，也满足我们项目的需求；</p>
+<h2 id="云硬盘限速部分设计"><a href="#云硬盘限速部分设计" class="headerlink" title="云硬盘限速部分设计"></a>云硬盘限速部分设计</h2><h3 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h3><p>前面在调研中指出，我们可以在<code>nova instance</code>具体的物理机上，通过<code>virsh</code>的命令调整虚拟机指定云硬盘的<code>io限制</code>。<br>所以具体执行动态限速的命令需要在<code>nova instance</code>的物理机上执行，也就是说每个运行<code>nova instance</code>的物理机需要跑一个限速的<code>agent</code>进程。</p>
+<p>我们期望云硬盘动态限速，会受到以下两个因素影响：</p>
+<ul>
+<li>物理机的负载</li>
+<li>云硬盘对应<code>Ceph Pool</code>的<code>IO</code>负载</li>
+</ul>
+<p><strong>所以比较简单的设计为：</strong></p>
+<p>每个<code>Agent</code>单独运行，负责本物理机上的<code>nova instances</code>的云硬盘IO动态调整。<code>Agent</code>可以获取本机的实时负载和<code>Ceph</code>对应<code>Pool</code>的IO负载。</p>
+<h3 id="考虑的因素"><a href="#考虑的因素" class="headerlink" title="考虑的因素"></a>考虑的因素</h3><ul>
+<li>通过配置可以关闭/开启动态限速</li>
+<li>支持白名单方式</li>
+<li>支持黑名单方式</li>
+<li>通过配置指定支持的云硬盘类型</li>
+<li>通过配置指定动态限速模式：<ul>
+<li>物理机负载 + <code>Ceph Pool</code>负载</li>
+<li>物理机负载</li>
+<li><code>Ceph Pool</code>负载</li>
+</ul>
+</li>
+<li>配置动态调整限速间隔</li>
+<li>配置指定类型云硬盘动态限速的范围: <code>[begin, end]</code></li>
+</ul>
+<h3 id="配置项示例"><a href="#配置项示例" class="headerlink" title="配置项示例"></a>配置项示例</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">[DEFAULT]</span><br><span class="line"><span class="comment"># Tune dynamic resource limitation to True/False</span></span><br><span class="line">dynamic_tune = True/False</span><br><span class="line"><span class="comment"># interval to check and reset dynamic tune, value in seconds</span></span><br><span class="line">interval = 60</span><br><span class="line"><span class="comment"># Tune modules which would do dynamic tune</span></span><br><span class="line"><span class="comment"># Keep pace with the below configurations</span></span><br><span class="line">tune_modules = iotune</span><br><span class="line"> </span><br><span class="line"><span class="comment">### io dynamic tune related</span></span><br><span class="line">[iotune]</span><br><span class="line"><span class="comment"># Which type of volumes supported, default means tune all volume types;</span></span><br><span class="line"><span class="comment"># Keep pace with the configuration of cinder type</span></span><br><span class="line"><span class="comment"># Example values: default/sata/ssd/sata, ssd</span></span><br><span class="line">volume_types = default</span><br><span class="line"><span class="comment"># Model to do tune, value maybe: default/local/ceph</span></span><br><span class="line"><span class="comment"># default model: local + ceph</span></span><br><span class="line"><span class="comment"># local: only check local load</span></span><br><span class="line"><span class="comment"># ceph: only check ceph load</span></span><br><span class="line">tune_model = default</span><br><span class="line"> </span><br><span class="line"><span class="comment"># Set the iotune range for specify volume type to [begin, end]</span></span><br><span class="line">iotune_bw_range = &#123;<span class="string">'sata'</span> : &#123;<span class="string">'read'</span> : [80, 200], <span class="string">'write'</span> : [50, 100]&#125;, <span class="string">'ssd'</span> : &#123;<span class="string">'read'</span> : [100, 300], <span class="string">'write'</span> : [80, 200]&#125;&#125;</span><br><span class="line">iotune_iops_range = &#123;<span class="string">'sata'</span> : &#123;<span class="string">'read'</span> : [100, 1000], <span class="string">'write'</span> : [100, 800]&#125;, <span class="string">'ssd'</span> : &#123;<span class="string">'read'</span> : [1000, 5000], <span class="string">'write'</span> : [600, 300]&#125;&#125;</span><br><span class="line"> </span><br><span class="line"><span class="comment"># Specify disks tune info</span></span><br><span class="line">iotune_range = &#123;<span class="string">'d-5pc4hq7y'</span> : &#123;<span class="string">'bw'</span> : &#123;<span class="string">'read'</span> : [80, 200], <span class="string">'write'</span> : [50, 100]&#125;, <span class="string">'iops'</span> : &#123;<span class="string">'read'</span> : [100, 1000], <span class="string">'write'</span> : [100, 800]&#125;&#125;,</span><br><span class="line">                <span class="string">'d-ymqagtez'</span> : &#123;<span class="string">'bw'</span> : &#123;<span class="string">'read'</span> : [100, 300], <span class="string">'write'</span> : [80, 200]&#125;, <span class="string">'iops'</span> : &#123;<span class="string">'read'</span> : [1000, 5000], <span class="string">'write'</span> : [600, 300]&#125;&#125; &#125;</span><br><span class="line"> </span><br><span class="line"><span class="comment"># Blacklist of nova instances which would not do dynamic iotune</span></span><br><span class="line"><span class="comment">#blacklist = nova-ins1, nova-ins2, ...</span></span><br><span class="line"><span class="comment"># Whitelist of nova instances which ONLY do dynamic iotune on them</span></span><br><span class="line"><span class="comment">#whitelist = nova-ins3, nova-ins4, ...</span></span><br><span class="line"> </span><br><span class="line"><span class="comment">### specify user tune info</span></span><br><span class="line">[usr-kndz857b]</span><br><span class="line">iotune_bw_range = &#123;<span class="string">'sata'</span> : &#123;<span class="string">'read'</span> : [80, 200], <span class="string">'write'</span> : [50, 100]&#125;, <span class="string">'ssd'</span> : &#123;<span class="string">'read'</span> : [100, 300], <span class="string">'write'</span> : [80, 200]&#125;&#125;</span><br><span class="line">iotune_iops_range = &#123;<span class="string">'sata'</span> : &#123;<span class="string">'read'</span> : [100, 1000], <span class="string">'write'</span> : [100, 800]&#125;, <span class="string">'ssd'</span> : &#123;<span class="string">'read'</span> : [1000, 5000], <span class="string">'write'</span> : [600, 300]&#125;&#125;</span><br></pre></td></tr></table></figure>
+<p>代码中读取上诉配置，在脚本中生成<code>conf</code>的字典信息；</p>
+<h3 id="涉及到的命令与解释"><a href="#涉及到的命令与解释" class="headerlink" title="涉及到的命令与解释"></a>涉及到的命令与解释</h3><h4 id="1-、获取系统cinder-volume的信息"><a href="#1-、获取系统cinder-volume的信息" class="headerlink" title="1)、获取系统cinder volume的信息"></a>1)、获取系统cinder volume的信息</h4><p><code>cinder list --all | grep &quot;in-use&quot; | awk &#39;{print $2,$4,$8,$12}&#39;</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">(.venv)openstack@Server-01-01:~$ cinder list --all | grep <span class="string">"in-use"</span> | awk <span class="string">'&#123;print $2,$4,$8,$12&#125;'</span></span><br><span class="line">...</span><br><span class="line">|               ID                  |            Tenant ID           |  Name    | Volume Type |</span><br><span class="line">04960b37-7a07-439d-9fd4-dc0664870245 a72514ab47524d00b0b43551466c7d67 d-6a3x2u8j sata</span><br><span class="line">06996e93-47ad-4003-acb4-b46aa185d479 f634c4182b634a7ca4a4c2ac72837cb7 d-ibvar57t sata</span><br><span class="line">0f45c78c-743b-4d42-b098-b2ee5f95df94 462dc39145324bb1bda7263368d176aa d-f8wkacjy ssd</span><br><span class="line">103a0e6d-382c-4caa-b313-63a95eeb351d 616eae54884147d786a3beb39ea6bcbb d-va5fe6bw sata</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h4 id="2-、找到配置文件中user对应的-Tenant-ID"><a href="#2-、找到配置文件中user对应的-Tenant-ID" class="headerlink" title="2)、找到配置文件中user对应的 Tenant ID"></a>2)、找到配置文件中user对应的 Tenant ID</h4><p><code>openstack project list | grep &quot;user-id&quot;</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">openstack@Server-01-01:~$ openstack user list | grep usr-kndz857b</span><br><span class="line">| 63719e972d7d4afe87b7127c9daa120f | usr-kndz857b |</span><br></pre></td></tr></table></figure>
+<h4 id="3-、列出本物理机上的virsh-instances"><a href="#3-、列出本物理机上的virsh-instances" class="headerlink" title="3)、列出本物理机上的virsh instances"></a>3)、列出本物理机上的virsh instances</h4><p><code>virsh list：list domains</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">openstack@Server-01-01:~$ virsh list</span><br><span class="line"> Id    Name                           State</span><br><span class="line">----------------------------------------------------</span><br><span class="line"> 40    instance-0000028d              running</span><br><span class="line"> 52    instance-0000033d              running</span><br><span class="line"> 122   instance-00000721              running</span><br><span class="line"> 140   instance-000007a5              running</span><br><span class="line"> 141   instance-000007a3              running</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h4 id="4-、列出指定virsh-instances的所有blocks"><a href="#4-、列出指定virsh-instances的所有blocks" class="headerlink" title="4)、列出指定virsh instances的所有blocks"></a>4)、列出指定virsh instances的所有blocks</h4><p><code>virsh domblklist &lt;domain&gt;：list all domain blocks</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">openstack@Server-01-01:~$ virsh domblklist instance-00000921</span><br><span class="line">Target     Source</span><br><span class="line">------------------------------------------------</span><br><span class="line">vda        /var/lib/nova/instances/7ef2900b-0653-443b-a2c0-3da7a5d7a10f/disk</span><br><span class="line">vdb        volumes/volume-7b94ccc5-6b14-4352-b4f3-74a71893f246</span><br></pre></td></tr></table></figure>
+<h4 id="5-、查看-修改block-device的iotune"><a href="#5-、查看-修改block-device的iotune" class="headerlink" title="5)、查看/修改block device的iotune"></a>5)、查看/修改block device的iotune</h4><p><code>virsh blkdeviotune &lt;domain&gt; &lt;device&gt;：Set or query a block device I/O tuning parameters</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">openstack@Server-01-01:~$ virsh blkdeviotune instance-00000921 vdb</span><br><span class="line">total_bytes_sec: 0</span><br><span class="line">read_bytes_sec : 104857600</span><br><span class="line">write_bytes_sec: 62914560</span><br><span class="line">total_iops_sec : 0</span><br><span class="line">read_iops_sec  : 1500</span><br><span class="line">write_iops_sec : 1000</span><br><span class="line">total_bytes_sec_max: 0</span><br><span class="line">read_bytes_sec_max: 10485760</span><br><span class="line">write_bytes_sec_max: 6291456</span><br><span class="line">total_iops_sec_max: 0</span><br><span class="line">read_iops_sec_max: 150</span><br><span class="line">write_iops_sec_max: 100</span><br><span class="line">size_iops_sec  : 0</span><br><span class="line">openstack@Server-01-01:~$ virsh blkdeviotune instance-00000921 vdb --read_iops_sec 5000 --write_iops_sec 3000</span><br></pre></td></tr></table></figure>
+<h3 id="Agent框架流程"><a href="#Agent框架流程" class="headerlink" title="Agent框架流程"></a>Agent框架流程</h3><p><img src="/images/volume-dynamic-iotune-agent" alt="agent"></p>
+<h3 id="获取负载信息"><a href="#获取负载信息" class="headerlink" title="获取负载信息"></a>获取负载信息</h3><h4 id="1-、本机负载信息"><a href="#1-、本机负载信息" class="headerlink" title="1)、本机负载信息"></a>1)、本机负载信息</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ uptime</span><br><span class="line"> 14:35:25 up 32 days, 14:54,  5 users,  load average: 2.53, 2.82, 2.80</span><br></pre></td></tr></table></figure>
+<p>获取最近1,5,15分钟负载分别为：2.53, 2.82, 2.80</p>
+<h4 id="2-、Ceph负载信息"><a href="#2-、Ceph负载信息" class="headerlink" title="2)、Ceph负载信息"></a>2)、Ceph负载信息</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">$ ceph osd tree</span><br><span class="line">ID  WEIGHT    TYPE NAME                    UP/DOWN REWEIGHT PRIMARY-AFFINITY</span><br><span class="line">-10   3.41998 root hp-default</span><br><span class="line"> -7   1.70999     host hp-Server-01-02</span><br><span class="line"> 33   0.64999         osd.33                    up  1.00000          1.00000</span><br><span class="line"> 32   0.67000         osd.32                    up  1.00000          1.00000</span><br><span class="line"> 31   0.39000         osd.31                    up  1.00000          1.00000</span><br><span class="line"> -9   1.70999     host hp-Server-02-02</span><br><span class="line"> 38   0.67000         osd.38                    up  1.00000          1.00000</span><br><span class="line"> 39   0.64999         osd.39                    up  1.00000          1.00000</span><br><span class="line"> 37   0.39000         osd.37                    up  1.00000          1.00000</span><br><span class="line"> -1 101.91998 root default</span><br><span class="line"> -2  25.48000     host Server-01-01</span><br><span class="line">  6   3.64000         osd.6                     up  1.00000          1.00000</span><br><span class="line">  5   3.64000         osd.5                     up  1.00000          1.00000</span><br><span class="line">  4   3.64000         osd.4                     up  1.00000          1.00000</span><br><span class="line">  3   3.64000         osd.3                     up  1.00000          1.00000</span><br><span class="line">  2   3.64000         osd.2                     up  1.00000          1.00000</span><br><span class="line">  1   3.64000         osd.1                     up  1.00000          1.00000</span><br><span class="line">  0   3.64000         osd.0                     up  1.00000          1.00000</span><br><span class="line"> -3  25.48000     host Server-01-02</span><br><span class="line"> 13   3.64000         osd.13                    up  1.00000          1.00000</span><br><span class="line"> 12   3.64000         osd.12                    up  1.00000          1.00000</span><br><span class="line"> 11   3.64000         osd.11                    up  1.00000          1.00000</span><br><span class="line"> 10   3.64000         osd.10                    up  1.00000          1.00000</span><br><span class="line">  9   3.64000         osd.9                     up  1.00000          1.00000</span><br><span class="line">  8   3.64000         osd.8                     up  1.00000          1.00000</span><br><span class="line">  7   3.64000         osd.7                     up  1.00000          1.00000</span><br><span class="line"> -4  25.48000     host Server-02-01</span><br><span class="line"> 20   3.64000         osd.20                    up  1.00000          1.00000</span><br><span class="line"> 19   3.64000         osd.19                    up  1.00000          1.00000</span><br><span class="line"> 18   3.64000         osd.18                    up  1.00000          1.00000</span><br><span class="line"> 17   3.64000         osd.17                    up  1.00000          1.00000</span><br><span class="line"> 16   3.64000         osd.16                    up  1.00000          1.00000</span><br><span class="line"> 15   3.64000         osd.15                    up  1.00000          1.00000</span><br><span class="line"> 14   3.64000         osd.14                    up  1.00000          1.00000</span><br><span class="line"> -5  25.48000     host Server-02-02</span><br><span class="line"> 27   3.64000         osd.27                    up  1.00000          1.00000</span><br><span class="line"> 26   3.64000         osd.26                    up  1.00000          1.00000</span><br><span class="line"> 25   3.64000         osd.25                    up  1.00000          1.00000</span><br><span class="line"> 24   3.64000         osd.24                    up  1.00000          1.00000</span><br><span class="line"> 23   3.64000         osd.23                    up  1.00000          1.00000</span><br><span class="line"> 22   3.64000         osd.22                    up  1.00000          1.00000</span><br><span class="line"> 21   3.64000         osd.21                    up  1.00000          1.00000</span><br></pre></td></tr></table></figure>
+<p>从上述输出中获取不同性质磁盘对应的<code>OSD</code>如下信息：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&#123;<span class="string">"sata"</span> : (0,1,2,3,4,5,6,7,...,26,27)&#125;</span><br><span class="line">&#123;<span class="string">"ssd"</span>: (31,32,33,37,38,39)&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>【注：这个信息是固定的，只需要获取一次即可】</p>
+</blockquote>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">$ ceph osd perf</span><br><span class="line">osd fs_commit_latency(ms) fs_apply_latency(ms)</span><br><span class="line">  0                     0                    1</span><br><span class="line">  1                     0                    1</span><br><span class="line">  2                     0                    1</span><br><span class="line">  3                     0                    1</span><br><span class="line">  4                     0                    1</span><br><span class="line">  5                     0                    1</span><br><span class="line">  6                     0                    1</span><br><span class="line">  7                     2                    4</span><br><span class="line">  8                     0                    1</span><br><span class="line">  9                     0                    0</span><br><span class="line"> 10                     0                    1</span><br><span class="line"> 11                     0                    1</span><br><span class="line"> 12                     0                    1</span><br><span class="line"> 13                     0                    0</span><br><span class="line"> 14                     0                    1</span><br><span class="line"> 15                     0                    1</span><br><span class="line"> 16                     0                    1</span><br><span class="line"> 17                     0                    1</span><br><span class="line"> 18                     0                    1</span><br><span class="line"> 19                     0                    1</span><br><span class="line"> 20                     0                    1</span><br><span class="line"> 21                     0                    1</span><br><span class="line"> 22                     0                    0</span><br><span class="line"> 23                     0                    0</span><br><span class="line"> 24                     0                    0</span><br><span class="line"> 25                     0                    1</span><br><span class="line"> 26                     0                    0</span><br><span class="line"> 27                     0                    1</span><br><span class="line"> 31                     1                    2</span><br><span class="line"> 32                     0                    7</span><br><span class="line"> 33                     0                    6</span><br><span class="line"> 37                     0                    6</span><br><span class="line"> 38                     0                    8</span><br><span class="line"> 39                     0                    3</span><br></pre></td></tr></table></figure>
+<p>分别获取SATA和SSD磁盘组内的平均负载信息：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;<span class="string">"sata"</span> : [1, 2], <span class="string">"ssd"</span> : [1, 6]&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>【注：这个信息需要周期性获取】</p>
+</blockquote>
+<h3 id="动态调整IO限速"><a href="#动态调整IO限速" class="headerlink" title="动态调整IO限速"></a>动态调整IO限速</h3><p>公式：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">sys_load_throttle = 20</span><br><span class="line">cepy_load_throttle1 = 10</span><br><span class="line">cepy_load_throttle2 = 20</span><br><span class="line"> </span><br><span class="line">系统负载，从uptime输出获取，sys_load: [2.53, 2.82, 2.80]</span><br><span class="line">ceph负载，从ceph osd perf输出获取，ceph_load: &#123;<span class="string">"sata"</span> : [1, 2], <span class="string">"ssd"</span> : [1, 6]&#125;</span><br><span class="line">根据volume_type，获取ceph对应磁盘组的负载信息: cload</span><br><span class="line">根据sys_load和cload的值决定增加还是减少bw和iops</span><br><span class="line"><span class="keyword">if</span> (cload[0] &lt; <span class="variable">$cepy_load_throttle1</span>) &amp;&amp; (cload[1] &lt; <span class="variable">$cepy_load_throttle1</span>):</span><br><span class="line">    <span class="keyword">if</span> (sys_load[0] &lt; <span class="variable">$sys_load_throttle</span>) &amp;&amp; (sys_load[1] &lt; <span class="variable">$sys_load_throttle</span>):</span><br><span class="line">        <span class="comment">#增大</span></span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="comment">#保持不变</span></span><br><span class="line"><span class="keyword">elif</span> (<span class="variable">$cepy_load_throttle2</span> &gt;= cload[0] &gt;= <span class="variable">$cepy_load_throttle1</span>) &amp;&amp; (<span class="variable">$cepy_load_throttle2</span> &gt;= cload[1] &gt;= <span class="variable">$cepy_load_throttle1</span>):</span><br><span class="line">    <span class="keyword">if</span> (sys_load[0] &gt; <span class="variable">$sys_load_throttle</span>) || (sys_load[1] &gt; <span class="variable">$sys_load_throttle</span>):</span><br><span class="line">        <span class="comment">#减少</span></span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="comment">#保持不变</span></span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">    <span class="comment">#减少</span></span><br><span class="line"></span><br><span class="line">根据ceph和sys的负载信息，可以计算出SATA/SSD磁盘的iotune是增加，减少，还是保持不变；</span><br></pre></td></tr></table></figure>
+<p>loop每个instance，针对volume类型是需要增加/减少的volume，设置volume新的iotune值：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">根据conf配置信息获取volume对应的bw_range和iops_range，然后调用下面的函数执行iotune调整。</span><br><span class="line"> </span><br><span class="line">set_volume_dynamic_iotune()</span><br><span class="line">输入：volume target - 卷的盘符，示例：vdb</span><br><span class="line">     bw_range      - 带宽范围，从配置文件获取，示例：&#123;<span class="string">'read'</span> : [80, 200], <span class="string">'write'</span> : [50, 100]&#125; <span class="comment">#单位：MB</span></span><br><span class="line">     iops_range    - iops范围，从配置文件获取，示例：&#123;<span class="string">'read'</span> : [100, 300], <span class="string">'write'</span> : [80, 200]&#125;</span><br><span class="line">     iotune        - iotune的趋势，0: 保持不变；&gt;0: 增加；&lt;0: 减少</span><br><span class="line"> </span><br><span class="line">1、获取volume现在对应的bw和iops值</span><br><span class="line">2、根据输入计算volume新的bw和iops值</span><br><span class="line">3、判断新的bw和iops值是不是在bw_range, iops_range范围内？是的话设置对应值为新值，否则保留旧值；</span><br><span class="line">4、通过virsh blkdeviotune命令设置read_bytes_sec，write_bytes_sec，read_iops_sec，write_iops_sec</span><br><span class="line"> </span><br><span class="line">注释：read_bytes_sec  - 每秒读bytes</span><br><span class="line">     write_bytes_sec - 每秒写bytes</span><br><span class="line">     read_iops_sec   - 每秒读iops</span><br><span class="line">     write_iops_sec  - 每秒写iops</span><br><span class="line"> </span><br><span class="line">bw: 增大减少幅度10MB (10485760 bytes)</span><br><span class="line">iops: 增大减少幅度100</span><br></pre></td></tr></table></figure>
+<h3 id="云硬盘默认限速"><a href="#云硬盘默认限速" class="headerlink" title="云硬盘默认限速"></a>云硬盘默认限速</h3><p>在动态限速程序退出前，需要调整相关云硬盘到默认限速值，具体的默认值如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">(.venv)openstack@Server-01-01:~$ cinder qos-list</span><br><span class="line">+--------------------------------------+--------------+-----------+----------------------------------------------------------------------------------------------------------------------------+</span><br><span class="line">|                  ID                  |     Name     |  Consumer |                                                           specs                                                            |</span><br><span class="line">+--------------------------------------+--------------+-----------+----------------------------------------------------------------------------------------------------------------------------+</span><br><span class="line">| 06661a25-27d4-4f64-93d4-8b74e3fda218 |   sata-qos   | front-end | &#123;u<span class="string">'read_bytes_sec'</span>: u<span class="string">'104857600'</span>, u<span class="string">'write_iops_sec'</span>: u<span class="string">'1000'</span>, u<span class="string">'write_bytes_sec'</span>: u<span class="string">'62914560'</span>, u<span class="string">'read_iops_sec'</span>: u<span class="string">'1500'</span>&#125;  |</span><br><span class="line">...</span><br><span class="line">| d560db69-e8f3-4a5f-a80c-fff41140f48c |   ssd-qos    | front-end | &#123;u<span class="string">'read_bytes_sec'</span>: u<span class="string">'157286400'</span>, u<span class="string">'write_iops_sec'</span>: u<span class="string">'3000'</span>, u<span class="string">'write_bytes_sec'</span>: u<span class="string">'104857600'</span>, u<span class="string">'read_iops_sec'</span>: u<span class="string">'5000'</span>&#125; |</span><br><span class="line">+--------------------------------------+--------------+-----------+----------------------------------------------------------------------------------------------------------------------------+</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/nova/" rel="tag"># nova</a>
+          
+            <a href="/tags/openstack/" rel="tag"># openstack</a>
+          
+            <a href="/tags/cinder/" rel="tag"># cinder</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/11/28/volume-dynamic-iotune-invest/" rel="next" title="基于Cinder的云硬盘动态限速调研">
+                <i class="fa fa-chevron-left"></i> 基于Cinder的云硬盘动态限速调研
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/12/20/ceph-radosgw-where-to-store-data/" rel="prev" title="Ceph radosgw where to store data?">
+                Ceph radosgw where to store data? <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#当前状况"><span class="nav-number">1.</span> <span class="nav-text">当前状况</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#目的"><span class="nav-number">2.</span> <span class="nav-text">目的</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#框架设计"><span class="nav-number">3.</span> <span class="nav-text">框架设计</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#需求"><span class="nav-number">3.1.</span> <span class="nav-text">需求</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#方案1"><span class="nav-number">3.2.</span> <span class="nav-text">方案1</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#方案2"><span class="nav-number">3.3.</span> <span class="nav-text">方案2</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#方案选择"><span class="nav-number">3.4.</span> <span class="nav-text">方案选择</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#云硬盘限速部分设计"><span class="nav-number">4.</span> <span class="nav-text">云硬盘限速部分设计</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#概述"><span class="nav-number">4.1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#考虑的因素"><span class="nav-number">4.2.</span> <span class="nav-text">考虑的因素</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#配置项示例"><span class="nav-number">4.3.</span> <span class="nav-text">配置项示例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#涉及到的命令与解释"><span class="nav-number">4.4.</span> <span class="nav-text">涉及到的命令与解释</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-、获取系统cinder-volume的信息"><span class="nav-number">4.4.1.</span> <span class="nav-text">1)、获取系统cinder volume的信息</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-、找到配置文件中user对应的-Tenant-ID"><span class="nav-number">4.4.2.</span> <span class="nav-text">2)、找到配置文件中user对应的 Tenant ID</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-、列出本物理机上的virsh-instances"><span class="nav-number">4.4.3.</span> <span class="nav-text">3)、列出本物理机上的virsh instances</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-、列出指定virsh-instances的所有blocks"><span class="nav-number">4.4.4.</span> <span class="nav-text">4)、列出指定virsh instances的所有blocks</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#5-、查看-修改block-device的iotune"><span class="nav-number">4.4.5.</span> <span class="nav-text">5)、查看/修改block device的iotune</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Agent框架流程"><span class="nav-number">4.5.</span> <span class="nav-text">Agent框架流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#获取负载信息"><span class="nav-number">4.6.</span> <span class="nav-text">获取负载信息</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-、本机负载信息"><span class="nav-number">4.6.1.</span> <span class="nav-text">1)、本机负载信息</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-、Ceph负载信息"><span class="nav-number">4.6.2.</span> <span class="nav-text">2)、Ceph负载信息</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#动态调整IO限速"><span class="nav-number">4.7.</span> <span class="nav-text">动态调整IO限速</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#云硬盘默认限速"><span class="nav-number">4.8.</span> <span class="nav-text">云硬盘默认限速</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.ictfox.cn/2017/12/05/volume-dynamic-iotune-arch-design/';
+          this.page.identifier = '2017/12/05/volume-dynamic-iotune-arch-design/';
+          this.page.title = '基于Cinder的云硬盘动态限速框架设计';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

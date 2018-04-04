@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="data transfer," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="概述随着云的普及，越来越多的客户需要把数据迁移到云上，针对小量的数据，通过云公司提供的迁移工具走互联网就可以做到，但针对海量的数据，互联网上传输是不现实的，这就需要我们提供一种新的迁移方案来缩短数据迁移时间。 结合过去磁带库的容灾备份方案，针对海量数据迁移到云上的需求，云公司也采用了离线设备+传统运输的解决方案，能大大缩短数据迁移的时间周期，降低成本。 方案步骤 准备离线设备 源端数据拷贝到离线设">
+<meta name="keywords" content="data transfer">
+<meta property="og:type" content="article">
+<meta property="og:title" content="海量数据迁移方案">
+<meta property="og:url" content="http://www.ictfox.cn/2017/10/10/mass-data-transport/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述随着云的普及，越来越多的客户需要把数据迁移到云上，针对小量的数据，通过云公司提供的迁移工具走互联网就可以做到，但针对海量的数据，互联网上传输是不现实的，这就需要我们提供一种新的迁移方案来缩短数据迁移时间。 结合过去磁带库的容灾备份方案，针对海量数据迁移到云上的需求，云公司也采用了离线设备+传统运输的解决方案，能大大缩短数据迁移的时间周期，降低成本。 方案步骤 准备离线设备 源端数据拷贝到离线设">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.ictfox.cn/images/aws-snowball-steps.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/aws-snowball-device.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/azure-data-import.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/azure-data-export.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/aliyun-lighting-cube.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/aliyun-lighting-cube-device.jpg">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.375Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="海量数据迁移方案">
+<meta name="twitter:description" content="概述随着云的普及，越来越多的客户需要把数据迁移到云上，针对小量的数据，通过云公司提供的迁移工具走互联网就可以做到，但针对海量的数据，互联网上传输是不现实的，这就需要我们提供一种新的迁移方案来缩短数据迁移时间。 结合过去磁带库的容灾备份方案，针对海量数据迁移到云上的需求，云公司也采用了离线设备+传统运输的解决方案，能大大缩短数据迁移的时间周期，降低成本。 方案步骤 准备离线设备 源端数据拷贝到离线设">
+<meta name="twitter:image" content="http://www.ictfox.cn/images/aws-snowball-steps.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.ictfox.cn/2017/10/10/mass-data-transport/"/>
+
+
+
+
+
+  <title>海量数据迁移方案 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/10/10/mass-data-transport/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">海量数据迁移方案</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-10-10T21:41:17+08:00">
+                2017-10-10
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/storage/" itemprop="url" rel="index">
+                    <span itemprop="name">storage</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/10/10/mass-data-transport/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/10/10/mass-data-transport/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>随着云的普及，越来越多的客户需要把数据迁移到云上，针对小量的数据，通过云公司提供的迁移工具走互联网就可以做到，但针对海量的数据，互联网上传输是不现实的，这就需要我们提供一种新的迁移方案来缩短数据迁移时间。</p>
+<p>结合过去磁带库的容灾备份方案，针对海量数据迁移到云上的需求，云公司也采用了<code>离线设备+传统运输</code>的解决方案，能大大缩短数据迁移的时间周期，降低成本。</p>
+<h3 id="方案步骤"><a href="#方案步骤" class="headerlink" title="方案步骤"></a>方案步骤</h3><ol>
+<li>准备<code>离线设备</code></li>
+<li>源端数据拷贝到<code>离线设备</code></li>
+<li><code>离线设备</code>通过传统方式运输到云公司机房</li>
+<li>云公司机房从<code>离线设备</code>上导入数据 / <code>离线设备</code>直接组建存储集群提供服务</li>
+</ol>
+<h2 id="友商"><a href="#友商" class="headerlink" title="友商"></a>友商</h2><p>提供服务的友商有: AWS，Azure，阿里云</p>
+<h2 id="产品功能"><a href="#产品功能" class="headerlink" title="产品功能"></a>产品功能</h2><ol>
+<li>定制<code>离线设备</code></li>
+<li>开发客户端</li>
+<li>NFS/CIFS数据导入</li>
+<li>文件导出到OSS，支持配置文件存放bucket的对应关系</li>
+<li>数据加密，压缩</li>
+<li>数据秘钥管理</li>
+</ol>
+<h2 id="友商实现"><a href="#友商实现" class="headerlink" title="友商实现"></a>友商实现</h2><h3 id="AWS"><a href="#AWS" class="headerlink" title="AWS"></a>AWS</h3><p>Snowball 是一种 PB 级数据传输解决方案，它使用安全设备在 AWS 云之间传输大量数据。使用 Snowball 可解决大规模数据传输的难题（包括高昂网络成本、较长传输时间和安全问题）。使用 Snowball 传输数据简单、快速、安全，并且成本可低至高速 Internet 费用的五分之一。</p>
+<p>借助 Snowball，您无需编写任何代码或购买任何硬件即可传输您的数据。只需在 AWS 管理控制台中创建一个任务，然后 Snowball 设备将自动交付于您。当它到达后，将该设备挂载到您的本地网络、下载并运行 Snowball 客户端来建立连接，然后使用该客户端选择要传输到该设备的文件目录。客户端随后将对文件进行加密，并将其高速传输至该设备。当传输完成后即可返还该设备，E-Ink 运送标签将自动更新，您可以通过 Amazon Simple Notification Service (SNS)、短信或直接在控制台中跟踪任务状态。</p>
+<p><img src="/images/aws-snowball-steps.jpg" alt="snowball steps"></p>
+<h4 id="硬件设备"><a href="#硬件设备" class="headerlink" title="硬件设备"></a>硬件设备</h4><p>便携式大容量设备，这些设备使用防篡改附件、加密和端到端跟踪，旨在确保数据的安全和全程监管链。<br>每台 Snowball 设备可传输数 TB 的数据，根据您需要传输的数据量，您可以使用多台 Snowball 以并行方式或一个接一个地传输大型数据集。</p>
+<p><img src="/images/aws-snowball-device.jpg" alt="snowball device"></p>
+<h4 id="客户端"><a href="#客户端" class="headerlink" title="客户端"></a>客户端</h4><p>Snowball 客户端是您安装在本地主计算机上的软件，用于高效识别、压缩、加密您指定目录中的数据并将其传输到 Snowball。</p>
+<h4 id="产品特色"><a href="#产品特色" class="headerlink" title="产品特色"></a>产品特色</h4><ol>
+<li>高速</li>
+<li>高度可扩展</li>
+<li>防状态和安全性</li>
+<li>简单且可兼容</li>
+<li>成本低廉</li>
+<li>轻松检索数据</li>
+</ol>
+<h3 id="Azure"><a href="#Azure" class="headerlink" title="Azure"></a>Azure</h3><p>Azure 导入/导出服务将大型数据快速、安全地迁移到云中。</p>
+<p>使用 Azure 导入/导出服务，可以将硬盘驱动器寄送到 Azure 数据中心，从而安全地将大量数据传输到 Azure Blob 存储（==高度可缩放的非结构化数据对象存储==）。 你还可以使用此服务将数据从 Azure Blob 存储传输到硬盘驱动器，然后再寄送到你的本地站点。 如果需要在本地站点和 Azure 之间传输数 TB 的数据，而由于带宽限制或网络成本过高，通过网络上传或下载数据不可行，在这种情况下，则可以使用此服务。<br>服务要求对硬盘驱动器进行 BitLocker 加密以确保数据的安全性。 服务支持所有公共 Azure 区域中的经典和 Azure Resource Manager 存储帐户（标准层和冷层）。 必须将硬盘驱动器寄送到本文后面指定的某个受支持的位置。</p>
+<h4 id="产品特色-1"><a href="#产品特色-1" class="headerlink" title="产品特色"></a>产品特色</h4><ol>
+<li><p>高效迁移大量数据集</p>
+<p> 与网络传输相比，将物理磁盘传入/传出 Azure 可节省时间和金钱。将大量初始工作负荷数据导入 Azure，或者将数据快速发送到客户网站进行简单的内容分发。创建本地数据备份以存储到云中，然后按需将数据恢复到本地位置。</p>
+</li>
+<li><p>保持数据私有</p>
+<p> 使用“导入/导出”服务时，数据在整个过程中都很安全。磁盘使用 Microsoft BitLocker 驱动器加密进行加密，并在 Azure 门户或 Azure REST API 上通过 SSL 管理加密密钥。在数据中心内，我们使用快速、专用的网络上传链接将用户的数据从驱动器迁移到云。</p>
+</li>
+<li><p>确保数据完整性</p>
+<p> 使用“导入/导出”服务放心迁移数据。内置校验和以及 MD5 哈希可确保数据完整性。通过 Azure 门户上的日志和审核痕迹跟踪并监视数据迁移状态。</p>
+</li>
+</ol>
+<h4 id="硬件设备-1"><a href="#硬件设备-1" class="headerlink" title="硬件设备"></a>硬件设备</h4><p>支持将 2.5 英寸 SSD 或者 2.5/3.5 英寸 SATA II 或 III 内部 HDD 用于导入/导出服务。</p>
+<p>单个导入/导出作业最多可以有 10 个 HDD/SSD，并且每个 HDD/SSD 可以为任意大小。大量驱动器可以分布在多个作业上，并且可创建的作业数没有限制。</p>
+<h4 id="导入作业"><a href="#导入作业" class="headerlink" title="导入作业"></a>导入作业</h4><p>概括而言，导入作业包括以下步骤：</p>
+<ul>
+<li>确定要导入的数据，以及所需驱动器数目。</li>
+<li>确定 Blob 存储中用于存储数据的目标 Blob 位置。</li>
+<li>使用 WAImportExport 工具将数据复制到一个或多个硬盘驱动器，并使用 BitLocker 进行加密。</li>
+<li>使用 Azure 门户或导入/导出 REST API 在目标存储帐户中创建导入作业。 如果使用 Azure 门户，请上传驱动器日记文件。</li>
+<li>请提供回寄地址以及快递商帐户号码，以便我们将驱动器寄回给你。</li>
+<li>将硬盘驱动器寄送到在创建作业时获得的寄送地址。</li>
+<li>在导入作业详细信息中更新快递跟踪号码，然后提交导入作业。</li>
+<li>Azure 数据中心在收到驱动器后会对其进行处理。</li>
+<li>该中心会使用你的快递商帐户将驱动器寄送到你在导入作业中提供的回寄地址。</li>
+</ul>
+<p><img src="/images/azure-data-import.jpg" alt="data import"></p>
+<h4 id="导出作业"><a href="#导出作业" class="headerlink" title="导出作业"></a>导出作业</h4><p>概括而言，导出作业包括以下步骤：</p>
+<ul>
+<li>确定要导出的数据，以及所需驱动器数目。</li>
+<li>确定你的数据在 Blob 存储中的源 Blob 或容器路径。</li>
+<li>使用 Azure 门户或导入/导出 REST API 在源存储帐户中创建导出作业。</li>
+<li>指定你的数据在导出作业中的源 Blob 或容器路径。</li>
+<li>请提供回寄地址以及快递商帐户号码，以便我们将驱动器寄回给你。</li>
+<li>将硬盘驱动器寄送到在创建作业时获得的寄送地址。</li>
+<li>在导出作业详细信息中更新快递跟踪号码，然后提交导出作业。</li>
+<li>Azure 数据中心在收到驱动器后会对其进行处理。</li>
+<li>驱动器使用 BitLocker 加密；密钥通过 Azure 门户提供。</li>
+<li>该中心会使用你的快递商帐户将驱动器寄送到你在导入作业中提供的回寄地址。</li>
+</ul>
+<p><img src="/images/azure-data-export.jpg" alt="data export"></p>
+<h4 id="导入-导出工具"><a href="#导入-导出工具" class="headerlink" title="导入/导出工具"></a>导入/导出工具</h4><p>使用此 WAImportExport 工具可以方便地将数据复制到驱动器、使用 BitLocker 加密驱动器上的数据，以及生成驱动器日志文件。</p>
+<p>WAImportExport 工具仅兼容 64 位 Windows 操作系统。</p>
+<h3 id="阿里云"><a href="#阿里云" class="headerlink" title="阿里云"></a>阿里云</h3><p>闪电立方 Lightning Cube，支持TB到PB级别数据上云解决方案。通过定制的离线迁移设备，解决本地数据中心大规模数据传输上云的迁移周期长，网络专线费用昂贵，数据复制效率低，迁移过程数据安全等问题。快速、安全、高效、降低90%的数据迁移成本。</p>
+<p>2017年6月10号，阿里云发布了产品“闪电立方”。它像是一个可移动的“数据中心”，通过一个安全的存储硬件，可将100TB数据安全地一次性转移，最快24小时即可完成PB级数据迁移。“闪电立方”外形黑色立方，可防尘防水，抗震抗压。容量上可容纳100TB数据，并能实现最高30：1的压缩比，配合高效的去重功能可节省更多的存储空间。内置了20Gbps的光纤网络连接。在数据安全性方面，“闪电立方”采用AES 256端到端加密算法，密钥由用户保管，运送过程中全程断网，同时配备24小时定位监控。</p>
+<p><img src="/images/aliyun-lighting-cube.jpg" alt="aliyun lighting cube"></p>
+<h4 id="产品特色-2"><a href="#产品特色-2" class="headerlink" title="产品特色"></a>产品特色</h4><ol>
+<li><p>高速高效</p>
+<p> 相比传统的Internet和高速专线速度提升20倍，成本降低60%</p>
+<ul>
+<li><p>数据压缩<br>  支持最高30倍压缩比</p>
+</li>
+<li><p>数据去重<br>  自动对数据进行去重处理，迁移过程中自动恢复</p>
+</li>
+<li><p>小文件优化<br>  小文件自动合并，提升读写效率</p>
+</li>
+</ul>
+</li>
+<li><p>安全可靠</p>
+<ul>
+<li>加密能力<br>  提供设备端到端的加密机制，用户自己管理密码并通过密码授权解密，保障运输过程中数据的安全  </li>
+<li>权限<br>  用户主动通过RAM授权的方式，允许数据同步到云端用户的存储空间  </li>
+<li>数据擦除<br>  数据迁移完毕后，通过阿里云官方数据擦除机制，确保数据不会被第三方获取</li>
+</ul>
+</li>
+<li><p>低成本</p>
+<p> 单次大容量的离线迁移能力，大幅降低物流成本和网络成本</p>
+</li>
+<li><p>可扩展</p>
+<p> 单台设备可支持100TB或480TB的迁移能力，可横向扩展，利用多套设备同时迁移PB+级别数据</p>
+</li>
+</ol>
+<h4 id="硬件设备-2"><a href="#硬件设备-2" class="headerlink" title="硬件设备"></a>硬件设备</h4><p>为数据迁移而生的专业设备，标准机架和电源，可多套同时部署提升迁移效率。<br>支持的数据源包括：本地文件系统，NAS，HDFS，FastDFS等。</p>
+<p><img src="/images/aliyun-lighting-cube-device.jpg" alt="aliyun lighting cube device"></p>
+<h4 id="客户端-1"><a href="#客户端-1" class="headerlink" title="客户端"></a>客户端</h4><p>没找到文档介绍“闪电立方”的客户端，从它支持的数据源包括：本地FS，NAS，HDFS，FastDFS等，可以推断出肯定有这样的一个客户端软件。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>在海量数据上云面前，离线物理设备迁移是一种很好的解决方案，几大公有云提供商都提供了专门的迁移设备和迁移服务，比较好的会设计专门的<code>硬件设备</code>，简单点的就使用标准的 2.5/3.5 英寸磁盘，但都会考虑数据安全性，这也是客户比较关注的问题。</p>
+<p>总结下产品所需的功能如下：</p>
+<ol>
+<li>硬件设备</li>
+<li>客户端软件</li>
+<li>数据加密</li>
+<li>秘钥管理</li>
+<li>数据压缩</li>
+<li>数据校验</li>
+</ol>
+<h3 id="自研需求"><a href="#自研需求" class="headerlink" title="自研需求"></a>自研需求</h3><p>该产品现在没有开源的解决方案，除了AWS以外，Azure和阿里云都是今年刚推出该服务，我们也只能参考他们的实现来自己研发产品。</p>
+<h4 id="硬件设备研发"><a href="#硬件设备研发" class="headerlink" title="硬件设备研发"></a>硬件设备研发</h4><p>若要设计研发可以跟友商竞争的硬件设备，包括整套专业硬件设备的研发，难点非常大</p>
+<p>难度：★★★★★</p>
+<h4 id="客户端软件"><a href="#客户端软件" class="headerlink" title="客户端软件"></a>客户端软件</h4><p>客户端软件研发也是重点，需要包括的功能有：</p>
+<ul>
+<li>支持哪些数据源？</li>
+<li>数据源跟云上产品的映射关系？</li>
+<li>数据加密，压缩，一致性校验</li>
+<li>秘钥管理</li>
+</ul>
+<p>难度：★★★★☆</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/data-transfer/" rel="tag"># data transfer</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/09/18/cephfs-knowledge-share-part2/" rel="next" title="cephfs架构解读与测试分析-part2">
+                <i class="fa fa-chevron-left"></i> cephfs架构解读与测试分析-part2
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/10/19/g3log-introduction/" rel="prev" title="一个开源的C++日志框架-G3log的简单示例">
+                一个开源的C++日志框架-G3log的简单示例 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#方案步骤"><span class="nav-number">1.1.</span> <span class="nav-text">方案步骤</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#友商"><span class="nav-number">2.</span> <span class="nav-text">友商</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#产品功能"><span class="nav-number">3.</span> <span class="nav-text">产品功能</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#友商实现"><span class="nav-number">4.</span> <span class="nav-text">友商实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#AWS"><span class="nav-number">4.1.</span> <span class="nav-text">AWS</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#硬件设备"><span class="nav-number">4.1.1.</span> <span class="nav-text">硬件设备</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#客户端"><span class="nav-number">4.1.2.</span> <span class="nav-text">客户端</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#产品特色"><span class="nav-number">4.1.3.</span> <span class="nav-text">产品特色</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Azure"><span class="nav-number">4.2.</span> <span class="nav-text">Azure</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#产品特色-1"><span class="nav-number">4.2.1.</span> <span class="nav-text">产品特色</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#硬件设备-1"><span class="nav-number">4.2.2.</span> <span class="nav-text">硬件设备</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#导入作业"><span class="nav-number">4.2.3.</span> <span class="nav-text">导入作业</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#导出作业"><span class="nav-number">4.2.4.</span> <span class="nav-text">导出作业</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#导入-导出工具"><span class="nav-number">4.2.5.</span> <span class="nav-text">导入/导出工具</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#阿里云"><span class="nav-number">4.3.</span> <span class="nav-text">阿里云</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#产品特色-2"><span class="nav-number">4.3.1.</span> <span class="nav-text">产品特色</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#硬件设备-2"><span class="nav-number">4.3.2.</span> <span class="nav-text">硬件设备</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#客户端-1"><span class="nav-number">4.3.3.</span> <span class="nav-text">客户端</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#自研需求"><span class="nav-number">5.1.</span> <span class="nav-text">自研需求</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#硬件设备研发"><span class="nav-number">5.1.1.</span> <span class="nav-text">硬件设备研发</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#客户端软件"><span class="nav-number">5.1.2.</span> <span class="nav-text">客户端软件</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.ictfox.cn/2017/10/10/mass-data-transport/';
+          this.page.identifier = '2017/10/10/mass-data-transport/';
+          this.page.title = '海量数据迁移方案';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="bcache,ssd," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="概述在前面的文章中介绍了 SSD加速SATA盘之flashcache策略。一般我们也推荐选择稳定的flashcache策略来做SSD加速SATA盘，但在实践中，发现其在CentOS上编译安装还是很麻烦的，这里就抓紧研究实践了下bcache策略。 另外bcache使用可以用一块SSD来缓存多块SATA盘，对于使用中随时变动磁盘的应用场景来说，操作非常便捷。 并且官网说bcache的性能完全优于fla">
+<meta name="keywords" content="bcache,ssd">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SSD加速SATA盘之bcache策略">
+<meta property="og:url" content="http://www.ictfox.cn/2018/03/26/lvm-sata-ssd-bcache/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述在前面的文章中介绍了 SSD加速SATA盘之flashcache策略。一般我们也推荐选择稳定的flashcache策略来做SSD加速SATA盘，但在实践中，发现其在CentOS上编译安装还是很麻烦的，这里就抓紧研究实践了下bcache策略。 另外bcache使用可以用一块SSD来缓存多块SATA盘，对于使用中随时变动磁盘的应用场景来说，操作非常便捷。 并且官网说bcache的性能完全优于fla">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.385Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SSD加速SATA盘之bcache策略">
+<meta name="twitter:description" content="概述在前面的文章中介绍了 SSD加速SATA盘之flashcache策略。一般我们也推荐选择稳定的flashcache策略来做SSD加速SATA盘，但在实践中，发现其在CentOS上编译安装还是很麻烦的，这里就抓紧研究实践了下bcache策略。 另外bcache使用可以用一块SSD来缓存多块SATA盘，对于使用中随时变动磁盘的应用场景来说，操作非常便捷。 并且官网说bcache的性能完全优于fla">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.ictfox.cn/2018/03/26/lvm-sata-ssd-bcache/"/>
+
+
+
+
+
+  <title>SSD加速SATA盘之bcache策略 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2018/03/26/lvm-sata-ssd-bcache/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">SSD加速SATA盘之bcache策略</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-03-26T22:18:27+08:00">
+                2018-03-26
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/storage/" itemprop="url" rel="index">
+                    <span itemprop="name">storage</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/03/26/lvm-sata-ssd-bcache/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/03/26/lvm-sata-ssd-bcache/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在前面的文章中介绍了<a href="http://www.yangguanjun.com/2018/03/08/ssd-enhance-sata-with-flashcache/" target="_blank" rel="noopener"> SSD加速SATA盘之flashcache策略</a>。<br>一般我们也推荐选择稳定的flashcache策略来做SSD加速SATA盘，但在实践中，发现其在CentOS上编译安装还是很麻烦的，这里就抓紧研究实践了下bcache策略。</p>
+<p>另外bcache使用可以用一块SSD来缓存多块SATA盘，对于使用中随时变动磁盘的应用场景来说，操作非常便捷。</p>
+<p>并且官网说bcache的性能完全优于flashcache，参考：</p>
+<p><a href="http://www.accelcloud.com/2012/04/18/linux-flashcache-and-bcache-performance-testing/" target="_blank" rel="noopener">http://www.accelcloud.com/2012/04/18/linux-flashcache-and-bcache-performance-testing/</a></p>
+<h2 id="Bcache"><a href="#Bcache" class="headerlink" title="Bcache"></a>Bcache</h2><p>介绍：</p>
+<p><a href="https://wiki.archlinux.org/index.php/Bcache" target="_blank" rel="noopener">https://wiki.archlinux.org/index.php/Bcache</a></p>
+<p><a href="https://bcache.evilpiepirate.org/" target="_blank" rel="noopener">https://bcache.evilpiepirate.org/</a></p>
+<p>Bcache在Linux kernel 3.10版本加入了mainline，使用它只需要主机的kernel版本大于3.10即可。</p>
+<p>bcache-tools 源码：<a href="https://evilpiepirate.org/git/bcache-tools.git" target="_blank" rel="noopener">https://evilpiepirate.org/git/bcache-tools.git</a></p>
+<h3 id="Ubuntu上安装"><a href="#Ubuntu上安装" class="headerlink" title="Ubuntu上安装"></a>Ubuntu上安装</h3><h4 id="系统信息"><a href="#系统信息" class="headerlink" title="系统信息"></a>系统信息</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># lsb_release -a</span></span><br><span class="line">No LSB modules are available.</span><br><span class="line">Distributor ID:    Ubuntu</span><br><span class="line">Description:    Ubuntu 16.04.2 LTS</span><br><span class="line">Release:    16.04</span><br><span class="line">Codename:    xenial</span><br><span class="line"><span class="comment"># uname -r</span></span><br><span class="line">4.4.0-72-generic</span><br></pre></td></tr></table></figure>
+<h4 id="编译安装"><a href="#编译安装" class="headerlink" title="编译安装"></a>编译安装</h4><p>加载系统的bcache module：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># lsmod | grep bcache</span></span><br><span class="line"><span class="comment"># modprobe bcache</span></span><br><span class="line"><span class="comment"># lsmod | grep bcache</span></span><br></pre></td></tr></table></figure>
+<p>编译安装bcace-tools：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># apt-get install -y pkg-config libblkid-dev</span></span><br><span class="line"><span class="comment"># git clone https://evilpiepirate.org/git/bcache-tools.git</span></span><br><span class="line"><span class="comment"># cd bcache-tools</span></span><br><span class="line"><span class="comment"># make</span></span><br><span class="line">cc -O2 -Wall -g `pkg-config --cflags uuid blkid`   -c -o bcache.o bcache.c</span><br><span class="line">bcache.c:125:9: warning: ‘crc_table’ is static but used <span class="keyword">in</span> inline <span class="keyword">function</span> ‘crc64’ <span class="built_in">which</span> is not static</span><br><span class="line">   crc = crc_table[i] ^ (crc &lt;&lt; 8);</span><br><span class="line">         ^</span><br><span class="line">cc -O2 -Wall -g `pkg-config --cflags uuid blkid`    make-bcache.c bcache.o  `pkg-config --libs uuid blkid` -o make-bcache</span><br><span class="line">/tmp/ccW6rXtD.o: In <span class="keyword">function</span> `write_sb<span class="string">':</span></span><br><span class="line"><span class="string">/root/yangguanjun/bcache-tools/make-bcache.c:277: undefined reference to `crc64'</span></span><br><span class="line">collect2: error: ld returned 1 <span class="built_in">exit</span> status</span><br><span class="line">&lt;<span class="built_in">builtin</span>&gt;: recipe <span class="keyword">for</span> target <span class="string">'make-bcache'</span> failed</span><br><span class="line">make: *** [make-bcache] Error 1</span><br></pre></td></tr></table></figure>
+<p>网上搜索有这个bug的fix，如下：</p>
+<p><a href="https://www.spinics.net/lists/linux-bcache/msg02847.html" target="_blank" rel="noopener">https://www.spinics.net/lists/linux-bcache/msg02847.html</a></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">--- a/bcache.c</span><br><span class="line">+++ b/bcache.c</span><br><span class="line"></span><br><span class="line">@@ -115,7 +115,7 @@ static const uint64_t crc_table[256] = &#123;</span><br><span class="line">       0x9AFCE626CE85B507ULL</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">-inline uint64_t crc64(const void *_data, size_t len)</span><br><span class="line">+uint64_t crc64(const void *_data, size_t len)</span><br><span class="line">&#123;</span><br><span class="line">       uint64_t crc = 0xFFFFFFFFFFFFFFFFULL;</span><br><span class="line">       const unsigned char *data = _data;</span><br></pre></td></tr></table></figure>
+<p>按上面patch修改bcache.c后，编译安装正常。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># make</span></span><br><span class="line">cc -O2 -Wall -g `pkg-config --cflags uuid blkid`   -c -o bcache.o bcache.c</span><br><span class="line">cc -O2 -Wall -g `pkg-config --cflags uuid blkid`    make-bcache.c bcache.o  `pkg-config --libs uuid blkid` -o make-bcache</span><br><span class="line">cc -O2 -Wall -g `pkg-config --cflags uuid blkid`    probe-bcache.c  `pkg-config --libs uuid blkid` -o probe-bcache</span><br><span class="line">cc -O2 -Wall -g -std=gnu99    bcache-super-show.c bcache.o  `pkg-config --libs uuid` -o bcache-super-show</span><br><span class="line">cc -O2 -Wall -g   -c -o bcache-register.o bcache-register.c</span><br><span class="line">cc   bcache-register.o   -o bcache-register</span><br><span class="line"><span class="comment"># make install</span></span><br><span class="line">install -m0755 make-bcache bcache-super-show    /usr/sbin/</span><br><span class="line">install -m0755 probe-bcache bcache-register        /lib/udev/</span><br><span class="line">install -m0644 69-bcache.rules    /lib/udev/rules.d/</span><br><span class="line">install -m0644 -- *.8 /usr/share/man/man8/</span><br><span class="line">install -D -m0755 initramfs/hook    /usr/share/initramfs-tools/hooks/bcache</span><br><span class="line">install -D -m0755 initcpio/install    /usr/lib/initcpio/install/bcache</span><br><span class="line">install -D -m0755 dracut/module-setup.sh /lib/dracut/modules.d/90bcache/module-setup.sh</span><br></pre></td></tr></table></figure>
+<h3 id="CentOS上安装"><a href="#CentOS上安装" class="headerlink" title="CentOS上安装"></a>CentOS上安装</h3><p>因为bcache在kernel 3.10版本才进入主线，所以我们要保证CentOS的内核版本大于3.10，所以CenOS 6就不要尝试了，直接用新的CentOS 7吧。</p>
+<h4 id="系统信息-1"><a href="#系统信息-1" class="headerlink" title="系统信息"></a>系统信息</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># lsb_release -a</span></span><br><span class="line">LSB Version:    :core-4.1-amd64:core-4.1-noarch</span><br><span class="line">Distributor ID:    CentOS</span><br><span class="line">Description:    CentOS Linux release 7.3.1611 (Core)</span><br><span class="line">Release:    7.3.1611</span><br><span class="line">Codename:    Core</span><br><span class="line"><span class="comment"># uname -r</span></span><br><span class="line">3.10.0-693.17.1.el7.x86_64</span><br></pre></td></tr></table></figure>
+<h4 id="编译安装-1"><a href="#编译安装-1" class="headerlink" title="编译安装"></a>编译安装</h4><p>加载系统的bcache模块：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># lsmod | grep bcache</span></span><br><span class="line"><span class="comment"># modprobe bcache</span></span><br><span class="line">modprobe: FATAL: Module bcache not found.</span><br></pre></td></tr></table></figure>
+<p>查看发现在kernel 3.10.0-693 版本里，默认是不编译bcache模块的，参考：</p>
+<p><a href="https://lakelight.net/2017/12/20/bcache-centos-7.html" target="_blank" rel="noopener">https://lakelight.net/2017/12/20/bcache-centos-7.html</a></p>
+<p>这里就需要下载当前内核版本的源码，重新编译内核bcache模块，然后再加载bcache模块。</p>
+<p>鉴于之前CentOS上安装flashcache时探索了内核版本的升级，所以这里在已经升级内核版本的机器上尝试，发现kernel 4.4版本默认已经编译好了bcache模块，所以在CentOS上使用cache时，还是建议升级到4.4版本内核。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># uname -r</span></span><br><span class="line">4.4.115-1.el7.elrepo.x86_64</span><br><span class="line"></span><br><span class="line"><span class="comment"># lsmod | grep bcache</span></span><br><span class="line"><span class="comment"># modprobe bcache</span></span><br><span class="line"><span class="comment"># lsmod | grep bcache</span></span><br><span class="line">bcache                233472  0</span><br></pre></td></tr></table></figure>
+<p>编译安装bcace-tools：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yum install -y git pkgconfig libblkid-devel</span></span><br><span class="line"><span class="comment"># git clone https://evilpiepirate.org/git/bcache-tools.git</span></span><br><span class="line"><span class="comment"># cd bcache-tools/</span></span><br><span class="line"><span class="comment"># make</span></span><br><span class="line">cc -O2 -Wall -g `pkg-config --cflags uuid blkid`   -c -o bcache.o bcache.c</span><br><span class="line">cc -O2 -Wall -g `pkg-config --cflags uuid blkid`    make-bcache.c bcache.o  `pkg-config --libs uuid blkid` -o make-bcache</span><br><span class="line">cc -O2 -Wall -g `pkg-config --cflags uuid blkid`    probe-bcache.c  `pkg-config --libs uuid blkid` -o probe-bcache</span><br><span class="line">cc -O2 -Wall -g -std=gnu99    bcache-super-show.c bcache.o  `pkg-config --libs uuid` -o bcache-super-show</span><br><span class="line">cc -O2 -Wall -g   -c -o bcache-register.o bcache-register.c</span><br><span class="line">cc   bcache-register.o   -o bcache-register</span><br><span class="line"><span class="comment"># make install</span></span><br><span class="line">install -m0755 make-bcache bcache-super-show    /usr/sbin/</span><br><span class="line">install -m0755 probe-bcache bcache-register        /lib/udev/</span><br><span class="line">install -m0644 69-bcache.rules    /lib/udev/rules.d/</span><br><span class="line">install -m0644 -- *.8 /usr/share/man/man8/</span><br><span class="line">install -D -m0755 initramfs/hook    /usr/share/initramfs-tools/hooks/bcache</span><br><span class="line">install -D -m0755 initcpio/install    /usr/lib/initcpio/install/bcache</span><br><span class="line">install -D -m0755 dracut/module-setup.sh /lib/dracut/modules.d/90bcache/module-setup.sh</span><br></pre></td></tr></table></figure>
+<h2 id="Bcache使用"><a href="#Bcache使用" class="headerlink" title="Bcache使用"></a>Bcache使用</h2><p>下面在CentOS机器上，介绍如何使用bcache。</p>
+<h3 id="硬盘信息"><a href="#硬盘信息" class="headerlink" title="硬盘信息"></a>硬盘信息</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># fdisk -l | grep dev</span></span><br><span class="line">...</span><br><span class="line">Disk /dev/vdb: 107.4 GB, 107374182400 bytes, 209715200 sectors</span><br><span class="line">Disk /dev/vdc: 107.4 GB, 107374182400 bytes, 209715200 sectors</span><br><span class="line">Disk /dev/vdd: 53.7 GB, 53687091200 bytes, 104857600 sectors</span><br></pre></td></tr></table></figure>
+<p>这里使用三块盘：vdb、vdc、vdd。</p>
+<p>其中vdb、vdc是容量型磁盘，vdd是性能型磁盘，实验用vdd通过bcache加速vdb和vdc。</p>
+<h3 id="使用步骤"><a href="#使用步骤" class="headerlink" title="使用步骤"></a>使用步骤</h3><p>与bcache相关的命令有：<code>make-bcache</code>和<code>bcache-super-show</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># make-bcache</span></span><br><span class="line">Please supply a device</span><br><span class="line">Usage: make-bcache [options] device</span><br><span class="line">	-C, --cache		Format a cache device</span><br><span class="line">	-B, --bdev		Format a backing device</span><br><span class="line">	-b, --bucket		bucket size</span><br><span class="line">	-w, --block		block size (hard sector size of SSD, often 2k)</span><br><span class="line">	-o, --data-offset	data offset <span class="keyword">in</span> sectors</span><br><span class="line">	    --cset-uuid		UUID <span class="keyword">for</span> the cache <span class="built_in">set</span></span><br><span class="line">	    --writeback		<span class="built_in">enable</span> writeback</span><br><span class="line">	    --discard		<span class="built_in">enable</span> discards</span><br><span class="line">	    --cache_replacement_policy=(lru|fifo)</span><br><span class="line">	-h, --<span class="built_in">help</span>		display this <span class="built_in">help</span> and <span class="built_in">exit</span></span><br><span class="line">	</span><br><span class="line"><span class="comment"># bcache-super-show</span></span><br><span class="line">Usage: bcache-super-show [-f] &lt;device&gt;</span><br></pre></td></tr></table></figure>
+<h4 id="创建backing-device"><a href="#创建backing-device" class="headerlink" title="创建backing device"></a>创建backing device</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># make-bcache -B /dev/vdb</span></span><br><span class="line">UUID:            c602abab-bf5a-4b51-b7f6-1492d34239f4</span><br><span class="line">Set UUID:        423e1910-f61a-45fa-8cdf-a23aca3b5eb8</span><br><span class="line">version:        1</span><br><span class="line">block_size:        1</span><br><span class="line">data_offset:        16</span><br><span class="line"></span><br><span class="line"><span class="comment"># bcache-super-show /dev/vdb</span></span><br><span class="line">sb.magic		ok</span><br><span class="line">sb.first_sector		8 [match]</span><br><span class="line">sb.csum			1376BA45B5F924B [match]</span><br><span class="line">sb.version		1 [backing device]</span><br><span class="line"></span><br><span class="line">dev.label		(empty)</span><br><span class="line">dev.uuid		c602abab-bf5a-4b51-b7f6-1492d34239f4</span><br><span class="line">dev.sectors_per_block	1</span><br><span class="line">dev.sectors_per_bucket	1024</span><br><span class="line">dev.data.first_sector	16</span><br><span class="line">dev.data.cache_mode	0 [writethrough]</span><br><span class="line">dev.data.cache_state	1 [clean]</span><br><span class="line"></span><br><span class="line">cset.uuid		4b60c663-7720-4dea-a17a-e9316078e796</span><br></pre></td></tr></table></figure>
+<h4 id="创建cache-device"><a href="#创建cache-device" class="headerlink" title="创建cache device"></a>创建cache device</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># make-bcache -C /dev/vdd</span></span><br><span class="line">UUID:            050998ce-403c-45d7-a89b-492379644c1b</span><br><span class="line">Set UUID:        4b60c663-7720-4dea-a17a-e9316078e796</span><br><span class="line">version:        0</span><br><span class="line">nbuckets:        102400</span><br><span class="line">block_size:        1</span><br><span class="line">bucket_size:        1024</span><br><span class="line">nr_in_set:        1</span><br><span class="line">nr_this_dev:        0</span><br><span class="line">first_bucket:        1</span><br><span class="line"></span><br><span class="line"><span class="comment"># bcache-super-show /dev/vdd</span></span><br><span class="line">sb.magic        ok</span><br><span class="line">sb.first_sector        8 [match]</span><br><span class="line">sb.csum            68CDDDC337A2E296 [match]</span><br><span class="line">sb.version        3 [cache device]</span><br><span class="line"></span><br><span class="line">dev.label        (empty)</span><br><span class="line">dev.uuid        050998ce-403c-45d7-a89b-492379644c1b</span><br><span class="line">dev.sectors_per_block    1</span><br><span class="line">dev.sectors_per_bucket    1024</span><br><span class="line">dev.cache.first_sector    1024</span><br><span class="line">dev.cache.cache_sectors    104856576</span><br><span class="line">dev.cache.total_sectors    104857600</span><br><span class="line">dev.cache.ordered    yes</span><br><span class="line">dev.cache.discard    no</span><br><span class="line">dev.cache.pos        0</span><br><span class="line">dev.cache.replacement    0 [lru]</span><br><span class="line"></span><br><span class="line">cset.uuid        4b60c663-7720-4dea-a17a-e9316078e796</span><br></pre></td></tr></table></figure>
+<h4 id="绑定backing-device到cache-device"><a href="#绑定backing-device到cache-device" class="headerlink" title="绑定backing device到cache device"></a>绑定backing device到cache device</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># echo "4b60c663-7720-4dea-a17a-e9316078e796" &gt; /sys/block/bcache0/bcache/attach</span></span><br><span class="line"><span class="comment"># lsblk</span></span><br><span class="line">NAME      MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT</span><br><span class="line">...</span><br><span class="line">vdb       253:16   0  100G  0 disk</span><br><span class="line">└─bcache0 251:0    0  100G  0 disk</span><br><span class="line">vdc       253:32   0  100G  0 disk</span><br><span class="line">vdd       253:48   0   50G  0 disk</span><br><span class="line">└─bcache0 251:0    0  100G  0 disk</span><br></pre></td></tr></table></figure>
+<h4 id="查看bcache相关信息"><a href="#查看bcache相关信息" class="headerlink" title="查看bcache相关信息"></a>查看bcache相关信息</h4><p>1、state</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat /sys/block/bcache0/bcache/state</span></span><br><span class="line">clean</span><br></pre></td></tr></table></figure>
+<p>state的几个状态：</p>
+<ul>
+<li>no cache：该backing device没有attach任何caching device</li>
+<li>clean：一切正常，缓存是干净的</li>
+<li>dirty：一切正常，已启用回写，缓存是脏的</li>
+<li>inconsistent：遇到问题，后台设备与缓存设备不同步</li>
+</ul>
+<p>2、缓存数据量</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat /sys/block/bcache0/bcache/dirty_data</span></span><br><span class="line">0.0k</span><br></pre></td></tr></table></figure>
+<p>3、缓存模式</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat /sys/block/bcache0/bcache/cache_mode</span></span><br><span class="line">[writethrough] writeback writearound none</span><br><span class="line"><span class="comment"># echo writearound &gt; /sys/block/bcache0/bcache/cache_mode</span></span><br><span class="line"><span class="comment"># cat /sys/block/bcache0/bcache/cache_mode</span></span><br><span class="line">writethrough writeback [writearound] none</span><br></pre></td></tr></table></figure>
+<p>4、writeback信息</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat /sys/block/bcache0/bcache/writeback_</span></span><br><span class="line">writeback_delay                writeback_percent              writeback_rate_debug           writeback_rate_p_term_inverse  writeback_running</span><br><span class="line">writeback_metadata             writeback_rate                 writeback_rate_d_term          writeback_rate_update_seconds</span><br></pre></td></tr></table></figure>
+<h4 id="解绑backing-device的cache-device"><a href="#解绑backing-device的cache-device" class="headerlink" title="解绑backing device的cache device"></a>解绑backing device的cache device</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># echo "697b764f-b3ef-4675-8761-d9518a12089c" &gt; /sys/block/bcache0/bcache/detach</span></span><br><span class="line"><span class="comment"># lsblk</span></span><br><span class="line">NAME      MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT</span><br><span class="line">...</span><br><span class="line">vdb       253:16   0  100G  0 disk</span><br><span class="line">└─bcache0 251:0    0  100G  0 disk</span><br><span class="line">vdc       253:32   0  100G  0 disk</span><br><span class="line">vdd       253:48   0   50G  0 disk</span><br><span class="line"></span><br><span class="line"><span class="comment"># cat /sys/block/vdb/bcache/state</span></span><br><span class="line">no cache</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>解绑后设备可以继续使用，只是没有cache device的加速</p>
+</blockquote>
+<h4 id="添加新backing-device"><a href="#添加新backing-device" class="headerlink" title="添加新backing device"></a>添加新backing device</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># make-bcache -B /dev/vdc</span></span><br><span class="line">UUID:            cc790e62-b3eb-4237-8265-dd1b619e15c0</span><br><span class="line">Set UUID:        edb2b1d0-9eeb-4a8a-b811-3dafd676fac0</span><br><span class="line">version:        1</span><br><span class="line">block_size:        1</span><br><span class="line">data_offset:        16</span><br><span class="line"></span><br><span class="line"><span class="comment"># echo "4b60c663-7720-4dea-a17a-e9316078e796" &gt; /sys/block/bcache1/bcache/attach</span></span><br><span class="line"><span class="comment"># lsblk</span></span><br><span class="line">NAME      MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT</span><br><span class="line">...</span><br><span class="line">vdb       253:16   0  100G  0 disk</span><br><span class="line">└─bcache0 251:0    0  100G  0 disk</span><br><span class="line">vdc       253:32   0  100G  0 disk</span><br><span class="line">└─bcache1 251:1    0  100G  0 disk</span><br><span class="line">vdd       253:48   0   50G  0 disk</span><br><span class="line">└─bcache1 251:1    0  100G  0 disk</span><br></pre></td></tr></table></figure>
+<h4 id="使用bcache-device"><a href="#使用bcache-device" class="headerlink" title="使用bcache device"></a>使用bcache device</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mkfs.ext4 /dev/bcache1</span></span><br><span class="line"><span class="comment"># mount /dev/bcache1 /mnt/</span></span><br><span class="line"><span class="comment"># df -h</span></span><br><span class="line">Filesystem      Size  Used Avail Use% Mounted on</span><br><span class="line">...</span><br><span class="line">/dev/bcache1     99G   61M   94G   1% /mnt</span><br><span class="line"></span><br><span class="line"><span class="comment"># umount /mnt/</span></span><br></pre></td></tr></table></figure>
+<h4 id="注销bcache-device"><a href="#注销bcache-device" class="headerlink" title="注销bcache device"></a>注销bcache device</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># echo 1 &gt; /sys/block/vdc/bcache/stop</span></span><br><span class="line"><span class="comment"># echo 1 &gt; /sys/block/vdb/bcache/stop</span></span><br><span class="line"><span class="comment"># echo 1 &gt; /sys/fs/bcache/10057a1c-15a2-4631-a6d2-f4652d37645d/unregister</span></span><br><span class="line"><span class="comment"># lsblk</span></span><br><span class="line">NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT</span><br><span class="line">...</span><br><span class="line">vdb    253:16   0  100G  0 disk</span><br><span class="line">vdc    253:32   0  100G  0 disk</span><br><span class="line">vdd    253:48   0   50G  0 disk</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>echo的数字不重要，可为任何值 ;)</p>
+</blockquote>
+<h4 id="快捷创建bcache-device"><a href="#快捷创建bcache-device" class="headerlink" title="快捷创建bcache device"></a>快捷创建bcache device</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># make-bcache -B /dev/vdb /dev/vdc -C /dev/vdd</span></span><br><span class="line">UUID:			09f971eb-6063-4f94-bdac-d7d7117c0e0f</span><br><span class="line">Set UUID:		697b764f-b3ef-4675-8761-d9518a12089c</span><br><span class="line">version:		0</span><br><span class="line">nbuckets:		102400</span><br><span class="line">block_size:		1</span><br><span class="line">bucket_size:		1024</span><br><span class="line">nr_in_set:		1</span><br><span class="line">nr_this_dev:		0</span><br><span class="line">first_bucket:		1</span><br><span class="line">UUID:			b45301fa-8932-4194-9518-ab681f37d9c9</span><br><span class="line">Set UUID:		697b764f-b3ef-4675-8761-d9518a12089c</span><br><span class="line">version:		1</span><br><span class="line">block_size:		1</span><br><span class="line">data_offset:		16</span><br><span class="line">UUID:			2c0452f7-76de-4319-bd3c-2a73b4fa4b68</span><br><span class="line">Set UUID:		697b764f-b3ef-4675-8761-d9518a12089c</span><br><span class="line">version:		1</span><br><span class="line">block_size:		1</span><br><span class="line">data_offset:		16</span><br><span class="line">[root@lvm-centos-tst ~]<span class="comment"># lsblk</span></span><br><span class="line">NAME      MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT</span><br><span class="line">...</span><br><span class="line">vdb       253:16   0  100G  0 disk</span><br><span class="line">└─bcache0 251:0    0  100G  0 disk</span><br><span class="line">vdc       253:32   0  100G  0 disk</span><br><span class="line">└─bcache1 251:1    0  100G  0 disk</span><br><span class="line">vdd       253:48   0   50G  0 disk</span><br><span class="line">├─bcache0 251:0    0  100G  0 disk</span><br><span class="line">└─bcache1 251:1    0  100G  0 disk</span><br></pre></td></tr></table></figure>
+<h3 id="遇到的问题"><a href="#遇到的问题" class="headerlink" title="遇到的问题"></a>遇到的问题</h3><h4 id="make-bcache命令有提示"><a href="#make-bcache命令有提示" class="headerlink" title="make-bcache命令有提示"></a>make-bcache命令有提示</h4><p>之前做过bcache的device，重做bcache有提示</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># make-bcache -B /dev/vdb</span></span><br><span class="line">Already a bcache device on /dev/vdb, overwrite with --wipe-bcache</span><br><span class="line"></span><br><span class="line"><span class="comment"># lsblk</span></span><br><span class="line">NAME      MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT</span><br><span class="line">...</span><br><span class="line">vdb       253:16   0  100G  0 disk</span><br><span class="line">└─bcache0 251:0    0  100G  0 disk</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>虽说有提示，但实际bcache device已经创建成果</p>
+</blockquote>
+<p>针对上述情况，可以通过写device前一部分数据的方法解决</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">可以通过dd命令来清理device的前部分数据：</span><br><span class="line"><span class="comment"># dd if=/dev/zero of=/dev/vdb bs=1M count=100 oflag=direct</span></span><br><span class="line"><span class="comment"># dd if=/dev/zero of=/dev/vdd bs=1M count=100 oflag=direct</span></span><br><span class="line"></span><br><span class="line">再创建bcache device，就不会报错了：</span><br><span class="line"><span class="comment"># make-bcache -B /dev/vdb</span></span><br><span class="line">UUID:            c602abab-bf5a-4b51-b7f6-1492d34239f4</span><br><span class="line">Set UUID:        423e1910-f61a-45fa-8cdf-a23aca3b5eb8</span><br><span class="line">version:        1</span><br><span class="line">block_size:        1</span><br><span class="line">data_offset:        16</span><br><span class="line"></span><br><span class="line"><span class="comment"># make-bcache -C /dev/vdd</span></span><br><span class="line">UUID:            050998ce-403c-45d7-a89b-492379644c1b</span><br><span class="line">Set UUID:        4b60c663-7720-4dea-a17a-e9316078e796</span><br><span class="line">version:        0</span><br><span class="line">nbuckets:        102400</span><br><span class="line">block_size:        1</span><br><span class="line">bucket_size:        1024</span><br><span class="line">nr_in_set:        1</span><br><span class="line">nr_this_dev:        0</span><br><span class="line">first_bucket:        1</span><br></pre></td></tr></table></figure>
+<h4 id="设备没umount就直接注销"><a href="#设备没umount就直接注销" class="headerlink" title="设备没umount就直接注销"></a>设备没umount就直接注销</h4><p>没有umount，注销bcache device后，设备依旧可以使用，umount后设备消失</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># lsblk</span></span><br><span class="line">NAME      MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT</span><br><span class="line">...</span><br><span class="line">vdb       253:16   0  100G  0 disk</span><br><span class="line">└─bcache0 251:0    0  100G  0 disk /mnt</span><br><span class="line">vdc       253:32   0  100G  0 disk</span><br><span class="line">vdd       253:48   0   50G  0 disk</span><br><span class="line">└─bcache0 251:0    0  100G  0 disk /mnt</span><br><span class="line"></span><br><span class="line"><span class="comment"># mount | grep bcache</span></span><br><span class="line">/dev/bcache0 on /mnt <span class="built_in">type</span> ext4 (rw,relatime,seclabel,data=ordered)</span><br><span class="line"></span><br><span class="line"><span class="comment"># echo 1 &gt; /sys/fs/bcache/4b60c663-7720-4dea-a17a-e9316078e796/unregister</span></span><br><span class="line"><span class="comment"># echo 0 &gt; /sys/block/vdb/bcache/stop</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># lsblk</span></span><br><span class="line">NAME      MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT</span><br><span class="line">...</span><br><span class="line">vdb       253:16   0  100G  0 disk</span><br><span class="line">└─bcache0 251:0    0  100G  0 disk /mnt</span><br><span class="line">vdc       253:32   0  100G  0 disk</span><br><span class="line">vdd       253:48   0   50G  0 disk</span><br><span class="line"></span><br><span class="line"><span class="comment"># ls /sys/block/vdb/bcache</span></span><br><span class="line">ls: cannot access /sys/block/vdb/bcache: No such file or directory</span><br><span class="line"></span><br><span class="line"><span class="comment"># cd /mnt/</span></span><br><span class="line"><span class="comment"># touch tstfile</span></span><br><span class="line"><span class="comment"># umount  /mnt/</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># lsblk</span></span><br><span class="line">NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT</span><br><span class="line">...</span><br><span class="line">vdb    253:16   0  100G  0 disk</span><br><span class="line">vdc    253:32   0  100G  0 disk</span><br><span class="line">vdd    253:48   0   50G  0 disk</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/bcache/" rel="tag"># bcache</a>
+          
+            <a href="/tags/ssd/" rel="tag"># ssd</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/03/08/ssd-enhance-sata-with-flashcache/" rel="next" title="SSD加速SATA盘之flashcache策略">
+                <i class="fa fa-chevron-left"></i> SSD加速SATA盘之flashcache策略
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Bcache"><span class="nav-number">2.</span> <span class="nav-text">Bcache</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Ubuntu上安装"><span class="nav-number">2.1.</span> <span class="nav-text">Ubuntu上安装</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#系统信息"><span class="nav-number">2.1.1.</span> <span class="nav-text">系统信息</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#编译安装"><span class="nav-number">2.1.2.</span> <span class="nav-text">编译安装</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CentOS上安装"><span class="nav-number">2.2.</span> <span class="nav-text">CentOS上安装</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#系统信息-1"><span class="nav-number">2.2.1.</span> <span class="nav-text">系统信息</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#编译安装-1"><span class="nav-number">2.2.2.</span> <span class="nav-text">编译安装</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Bcache使用"><span class="nav-number">3.</span> <span class="nav-text">Bcache使用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#硬盘信息"><span class="nav-number">3.1.</span> <span class="nav-text">硬盘信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用步骤"><span class="nav-number">3.2.</span> <span class="nav-text">使用步骤</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#创建backing-device"><span class="nav-number">3.2.1.</span> <span class="nav-text">创建backing device</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#创建cache-device"><span class="nav-number">3.2.2.</span> <span class="nav-text">创建cache device</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#绑定backing-device到cache-device"><span class="nav-number">3.2.3.</span> <span class="nav-text">绑定backing device到cache device</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#查看bcache相关信息"><span class="nav-number">3.2.4.</span> <span class="nav-text">查看bcache相关信息</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#解绑backing-device的cache-device"><span class="nav-number">3.2.5.</span> <span class="nav-text">解绑backing device的cache device</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#添加新backing-device"><span class="nav-number">3.2.6.</span> <span class="nav-text">添加新backing device</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#使用bcache-device"><span class="nav-number">3.2.7.</span> <span class="nav-text">使用bcache device</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#注销bcache-device"><span class="nav-number">3.2.8.</span> <span class="nav-text">注销bcache device</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#快捷创建bcache-device"><span class="nav-number">3.2.9.</span> <span class="nav-text">快捷创建bcache device</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#遇到的问题"><span class="nav-number">3.3.</span> <span class="nav-text">遇到的问题</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#make-bcache命令有提示"><span class="nav-number">3.3.1.</span> <span class="nav-text">make-bcache命令有提示</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#设备没umount就直接注销"><span class="nav-number">3.3.2.</span> <span class="nav-text">设备没umount就直接注销</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.ictfox.cn/2018/03/26/lvm-sata-ssd-bcache/';
+          this.page.identifier = '2018/03/26/lvm-sata-ssd-bcache/';
+          this.page.title = 'SSD加速SATA盘之bcache策略';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

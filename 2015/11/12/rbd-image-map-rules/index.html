@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,rbd," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="代码定义Ceph版本：Hammer 0.94.5 12345678/* New-style rbd image &apos;foo&apos; consists of objects *   rbd_id.foo              - id of image *   rbd_header.&amp;lt;id&amp;gt;         - image metadata *   rbd_object_map.&amp;lt;id">
+<meta name="keywords" content="ceph,rbd">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Ceph RBD image map rules">
+<meta property="og:url" content="http://www.ictfox.cn/2015/11/12/rbd-image-map-rules/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="代码定义Ceph版本：Hammer 0.94.5 12345678/* New-style rbd image &apos;foo&apos; consists of objects *   rbd_id.foo              - id of image *   rbd_header.&amp;lt;id&amp;gt;         - image metadata *   rbd_object_map.&amp;lt;id">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.343Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Ceph RBD image map rules">
+<meta name="twitter:description" content="代码定义Ceph版本：Hammer 0.94.5 12345678/* New-style rbd image &apos;foo&apos; consists of objects *   rbd_id.foo              - id of image *   rbd_header.&amp;lt;id&amp;gt;         - image metadata *   rbd_object_map.&amp;lt;id">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.ictfox.cn/2015/11/12/rbd-image-map-rules/"/>
+
+
+
+
+
+  <title>Ceph RBD image map rules | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2015/11/12/rbd-image-map-rules/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Ceph RBD image map rules</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2015-11-12T21:01:17+08:00">
+                2015-11-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2015/11/12/rbd-image-map-rules/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2015/11/12/rbd-image-map-rules/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="代码定义"><a href="#代码定义" class="headerlink" title="代码定义"></a>代码定义</h2><p>Ceph版本：Hammer 0.94.5</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">/* New-style rbd image <span class="string">'foo'</span> consists of objects</span><br><span class="line"> *   rbd_id.foo              - id of image</span><br><span class="line"> *   rbd_header.&lt;id&gt;         - image metadata</span><br><span class="line"> *   rbd_object_map.&lt;id&gt;     - optional image object map</span><br><span class="line"> *   rbd_data.&lt;id&gt;.00000000</span><br><span class="line"> *   rbd_data.&lt;id&gt;.00000001</span><br><span class="line"> *   ...                     - data</span><br><span class="line"> */</span><br></pre></td></tr></table></figure>
+<p>从中可以看出一个rbd image会对应至少4个文件：</p>
+<ol>
+<li><code>rbd_id.foo</code> - foo为image的name</li>
+<li><code>rbd_header.&lt;id&gt;</code></li>
+<li><code>rbd_object_map.&lt;id&gt;</code></li>
+<li><code>rbd_data.&lt;id&gt;.00000000</code></li>
+</ol>
+<h2 id="选择一个image"><a href="#选择一个image" class="headerlink" title="选择一个image"></a>选择一个image</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># rbd ls volumes</span><br><span class="line">volume-5ba95c5d-287b-429f-aadb-b72e990122ad</span><br></pre></td></tr></table></figure>
+<h2 id="查看rbd-id文件"><a href="#查看rbd-id文件" class="headerlink" title="查看rbd_id文件"></a>查看rbd_id文件</h2><h3 id="获取image的id"><a href="#获取image的id" class="headerlink" title="获取image的id"></a>获取image的id</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph osd map volumes rbd_id.volume-5ba95c5d-287b-429f-aadb-b72e990122ad</span></span><br><span class="line">osdmap e3001 pool <span class="string">'volumes'</span> (2) object <span class="string">'rbd_id.volume-5ba95c5d-287b-429f-aadb-b72e990122ad'</span> -&gt; pg 2.49c908b (2.8b) -&gt; up ([13,15], p13) acting ([13,15], p13)</span><br><span class="line"></span><br><span class="line">在osd节点上找到image对应的文件：</span><br><span class="line"><span class="comment"># find . -name "*volume-5ba95c5d-287b-429f-aadb-b72e990122ad*"</span></span><br><span class="line">./ceph-15/current/2.8b_head/rbd\uid.volume-5ba95c5d-287b-429f-aadb-b72e990122ad__head_049C908B__2</span><br><span class="line"></span><br><span class="line"><span class="comment"># cat ./ceph-15/current/2.8b_head/rbd\\uid.volume-5ba95c5d-287b-429f-aadb-b72e990122ad__head_049C908B__2</span></span><br><span class="line"></span><br><span class="line">13cd1213ee70</span><br></pre></td></tr></table></figure>
+<p>上面<code>13cd1213ee70</code>即为image的id</p>
+<h3 id="查看rbd-id文件的attr"><a href="#查看rbd-id文件的attr" class="headerlink" title="查看rbd_id文件的attr"></a>查看rbd_id文件的attr</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rados -p volumes listxattr rbd_id.volume-5ba95c5d-287b-429f-aadb-b72e990122ad</span></span><br><span class="line"><span class="comment"># rados -p volumes getxattr rbd_id.volume-5ba95c5d-287b-429f-aadb-b72e990122ad attr</span></span><br><span class="line">error getting xattr volumes/rbd_id.volume-5ba95c5d-287b-429f-aadb-b72e990122ad/attr: (61) No data available</span><br></pre></td></tr></table></figure>
+<p>rbd_id文件并没有设置attr</p>
+<h2 id="查看rbd-header文件"><a href="#查看rbd-header文件" class="headerlink" title="查看rbd_header文件"></a>查看rbd_header文件</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph osd map volumes rbd_header.13cd1213ee70</span></span><br><span class="line">osdmap e3001 pool <span class="string">'volumes'</span> (2) object <span class="string">'rbd_header.13cd1213ee70'</span> -&gt; pg 2.57c27b74 (2.374) -&gt; up ([5,11], p5) acting ([5,11], p5)</span><br><span class="line"></span><br><span class="line"><span class="comment"># find . -name "*header.13cd1213ee70*"</span></span><br><span class="line">./ceph-5/current/2.374_head/rbd\uheader.13cd1213ee70__head_57C27B74__2</span><br><span class="line"></span><br><span class="line"><span class="comment"># ll ./ceph-5/current/2.374_head/rbd\\uheader.13cd1213ee70__head_57C27B74__2</span></span><br><span class="line">-rw-r--r-- 1 root root 0 Oct 29 17:13 ./ceph-5/current/2.374_head/rbd\uheader.13cd1213ee70__head_57C27B74__2</span><br></pre></td></tr></table></figure>
+<p>创建rbd的时候，image-format的解释如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">--image-format &lt;format-number&gt;     format to use when creating an image</span><br><span class="line">                                   format 1 is the original format (default)</span><br><span class="line">                                   format 2 supports cloning</span><br></pre></td></tr></table></figure>
+<ol>
+<li><p>old_format格式</p>
+<p> 调用顺序为：<code>create_v1() --&gt; init_rbd_header()</code>，里面会把image的metadata写入<code>rbd_header</code>object里。</p>
+</li>
+<li><p>new_format格式</p>
+<p> <code>rbd_header</code> object的size为0，而image的metadata存在omap里。</p>
+</li>
+</ol>
+<blockquote>
+<p>貌似file的xattr只在有snap的时候才会设置，clone后会清除，需要验证。<br>xattr主要用来给CephFS提供XATTR数据存放</p>
+</blockquote>
+<h3 id="查看rbd-header的attr"><a href="#查看rbd-header的attr" class="headerlink" title="查看rbd_header的attr"></a>查看rbd_header的attr</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rados -p volumes listxattr rbd_header.13cd1213ee70</span></span><br><span class="line"><span class="comment"># rados -p volumes getxattr rbd_header.13cd1213ee70 attr</span></span><br><span class="line">error getting xattr volumes/rbd_header.13cd1213ee70/attr: (61) No data available</span><br></pre></td></tr></table></figure>
+<p>rbd_header文件并没有设置attr</p>
+<h3 id="查看rbd-header的omapvalue"><a href="#查看rbd-header的omapvalue" class="headerlink" title="查看rbd_header的omapvalue"></a>查看rbd_header的omapvalue</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rados -p volumes listomapvals rbd_header.13cd1213ee70</span></span><br><span class="line">features</span><br><span class="line">value: (8 bytes) :</span><br><span class="line">0000 : 03 00 00 00 00 00 00 00                         : ........</span><br><span class="line"></span><br><span class="line">object_prefix</span><br><span class="line">value: (25 bytes) :</span><br><span class="line">0000 : 15 00 00 00 72 62 64 5f 64 61 74 61 2e 31 33 63 : ....rbd_data.13c</span><br><span class="line">0010 : 64 31 32 31 33 65 65 37 30                      : d1213ee70</span><br><span class="line"></span><br><span class="line">order</span><br><span class="line">value: (1 bytes) :</span><br><span class="line">0000 : 19                                              : .</span><br><span class="line"></span><br><span class="line">size</span><br><span class="line">value: (8 bytes) :</span><br><span class="line">0000 : 00 00 00 00 32 00 00 00                         : ....2...</span><br><span class="line"></span><br><span class="line">snap_seq</span><br><span class="line">value: (8 bytes) :</span><br><span class="line">0000 : 00 00 00 00 00 00 00 00                         : ........</span><br></pre></td></tr></table></figure>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rados -p volumes listomapkeys rbd_header.13cd1213ee70</span></span><br><span class="line">features</span><br><span class="line">object_prefix</span><br><span class="line">order</span><br><span class="line">size</span><br><span class="line">snap_seq</span><br><span class="line"></span><br><span class="line"><span class="comment"># rados -p volumes getomapheader rbd_header.13cd1213ee70</span></span><br><span class="line">header (0 bytes) :</span><br></pre></td></tr></table></figure>
+<h3 id="从rbd-directory中查看信息"><a href="#从rbd-directory中查看信息" class="headerlink" title="从rbd_directory中查看信息"></a>从rbd_directory中查看信息</h3><p>rbd_directory里包含了pool里所有image的信息</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rados -p volumes listomapvals rbd_directory</span></span><br><span class="line">id_13cd1213ee70</span><br><span class="line">value: (47 bytes) :</span><br><span class="line">0000 : 2b 00 00 00 76 6f 6c 75 6d 65 2d 35 62 61 39 35 : +...volume-5ba95</span><br><span class="line">0010 : 63 35 64 2d 32 38 37 62 2d 34 32 39 66 2d 61 61 : c5d-287b-429f-aa</span><br><span class="line">0020 : 64 62 2d 62 37 32 65 39 39 30 31 32 32 61 64    : db-b72e990122ad</span><br><span class="line"></span><br><span class="line">name_volume-5ba95c5d-287b-429f-aadb-b72e990122ad</span><br><span class="line">value: (16 bytes) :</span><br><span class="line">0000 : 0c 00 00 00 31 33 63 64 31 32 31 33 65 65 37 30 : ....13cd1213ee70</span><br><span class="line"></span><br><span class="line"><span class="comment"># rados -p volumes listomapkeys rbd_directory</span></span><br><span class="line">id_13cd1213ee70</span><br><span class="line">name_volume-5ba95c5d-287b-429f-aadb-b72e990122ad</span><br><span class="line"></span><br><span class="line"><span class="comment"># rados -p volumes getomapheader rbd_directory</span></span><br><span class="line">header (0 bytes) :</span><br></pre></td></tr></table></figure>
+<h2 id="查看rbd-data文件"><a href="#查看rbd-data文件" class="headerlink" title="查看rbd_data文件"></a>查看rbd_data文件</h2><p>查看该image的其中一个object的存放信息：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">获取映射关系</span><br><span class="line"><span class="comment"># ceph osd map volumes rbd_header.13cd1213ee70.0000000000000ac3</span></span><br><span class="line">osdmap e3001 pool <span class="string">'volumes'</span> (2) object <span class="string">'rbd_data.13cd1213ee70.0000000000000ac3'</span> -&gt; pg 2.bc79817 (2.17) -&gt; up ([6,12], p6) acting ([6,12], p6)</span><br><span class="line"></span><br><span class="line">在对应osd上找到上面的数据objects，命名规则介绍如下：</span><br><span class="line"><span class="comment"># find . -name "*13cd1213ee70.0000000000000ac3*"</span></span><br><span class="line">./ceph-12/current/2.17_head/rbd\udata.13cd1213ee70.0000000000000ac3__head_0BC79817__2</span><br><span class="line">                            rbd_data  &lt;id&gt;         &lt;slice num&gt;       head &lt;HASH&gt;    &lt;pool id&gt;</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/rbd/" rel="tag"># rbd</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/11/08/ceph-cpu-profile/" rel="next" title="Ceph cpu profile">
+                <i class="fa fa-chevron-left"></i> Ceph cpu profile
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/11/17/cinder-with-multi-ceph-pools/" rel="prev" title="Openstack cinder configuration with multi ceph pools">
+                Openstack cinder configuration with multi ceph pools <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#代码定义"><span class="nav-number">1.</span> <span class="nav-text">代码定义</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#选择一个image"><span class="nav-number">2.</span> <span class="nav-text">选择一个image</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#查看rbd-id文件"><span class="nav-number">3.</span> <span class="nav-text">查看rbd_id文件</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#获取image的id"><span class="nav-number">3.1.</span> <span class="nav-text">获取image的id</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#查看rbd-id文件的attr"><span class="nav-number">3.2.</span> <span class="nav-text">查看rbd_id文件的attr</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#查看rbd-header文件"><span class="nav-number">4.</span> <span class="nav-text">查看rbd_header文件</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#查看rbd-header的attr"><span class="nav-number">4.1.</span> <span class="nav-text">查看rbd_header的attr</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#查看rbd-header的omapvalue"><span class="nav-number">4.2.</span> <span class="nav-text">查看rbd_header的omapvalue</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#从rbd-directory中查看信息"><span class="nav-number">4.3.</span> <span class="nav-text">从rbd_directory中查看信息</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#查看rbd-data文件"><span class="nav-number">5.</span> <span class="nav-text">查看rbd_data文件</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.ictfox.cn/2015/11/12/rbd-image-map-rules/';
+          this.page.identifier = '2015/11/12/rbd-image-map-rules/';
+          this.page.title = 'Ceph RBD image map rules';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

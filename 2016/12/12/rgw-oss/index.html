@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,radosgw," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="概述OSS: Object Storage ServiceRadosGW兼容S3，我们需要依S3的方式提供OSS  OSS功能列表Bucket相关   Buckets功能 REST API Ceph Operation &amp;amp; Class     List Buckets GET / HTTP/1.1Host:  cname.company.cnAuthorization: AWS {acce">
+<meta name="keywords" content="ceph,radosgw">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RadosGW对象存储使用文档">
+<meta property="og:url" content="http://www.ictfox.cn/2016/12/12/rgw-oss/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述OSS: Object Storage ServiceRadosGW兼容S3，我们需要依S3的方式提供OSS  OSS功能列表Bucket相关   Buckets功能 REST API Ceph Operation &amp;amp; Class     List Buckets GET / HTTP/1.1Host:  cname.company.cnAuthorization: AWS {acce">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.ictfox.cn/images/rgw-user.jpg">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.354Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="RadosGW对象存储使用文档">
+<meta name="twitter:description" content="概述OSS: Object Storage ServiceRadosGW兼容S3，我们需要依S3的方式提供OSS  OSS功能列表Bucket相关   Buckets功能 REST API Ceph Operation &amp;amp; Class     List Buckets GET / HTTP/1.1Host:  cname.company.cnAuthorization: AWS {acce">
+<meta name="twitter:image" content="http://www.ictfox.cn/images/rgw-user.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.ictfox.cn/2016/12/12/rgw-oss/"/>
+
+
+
+
+
+  <title>RadosGW对象存储使用文档 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2016/12/12/rgw-oss/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">RadosGW对象存储使用文档</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-12-12T15:31:17+08:00">
+                2016-12-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2016/12/12/rgw-oss/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2016/12/12/rgw-oss/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>OSS: Object Storage Service<br>RadosGW兼容S3，我们需要依S3的方式提供OSS </p>
+<h2 id="OSS功能列表"><a href="#OSS功能列表" class="headerlink" title="OSS功能列表"></a>OSS功能列表</h2><h3 id="Bucket相关"><a href="#Bucket相关" class="headerlink" title="Bucket相关"></a>Bucket相关</h3><table>
+<thead>
+<tr>
+<th>Buckets功能</th>
+<th>REST API</th>
+<th>Ceph Operation &amp; Class</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>List Buckets</td>
+<td>GET / HTTP/1.1<br>Host:  <a href="http://cname.company.cn/" target="_blank" rel="noopener"><em>cname.company.cn</em></a><br>Authorization: AWS {access-key}:{hash-of-header-and-secret}</td>
+<td>RGW_OP_LIST_BUCKETS<br>class RGWListBuckets_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Put Bucket</td>
+<td>PUT /{bucket} HTTP/1.1<br>Host:  <a href="http://cname.company.cn/" target="_blank" rel="noopener"><em>cname.company.cn</em></a><br>x-amz-acl: public-read-write<br>Authorization: AWS {access-key}:{hash-of-header-and-secret}</td>
+<td>RGW_OP_CREATE_BUCKET<br>class RGWCreateBucket_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Delete Bucket</td>
+<td>DELETE /{bucket} HTTP/1.1<br>Host:  <a href="http://cname.company.cn/" target="_blank" rel="noopener"><em>cname.company.cn</em></a><br>Authorization: AWS {access-key}:{hash-of-header-and-secret}</td>
+<td>RGW_OP_DELETE_BUCKET<br>class RGWDeleteBucket_ObjStore_S3</td>
+</tr>
+<tr>
+<td>List Bucket Objects</td>
+<td>GET /{bucket}?max-keys=25 HTTP/1.1<br>Host:  <a href="http://cname.company.cn/" target="_blank" rel="noopener"><em>cname.company.cn</em></a></td>
+<td>RGW_OP_LIST_BUCKET<br>class RGWListBucket_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Get Bucket Location</td>
+<td>GET /{bucket}?location HTTP/1.1<br>Host:  <a href="http://cname.company.cn/" target="_blank" rel="noopener"><em>cname.company.cn</em></a><br>Authorization: AWS {access-key}:{hash-of-header-and-secret}</td>
+<td>class RGWGetBucketLocation_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Get Bucket ACL</td>
+<td>GET /{bucket}?acl HTTP/1.1<br>Host:  <a href="http://cname.company.cn/" target="_blank" rel="noopener"><em>cname.company.cn</em></a><br>Authorization: AWS {access-key}:{hash-of-header-and-secret}</td>
+<td>RGW_OP_GET_ACLS<br>class RGWGetACLs_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Put Bucket ACL</td>
+<td>PUT /{bucket}?acl HTTP/1.1</td>
+<td>RGW_OP_PUT_ACLS<br>class RGWPutACLs_ObjStore_S3</td>
+</tr>
+<tr>
+<td>List Bucket MultiPart Uploads</td>
+<td>GET /{bucket}?uploads HTTP/1.1</td>
+<td>RGW_OP_LIST_BUCKET_MULTIPARTS<br>class RGWListBucketMultiparts_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Head Bucket</td>
+<td>HEAD / HTTP/1.1<br>Host:  <a href="http://cname.company.cn/" target="_blank" rel="noopener"><em>cname.company.cn</em></a><br>Authorization: AWS {access-key}:{hash-of-header-and-secret}</td>
+<td>RGW_OP_STAT_BUCKET<br>class RGWStatBucket_ObjStore_S3</td>
+</tr>
+</tbody>
+</table>
+<h3 id="Object相关"><a href="#Object相关" class="headerlink" title="Object相关"></a>Object相关</h3><table>
+<thead>
+<tr>
+<th>Object功能</th>
+<th>RESTful API</th>
+<th>Ceph Operation &amp; Class</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Put Object</td>
+<td>PUT /{bucket}/{object} HTTP/1.1</td>
+<td>RGW_OP_PUT_OBJ<br>class RGWPutObj_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Copy Object</td>
+<td>PUT /{dest-bucket}/{dest-object} HTTP/1.1<br>x-amz-copy-source: {source-bucket}/{source-object}</td>
+<td>RGW_OP_COPY_OBJ<br>class RGWCopyObj_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Remove Object</td>
+<td>DELETE /{bucket}/{object} HTTP/1.1</td>
+<td>RGW_OP_DELETE_OBJ <br>class RGWDeleteObj_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Get Object</td>
+<td>GET /{bucket}/{object} HTTP/1.1</td>
+<td>RGW_OP_GET_OBJ <br>class RGWGetObj_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Get Object Info</td>
+<td>HEAD /{bucket}/{object} HTTP/1.1</td>
+<td>RGW_OP_GET_OBJ <br>class RGWGetObj_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Get Object ACL</td>
+<td>GET /{bucket}/{object}?acl HTTP/1.1</td>
+<td>RGW_OP_GET_ACLS <br>class RGWGetACLs_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Set Object ACL</td>
+<td>PUT /{bucket}/{object}?acl</td>
+<td>RGW_OP_PUT_ACLS <br>class RGWPutACLs_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Initiate MultiPart Upload</td>
+<td>POST /{bucket}/{object}?uploads</td>
+<td>RGW_OP_INIT_MULTIPART <br>class RGWInitMultipart_ObjStore_S3</td>
+</tr>
+<tr>
+<td>MultiPart Upload Part</td>
+<td>PUT /{bucket}/{object}?partNumber=&amp;uploadId= HTTP/1.1</td>
+<td>RGW_OP_PUT_OBJ <br>class RGWPutObj_ObjStore_S3</td>
+</tr>
+<tr>
+<td>List MultiPart Upload Parts</td>
+<td>GET /{bucket}/{object}?uploadId=123 HTTP/1.1</td>
+<td>RGW_OP_LIST_MULTIPART <br>class RGWListMultipart_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Complete MultiPart Upload</td>
+<td>POST /{bucket}/{object}?uploadId= HTTP/1.1</td>
+<td>RGW_OP_COMPLETE_MULTIPART <br>class RGWCompleteMultipart_ObjStore_S3</td>
+</tr>
+<tr>
+<td>Abort MultiPart Upload</td>
+<td>DELETE /{bucket}/{object}?uploadId= HTTP/1.1</td>
+<td>RGW_OP_ABORT_MULTIPART <br>class RGWAbortMultipart_ObjStore_S3</td>
+</tr>
+</tbody>
+</table>
+<h2 id="如何访问对象存储？"><a href="#如何访问对象存储？" class="headerlink" title="如何访问对象存储？"></a>如何访问对象存储？</h2><h3 id="REST-API"><a href="#REST-API" class="headerlink" title="REST API"></a>REST API</h3><h5 id="Service"><a href="#Service" class="headerlink" title="Service:"></a>Service:</h5><ul>
+<li>GET</li>
+</ul>
+<h5 id="Bucket"><a href="#Bucket" class="headerlink" title="Bucket:"></a>Bucket:</h5><ul>
+<li>GET<ul>
+<li>&lt;null&gt;</li>
+<li>logging</li>
+<li>location</li>
+<li>versioning</li>
+<li>acl</li>
+<li>cors</li>
+<li>uploads</li>
+</ul>
+</li>
+<li>PUT<ul>
+<li>&lt;null&gt;</li>
+<li>logging</li>
+<li>versioning</li>
+<li>acl</li>
+<li>cors</li>
+</ul>
+</li>
+<li>DELETE<ul>
+<li>&lt;null&gt;</li>
+<li>cors</li>
+</ul>
+</li>
+<li>HEAD<ul>
+<li>&lt;null&gt;</li>
+<li>acl</li>
+<li>uploads</li>
+</ul>
+</li>
+<li>POST<ul>
+<li>&lt;null&gt;</li>
+<li>delete</li>
+</ul>
+</li>
+<li>OPTIONS<ul>
+<li>&lt;null&gt;</li>
+</ul>
+</li>
+</ul>
+<h5 id="Object"><a href="#Object" class="headerlink" title="Object:"></a>Object:</h5><ul>
+<li>GET<ul>
+<li>&lt;null&gt;</li>
+<li>acl</li>
+<li>uploadId</li>
+</ul>
+</li>
+<li>PUT<ul>
+<li>acl</li>
+<li>copy_source</li>
+</ul>
+</li>
+<li>DELETE<ul>
+<li>&lt;null&gt;</li>
+<li>uploadId</li>
+</ul>
+</li>
+<li>HEAD<ul>
+<li>&lt;null&gt;</li>
+<li>acl</li>
+<li>uploadId</li>
+</ul>
+</li>
+<li>POST<ul>
+<li>uploadId</li>
+<li>uploads</li>
+</ul>
+</li>
+<li>OPTIONS<ul>
+<li>&lt;null&gt;</li>
+</ul>
+</li>
+</ul>
+<h3 id="CLI命令行工具"><a href="#CLI命令行工具" class="headerlink" title="CLI命令行工具"></a>CLI命令行工具</h3><h5 id="s3cmd工具："><a href="#s3cmd工具：" class="headerlink" title="s3cmd工具："></a>s3cmd工具：</h5><pre><code>apt-get install s3cmd
+
+s3cmd --configure
+
+s3cmd --help
+</code></pre><h3 id="SDK包"><a href="#SDK包" class="headerlink" title="SDK包"></a>SDK包</h3><pre><code>兼容AWS S3提供的SDK包，但有部分功能不支持。
+</code></pre><h3 id="GUI管理界面"><a href="#GUI管理界面" class="headerlink" title="GUI管理界面"></a>GUI管理界面</h3><pre><code>需要前端支持添加GUI管理界面。 
+</code></pre><h2 id="RadosGW的用户帐号"><a href="#RadosGW的用户帐号" class="headerlink" title="RadosGW的用户帐号"></a>RadosGW的用户帐号</h2><h3 id="user类型"><a href="#user类型" class="headerlink" title="user类型"></a>user类型</h3><pre><code>There are two user types:
+</code></pre><ol>
+<li><p><strong>User</strong>: The term ‘user’ reflects a user of the S3 interface.</p>
+</li>
+<li><p><strong>Subuser</strong>: The term ‘subuser’ reflects a user of the Swift interface. A subuser is associated to a user .<br><img src="/images/rgw-user.jpg" alt="rgw-user"></p>
+</li>
+</ol>
+<h3 id="user操作"><a href="#user操作" class="headerlink" title="user操作"></a>user操作</h3><ol>
+<li><p>CREATE A USER</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">adosgw-admin user create --uid=&#123;username&#125; --display-name=<span class="string">"&#123;display-name&#125;"</span> \[--email=&#123;email&#125;\]</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>GET USER INFO</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin user info --uid=johndoe</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>MODIFY USER INFO</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin user modify --uid=johndoe --display-name=<span class="string">"John E. Doe"</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>USER ENABLE/SUSPEND</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin user <span class="built_in">suspend</span> --uid=johndoe</span><br><span class="line">radosgw-admin user <span class="built_in">enable</span> --uid=johndoe</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>REMOVE A USER</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin user rm --uid=johndoe</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="RadosGW兼容Keystone认证"><a href="#RadosGW兼容Keystone认证" class="headerlink" title="RadosGW兼容Keystone认证"></a>RadosGW兼容Keystone认证</h2><p>官网上指出RadosGW兼容Openstack KeyStone认证，<br><a href="http://docs.ceph.com/docs/hammer/radosgw/keystone/" target="_blank" rel="noopener"><em>http://docs.ceph.com/docs/hammer/radosgw/keystone/</em></a></p>
+<p>但搜索发现Mirantis分析测试了RGW with Keystone，并不推荐这么做。</p>
+<h3 id="RGW中S3的认证方式"><a href="#RGW中S3的认证方式" class="headerlink" title="RGW中S3的认证方式"></a>RGW中S3的认证方式</h3><ol>
+<li><p>Keystone-based （disable default）</p>
+<p> 如何配置：</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[client.radosgw.gateway]</span><br><span class="line">	rgw s3 auth use keystone = <span class="literal">true</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>RADOS-based（internal）</p>
+</li>
+</ol>
+<h3 id="S3使用KeyStone认证的优缺点"><a href="#S3使用KeyStone认证的优缺点" class="headerlink" title="S3使用KeyStone认证的优缺点"></a>S3使用KeyStone认证的优缺点</h3><h5 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h5><ul>
+<li><p>所有认证存储在统一的Keystone</p>
+</li>
+<li><p>不需要配置额外的S3认证管理系统，可以用Horizon替代</p>
+</li>
+</ul>
+<h5 id="缺点"><a href="#缺点" class="headerlink" title="缺点"></a>缺点</h5><ul>
+<li><p>需要提升Keystone的性能以支持S3的请求</p>
+</li>
+<li><p>因为Keystone认证方式优先于内部的RADOS认证，则打开Keystone认证会使所有的S3认证先走KeyStone认证方式，如果失败了再尝试RADOS认证。这样使得正常使用S3<br>RADOS认证的请求时延增大，影响S3的性能。</p>
+</li>
+<li><p>S3频繁访问Keystone服务，可能影响其他的Openstack service</p>
+</li>
+</ul>
+<h3 id="我们如何使用"><a href="#我们如何使用" class="headerlink" title="我们如何使用?"></a>我们如何使用?</h3><p>个人推荐不使用Keystone认证S3的方式，而使用RadosGW内部的认证机制比较好。</p>
+<p>但这样就引入了我们的注册用户如何使用S3的问题，结合阿里云，金山云，可以做如下实现：</p>
+<ol>
+<li><p>类似阿里云，用户默认不能使用S3功能，需要点击“开通对象存储”按钮。</p>
+<p> 可以在开通对象存储过程中，给用户创建对应的S3 user和AccessKey/SecretKey对，与前端帐号信息绑定。</p>
+</li>
+<li><p>金山云用户注册后，登录对象存储跳转到单独的控制台界面，里面的帐号设置里就有两个AccessKey/SecretKey对。</p>
+<p> 这种方式也需要AccessKey/SecretKey对与前端帐号信息绑定。</p>
+</li>
+</ol>
+<h3 id="参考资料："><a href="#参考资料：" class="headerlink" title="参考资料："></a>参考资料：</h3><p><a href="https://content.mirantis.com/rs/451-RBY-185/images/Mirantis-Technical-Bulletin-S3-API-Keystone-integration-in-Ceph-RADOS-Gateway.pdf" target="_blank" rel="noopener">https://content.mirantis.com/rs/451-RBY-185/images/Mirantis-Technical-Bulletin-S3-API-Keystone-integration-in-Ceph-RADOS-Gateway.pdf</a><br><a href="http://dolphm.com/benchmarking-openstack-keystone-token-formats/" target="_blank" rel="noopener">http://dolphm.com/benchmarking-openstack-keystone-token-formats/</a></p>
+<h2 id="RadosGW提供OSS服务功能"><a href="#RadosGW提供OSS服务功能" class="headerlink" title="RadosGW提供OSS服务功能"></a>RadosGW提供OSS服务功能</h2><p>基于上面的分析，使用RadosGW我们可以提供如下OSS功能，<br>对象存储OSSV1.0.0版本功能具体包括哪些？还需找再讨论确定。</p>
+<table>
+<thead>
+<tr>
+<th>分类</th>
+<th>描述</th>
+<th>操作</th>
+<th>Amazon</th>
+<th>金山云</th>
+<th>我们公司</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Service Operation</td>
+<td>获取所有bucket信息</td>
+<td>GET Service</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td>Bucket Operation</td>
+<td>Bucket基本操作</td>
+<td>DELETE Bucket</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>GET Bucket</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>HEAD Bucket</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>PUT Bucket</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td>Bucket cors相关操作</td>
+<td>DELETE Bucket cors</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>GET Bucket cors</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>PUT Bucket cors</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td>Bucket lifecycle相关操作</td>
+<td>DELETE Bucket lifecycle</td>
+<td>√</td>
+<td>×</td>
+<td>×</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>GET Bucket lifecycle</td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>PUT Bucket lifecycle</td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Bucket policy相关操作</td>
+<td>DELETE Bucket policy</td>
+<td>√</td>
+<td>×</td>
+<td>×</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>GET Bucket policy</td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>PUT Bucket policy</td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Bucket tagging相关操作</td>
+<td>DELETE Bucket tagging</td>
+<td>√</td>
+<td>×</td>
+<td>×</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>GET Bucket tagging</td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>PUT Bucket tagging</td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Bucket website相关操作</td>
+<td>DELETE Bucket website</td>
+<td>√</td>
+<td>×</td>
+<td>hammer: ×</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>jewel: √</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>GET Bucket website</td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>PUT Bucket website</td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Bucket logging相关操作</td>
+<td>GET Bucket logging</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>PUT Bucket logging</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td>Bucket notification相关操作</td>
+<td>GET Bucket notification</td>
+<td>√</td>
+<td>×</td>
+<td>×</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>PUT Bucket notification</td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Bucket versioning相关操作</td>
+<td>GET Bucket versioning</td>
+<td>√</td>
+<td>×</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>GET Bucket Object versions</td>
+<td>√</td>
+<td></td>
+<td>hammer: ×</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>jewel: √</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>PUT Bucket versioning</td>
+<td>√</td>
+<td></td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td>Bucket acl相关操作</td>
+<td>PUT Bucket acl</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>GET Bucket acl</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td>Bucket requestPayment相关操作</td>
+<td>GET Bucket requestPayment</td>
+<td>√</td>
+<td>×</td>
+<td>hammer: ×</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>jewel: √</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>PUT Bucket requestPayment</td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>枚举该Bucket下的所有分块上传</td>
+<td>List MultiPart Uploads</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td>Object Operation</td>
+<td>删除Object</td>
+<td>DELETE Object</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td>删除多个Object</td>
+<td>Delete Multiple Objects</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td>下载Object</td>
+<td>GET Object</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td>获取Object ACL</td>
+<td>GET Object ACL</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td>获取Object BT 种子</td>
+<td>GET Object torrent</td>
+<td>√</td>
+<td>×</td>
+<td>×</td>
+</tr>
+<tr>
+<td></td>
+<td>获取Object 元信息</td>
+<td>HEAD Object</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td>Object对HTML5浏览器跨域支持</td>
+<td>OPTIONS Object</td>
+<td>√</td>
+<td>×</td>
+<td>×</td>
+</tr>
+<tr>
+<td></td>
+<td>浏览器表单上传Object</td>
+<td>POST Object</td>
+<td>√</td>
+<td>√</td>
+<td>×?</td>
+</tr>
+<tr>
+<td></td>
+<td>Amazon Glacier存储恢复</td>
+<td>POST Object restore</td>
+<td>√</td>
+<td>×</td>
+<td>×</td>
+</tr>
+<tr>
+<td></td>
+<td>上传Object</td>
+<td>PUT Object</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td>设置Object ACL</td>
+<td>PUT Object acl</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td>复制Object</td>
+<td>PUT Object - Copy</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td>分块上传相关操作</td>
+<td>Initiate Multipart Upload</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>Upload Part</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>Upload Part - Copy</td>
+<td>√</td>
+<td>×</td>
+<td>×</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>Complete Multipart Upload</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>Abort Multipart Upload</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>List Parts</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td>Image Thumbnail</td>
+<td></td>
+<td></td>
+<td>×</td>
+<td>√</td>
+<td>×</td>
+</tr>
+</tbody>
+</table>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/radosgw/" rel="tag"># radosgw</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/11/11/trove-lvm-thin-provision/" rel="next" title="RDS配置使用Thin Provision LVM">
+                <i class="fa fa-chevron-left"></i> RDS配置使用Thin Provision LVM
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/12/15/rgw-functions-tst/" rel="prev" title="对象存储OSS功能测试">
+                对象存储OSS功能测试 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#OSS功能列表"><span class="nav-number">2.</span> <span class="nav-text">OSS功能列表</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Bucket相关"><span class="nav-number">2.1.</span> <span class="nav-text">Bucket相关</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Object相关"><span class="nav-number">2.2.</span> <span class="nav-text">Object相关</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#如何访问对象存储？"><span class="nav-number">3.</span> <span class="nav-text">如何访问对象存储？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#REST-API"><span class="nav-number">3.1.</span> <span class="nav-text">REST API</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#Service"><span class="nav-number">3.1.0.1.</span> <span class="nav-text">Service:</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Bucket"><span class="nav-number">3.1.0.2.</span> <span class="nav-text">Bucket:</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Object"><span class="nav-number">3.1.0.3.</span> <span class="nav-text">Object:</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CLI命令行工具"><span class="nav-number">3.2.</span> <span class="nav-text">CLI命令行工具</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#s3cmd工具："><span class="nav-number">3.2.0.1.</span> <span class="nav-text">s3cmd工具：</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SDK包"><span class="nav-number">3.3.</span> <span class="nav-text">SDK包</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GUI管理界面"><span class="nav-number">3.4.</span> <span class="nav-text">GUI管理界面</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RadosGW的用户帐号"><span class="nav-number">4.</span> <span class="nav-text">RadosGW的用户帐号</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#user类型"><span class="nav-number">4.1.</span> <span class="nav-text">user类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#user操作"><span class="nav-number">4.2.</span> <span class="nav-text">user操作</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RadosGW兼容Keystone认证"><span class="nav-number">5.</span> <span class="nav-text">RadosGW兼容Keystone认证</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#RGW中S3的认证方式"><span class="nav-number">5.1.</span> <span class="nav-text">RGW中S3的认证方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#S3使用KeyStone认证的优缺点"><span class="nav-number">5.2.</span> <span class="nav-text">S3使用KeyStone认证的优缺点</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#优点"><span class="nav-number">5.2.0.1.</span> <span class="nav-text">优点</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#缺点"><span class="nav-number">5.2.0.2.</span> <span class="nav-text">缺点</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#我们如何使用"><span class="nav-number">5.3.</span> <span class="nav-text">我们如何使用?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考资料："><span class="nav-number">5.4.</span> <span class="nav-text">参考资料：</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RadosGW提供OSS服务功能"><span class="nav-number">6.</span> <span class="nav-text">RadosGW提供OSS服务功能</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.ictfox.cn/2016/12/12/rgw-oss/';
+          this.page.identifier = '2016/12/12/rgw-oss/';
+          this.page.title = 'RadosGW对象存储使用文档';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

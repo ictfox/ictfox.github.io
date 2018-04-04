@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,osd,filestore," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="OSD Message示例分析12345678910111213141516171819202122232425262728293031323334353637osd_op(client.4813.0:510 default.4161.780__shadow__99999.txt_0 [write 2097152~524288] 5.ba5249f6 ack+ondisk+write+known_">
+<meta name="keywords" content="ceph,osd,filestore">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Ceph osd request分析">
+<meta property="og:url" content="http://www.ictfox.cn/2015/06/18/ceph-osd-requst-analysis/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="OSD Message示例分析12345678910111213141516171819202122232425262728293031323334353637osd_op(client.4813.0:510 default.4161.780__shadow__99999.txt_0 [write 2097152~524288] 5.ba5249f6 ack+ondisk+write+known_">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.340Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Ceph osd request分析">
+<meta name="twitter:description" content="OSD Message示例分析12345678910111213141516171819202122232425262728293031323334353637osd_op(client.4813.0:510 default.4161.780__shadow__99999.txt_0 [write 2097152~524288] 5.ba5249f6 ack+ondisk+write+known_">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.ictfox.cn/2015/06/18/ceph-osd-requst-analysis/"/>
+
+
+
+
+
+  <title>Ceph osd request分析 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2015/06/18/ceph-osd-requst-analysis/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Ceph osd request分析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2015-06-18T10:31:17+08:00">
+                2015-06-18
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2015/06/18/ceph-osd-requst-analysis/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2015/06/18/ceph-osd-requst-analysis/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="OSD-Message示例分析"><a href="#OSD-Message示例分析" class="headerlink" title="OSD Message示例分析"></a>OSD Message示例分析</h2><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">osd_op(client<span class="number">.4813</span><span class="number">.0</span>:<span class="number">510</span> <span class="keyword">default</span><span class="number">.4161</span><span class="number">.780</span>__shadow__99999.txt_0 [write <span class="number">2097152</span>~<span class="number">524288</span>] <span class="number">5.b</span>a5249f6 ack+ondisk+write+known_if_redirected e130) v4</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MOSDOp</span> :</span> <span class="keyword">public</span> Message &#123;</span><br><span class="line">...</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">print</span><span class="params">(ostream&amp; out)</span> <span class="keyword">const</span> </span>&#123;</span><br><span class="line">        out &lt;&lt; <span class="string">"osd_op("</span> &lt;&lt; get_reqid();     client<span class="number">.4813</span><span class="number">.0</span>:<span class="number">510</span></span><br><span class="line">        out &lt;&lt; <span class="string">" "</span>;</span><br><span class="line">        <span class="keyword">if</span> (!oloc.nspace.empty())</span><br><span class="line">            out &lt;&lt; oloc.nspace &lt;&lt; <span class="string">"/"</span>;</span><br><span class="line">        out &lt;&lt; oid;                         <span class="keyword">default</span><span class="number">.4161</span><span class="number">.780</span>__shadow__99999.txt_0</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">if</span> 0</span></span><br><span class="line">        out &lt;&lt; <span class="string">" "</span>;</span><br><span class="line">        <span class="keyword">if</span> (may_read())</span><br><span class="line">            out &lt;&lt; <span class="string">"r"</span>;</span><br><span class="line">        <span class="keyword">if</span> (may_write())</span><br><span class="line">            out &lt;&lt; <span class="string">"w"</span>;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">        <span class="keyword">if</span> (snapid != CEPH_NOSNAP)</span><br><span class="line">            out &lt;&lt; <span class="string">"@"</span> &lt;&lt; snapid;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (oloc.key.size())</span><br><span class="line">            out &lt;&lt; <span class="string">" "</span> &lt;&lt; oloc;</span><br><span class="line"></span><br><span class="line">        out &lt;&lt; <span class="string">" "</span> &lt;&lt; ops;           [write <span class="number">2097152</span>~<span class="number">524288</span>]</span><br><span class="line">        out &lt;&lt; <span class="string">" "</span> &lt;&lt; pgid;          <span class="number">5.b</span>a5249f6</span><br><span class="line">        <span class="keyword">if</span> (is_retry_attempt())</span><br><span class="line">            out &lt;&lt; <span class="string">" RETRY="</span> &lt;&lt; get_retry_attempt();</span><br><span class="line">        <span class="keyword">if</span> (reassert_version != <span class="keyword">eversion_t</span>())</span><br><span class="line">            out &lt;&lt; <span class="string">" reassert_version="</span> &lt;&lt; reassert_version;</span><br><span class="line">        <span class="keyword">if</span> (get_snap_seq())</span><br><span class="line">            out &lt;&lt; <span class="string">" snapc "</span> &lt;&lt; get_snap_seq() &lt;&lt; <span class="string">"="</span> &lt;&lt; snaps;</span><br><span class="line">        out &lt;&lt; <span class="string">" "</span> &lt;&lt; ceph_osd_flag_string(get_flags());     ack+ondisk+write+known_if_redirected</span><br><span class="line">        out &lt;&lt; <span class="string">" e"</span> &lt;&lt; osdmap_epoch;     e130</span><br><span class="line">        out &lt;&lt; <span class="string">")"</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="OSD-Message处理流程"><a href="#OSD-Message处理流程" class="headerlink" title="OSD Message处理流程"></a>OSD Message处理流程</h2><h3 id="Message在Primary-OSD的处理流程"><a href="#Message在Primary-OSD的处理流程" class="headerlink" title="Message在Primary OSD的处理流程"></a>Message在Primary OSD的处理流程</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">bool</span> OSD::dispatch_op_fast(OpRequestRef&amp; op, OSDMapRef&amp; osdmap)</span><br><span class="line"><span class="keyword">void</span> OSD::handle_op(OpRequestRef&amp; op, OSDMapRef&amp; osdmap)</span><br><span class="line"><span class="keyword">void</span> OSD::enqueue_op(PG *pg, OpRequestRef&amp; op)</span><br><span class="line"><span class="keyword">void</span> PG::queue_op(OpRequestRef&amp; op) -- &#123; osd-&gt;op_wq.<span class="built_in">queue</span>(make_pair(PGRef(<span class="keyword">this</span>), op));&#125;</span><br><span class="line"> </span><br><span class="line"><span class="keyword">void</span> OSD::ShardedOpWQ::_process(<span class="keyword">uint32_t</span> thread_index, heartbeat_handle_d *hb) </span><br><span class="line"><span class="keyword">void</span> OSD::dequeue_op(PGRef pg, OpRequestRef op, ThreadPool::TPHandle &amp;handle)</span><br><span class="line"><span class="keyword">void</span> ReplicatedPG::do_request(OpRequestRef&amp; op, ThreadPool::TPHandle &amp;handle)</span><br><span class="line"><span class="keyword">void</span> ReplicatedPG::do_op(OpRequestRef&amp; op)          <span class="comment">// case CEPH_MSG_OSD_OP</span></span><br><span class="line"><span class="keyword">void</span> ReplicatedPG::execute_ctx(OpContext *ctx)</span><br><span class="line">|--  <span class="keyword">int</span> ReplicatedPG::prepare_transaction(OpContext *ctx)</span><br><span class="line">|    <span class="keyword">int</span> ReplicatedPG::do_osd_ops(OpContext *ctx, <span class="built_in">vector</span>&lt;OSDOp&gt;&amp; ops)</span><br><span class="line">|--  <span class="keyword">void</span> ReplicatedPG::issue_repop(RepGather *repop, <span class="keyword">utime_t</span> now)</span><br><span class="line">|    <span class="keyword">void</span> ReplicatedBackend::submit_transaction()</span><br><span class="line">|    |--  <span class="keyword">void</span> ReplicatedBackend::issue_op()</span><br><span class="line">|    |    |-- <span class="keyword">void</span> ReplicatedPG::send_message_osd_cluster()     <span class="comment">// send write data to replica osds</span></span><br><span class="line">|    |    |-- <span class="keyword">void</span> OSDService::send_message_osd_cluster(<span class="keyword">int</span> peer, Message *m, <span class="keyword">epoch_t</span> from_epoch) </span><br><span class="line">|    |--  parent-&gt;queue_transaction(<span class="keyword">op_t</span>, op.op);</span><br><span class="line">|    |    |-- <span class="keyword">int</span> FileStore::queue_transactions()    <span class="comment">// 没有journal或需要同时写journal和disk时，会调用 queue_op(osr, o);</span></span><br><span class="line">|    |    |-- <span class="keyword">void</span> JournalingObjectStore::_op_journal_transactions()</span><br><span class="line">|    |    |-- <span class="keyword">void</span> FileJournal::submit_entry()       <span class="comment">//添加到 deque&lt;write_item&gt; writeq;</span></span><br><span class="line">|--  <span class="keyword">void</span> ReplicatedPG::eval_repop(RepGather *repop)</span><br></pre></td></tr></table></figure>
+<h3 id="异步journal写数据"><a href="#异步journal写数据" class="headerlink" title="异步journal写数据"></a>异步journal写数据</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">FileJournal.Writer.entry() -&gt; FileJournal::write_thread_entry() -&gt; FileJournal::do_write() -&gt; FileJournal::write_bl()</span><br></pre></td></tr></table></figure>
+<h3 id="Message在Replica-OSD的处理流程"><a href="#Message在Replica-OSD的处理流程" class="headerlink" title="Message在Replica OSD的处理流程"></a>Message在Replica OSD的处理流程</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">bool</span> OSD::dispatch_op_fast(OpRequestRef&amp; op, OSDMapRef&amp; osdmap)</span><br><span class="line"><span class="keyword">void</span> OSD::handle_op(OpRequestRef&amp; op, OSDMapRef&amp; osdmap)</span><br><span class="line"><span class="keyword">void</span> OSD::enqueue_op(PG *pg, OpRequestRef&amp; op)</span><br><span class="line"><span class="keyword">void</span> PG::queue_op(OpRequestRef&amp; op) -- &#123; osd-&gt;op_wq.<span class="built_in">queue</span>(make_pair(PGRef(<span class="keyword">this</span>), op));&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">void</span> OSD::ShardedOpWQ::_process(<span class="keyword">uint32_t</span> thread_index, heartbeat_handle_d *hb) </span><br><span class="line"><span class="keyword">void</span> OSD::dequeue_op(PGRef pg, OpRequestRef op, ThreadPool::TPHandle &amp;handle)</span><br><span class="line"><span class="keyword">void</span> ReplicatedPG::do_request(OpRequestRef&amp; op, ThreadPool::TPHandle &amp;handle)</span><br><span class="line"><span class="keyword">bool</span> ReplicatedBackend::handle_message()</span><br><span class="line"><span class="keyword">void</span> ReplicatedBackend::sub_op_modify(OpRequestRef op)</span><br><span class="line">|--  parent-&gt;queue_transaction(<span class="keyword">op_t</span>, op.op);</span><br><span class="line">|    |-- <span class="keyword">int</span> FileStore::queue_transactions()</span><br></pre></td></tr></table></figure>
+<h2 id="回调函数"><a href="#回调函数" class="headerlink" title="回调函数"></a>回调函数</h2><p>在把transaction加入队列前，会初始化transaction的几个operation回调函数：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ObjectStore</span>:</span></span><br><span class="line">        <span class="built_in">list</span>&lt;Context *&gt; on_applied;</span><br><span class="line">        <span class="built_in">list</span>&lt;Context *&gt; on_commit;</span><br><span class="line">        <span class="built_in">list</span>&lt;Context *&gt; on_applied_sync;</span><br></pre></td></tr></table></figure>
+<h3 id="Primary-OSD"><a href="#Primary-OSD" class="headerlink" title="Primary OSD"></a>Primary OSD</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">— 发往replica的operation，处理replica reply是否全部返回</span><br><span class="line">Context *on_all_commit = <span class="keyword">new</span> C_OSD_RepopCommit(<span class="keyword">this</span>, repop);</span><br><span class="line">Context *on_all_applied = <span class="keyword">new</span> C_OSD_RepopApplied(<span class="keyword">this</span>, repop);</span><br><span class="line">Context *onapplied_sync = <span class="keyword">new</span> C_OSD_OndiskWriteUnlock(</span><br><span class="line">    repop-&gt;obc,</span><br><span class="line">    repop-&gt;ctx-&gt;clone_obc,</span><br><span class="line">    unlock_snapset_obc ? repop-&gt;ctx-&gt;snapset_obc : ObjectContextRef());</span><br><span class="line"></span><br><span class="line">— 发送到本OSD的operation，处理写本OSD的reply是否返回</span><br><span class="line"><span class="keyword">op_t</span>-&gt;register_on_applied_sync(on_local_applied_sync);</span><br><span class="line"><span class="keyword">op_t</span>-&gt;register_on_applied(</span><br><span class="line">    parent-&gt;bless_context(</span><br><span class="line">        <span class="keyword">new</span> C_OSD_OnOpApplied(<span class="keyword">this</span>, &amp;op)));</span><br><span class="line"><span class="keyword">op_t</span>-&gt;register_on_applied(</span><br><span class="line">    <span class="keyword">new</span> ObjectStore::C_DeleteTransaction(<span class="keyword">op_t</span>));</span><br><span class="line"><span class="keyword">op_t</span>-&gt;register_on_commit(</span><br><span class="line">    parent-&gt;bless_context(</span><br><span class="line">        <span class="keyword">new</span> C_OSD_OnOpCommit(<span class="keyword">this</span>, &amp;op)));</span><br></pre></td></tr></table></figure>
+<h3 id="Replica-OSD"><a href="#Replica-OSD" class="headerlink" title="Replica OSD"></a>Replica OSD</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">— 发送到本OSD的operation，处理写本OSD的reply是否返回</span><br><span class="line">rm-&gt;localt.register_on_commit(</span><br><span class="line">    parent-&gt;bless_context(</span><br><span class="line">        <span class="keyword">new</span> C_OSD_RepModifyCommit(<span class="keyword">this</span>, rm)));</span><br><span class="line">rm-&gt;localt.register_on_applied(</span><br><span class="line">    parent-&gt;bless_context(     </span><br><span class="line">        <span class="keyword">new</span> C_OSD_RepModifyApply(<span class="keyword">this</span>, rm)));</span><br></pre></td></tr></table></figure>
+<h2 id="Finisher类"><a href="#Finisher类" class="headerlink" title="Finisher类"></a>Finisher类</h2><p>Finisher类是在src/common中定义的一个专门查看操作是否结束的一个类。</p>
+<p>在这个类里面拥有一个线程<code>finisher_thread</code>和一个类型为Context指针的队列<code>finisher_queue</code>。当一个操作线程完成自己的操作后，会将Context类型对象送入队列。此时<code>finisher_thread</code>线程循环监视着自己的<code>finisher_queue</code>队列，当发现了有新进入的Context时，会调用这个<code>Context::complete</code>函数，这个函数则会调用到Context子类自己实现的finish函数，来处理操作完成后的后续工作。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Finisher</span> &#123;</span></span><br><span class="line">    CephContext *cct;</span><br><span class="line">...</span><br><span class="line">    <span class="built_in">vector</span>&lt;Context*&gt; finisher_queue;</span><br><span class="line">...</span><br><span class="line">    <span class="function"><span class="keyword">void</span> *<span class="title">finisher_thread_entry</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">FinisherThread</span> :</span> <span class="keyword">public</span> Thread &#123;</span><br><span class="line">        Finisher *fin;</span><br><span class="line">        FinisherThread(Finisher *f) : fin(f) &#123;&#125;</span><br><span class="line">        <span class="function"><span class="keyword">void</span>* <span class="title">entry</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> (<span class="keyword">void</span>*)fin-&gt;finisher_thread_entry();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; finisher_thread;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">void</span> *Finisher::finisher_thread_entry()</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">    <span class="keyword">while</span> (!finisher_stop) &#123;</span><br><span class="line">        <span class="keyword">while</span> (!finisher_queue.empty()) &#123;</span><br><span class="line">            <span class="built_in">vector</span>&lt;Context*&gt; ls;</span><br><span class="line">            ls.swap(finisher_queue);</span><br><span class="line">...</span><br><span class="line">            <span class="keyword">for</span> (<span class="built_in">vector</span>&lt;Context*&gt;::iterator p = ls.begin();</span><br><span class="line">                    p != ls.end();</span><br><span class="line">                    ++p) &#123;</span><br><span class="line">                <span class="keyword">if</span> (*p) &#123;</span><br><span class="line">                    (*p)-&gt;complete(<span class="number">0</span>);  <span class="comment">// 调用Context子类实现的finish函数</span></span><br><span class="line">                &#125;...</span><br><span class="line">            &#125;</span><br><span class="line">...</span><br><span class="line">        &#125;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="IO相关finisher"><a href="#IO相关finisher" class="headerlink" title="IO相关finisher"></a>IO相关finisher</h3><p>跟IO相关的finisher有三个，journal有一个，filestore有两个：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">JournalingObjectStore</span> :</span> <span class="keyword">public</span> ObjectStore &#123;</span><br><span class="line"><span class="keyword">protected</span>:</span><br><span class="line">    Journal *journal;</span><br><span class="line">    Finisher finisher;   <span class="comment">// 负责journal写完后的通知处理</span></span><br><span class="line">...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">FileStore</span> :</span> <span class="keyword">public</span> JournalingObjectStore,</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">md_config_obs_t</span></span><br><span class="line">&#123;</span><br><span class="line">    Finisher ondisk_finisher;   <span class="comment">// 负责data写到journal后commit的通知处理</span></span><br><span class="line">    Finisher op_finisher;       <span class="comment">// 负责data写到filestore后apply的通知处理</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="写数据到FileStore和IO回调"><a href="#写数据到FileStore和IO回调" class="headerlink" title="写数据到FileStore和IO回调"></a>写数据到FileStore和IO回调</h2><h3 id="Primary-OSD-1"><a href="#Primary-OSD-1" class="headerlink" title="Primary OSD"></a>Primary OSD</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> FileStore::queue_transactions(Sequencer *posr, <span class="built_in">list</span>&lt;Transaction*&gt; &amp;tls,</span><br><span class="line">                                  TrackedOpRef osd_op,</span><br><span class="line">                                  ThreadPool::TPHandle *handle)</span><br><span class="line">&#123;</span><br><span class="line">            _op_journal_transactions(o-&gt;tls, o-&gt;op,</span><br><span class="line">                                     <span class="keyword">new</span> C_JournaledAhead(<span class="keyword">this</span>, osr, o, ondisk),</span><br><span class="line">                                     osd_op);</span><br><span class="line">...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">C_JournaledAhead</span> :</span> <span class="keyword">public</span> Context &#123;</span><br><span class="line">    FileStore *fs;</span><br><span class="line">    FileStore::OpSequencer *osr;</span><br><span class="line">    FileStore::Op *o;</span><br><span class="line">    Context *ondisk;</span><br><span class="line"></span><br><span class="line">    C_JournaledAhead(FileStore *f, FileStore::OpSequencer *os, FileStore::Op *o, Context *ondisk):</span><br><span class="line">        fs(f), osr(os), o(o), ondisk(ondisk) &#123; &#125;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">finish</span><span class="params">(<span class="keyword">int</span> r)</span> </span>&#123;</span><br><span class="line">        fs-&gt;_journaled_ahead(osr, o, ondisk);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>在journal commit后会通过<code>JournalingObjectStore</code>类的 finisher 来通知调用到<code>C_JournaledAhead.finish()</code>函数。</p>
+<p>在<code>_journal_ahead</code>函数里会把op添加到filestore的写队列里和FileStore类的<code>ondisk_finisher</code>队列里。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> FileStore::_journaled_ahead(OpSequencer *osr, Op *o, Context *ondisk)</span><br><span class="line">|-- queue_op(osr, o);                 —  <span class="keyword">void</span> FileStore::queue_op(OpSequencer *osr, Op *o) &#123;op_wq.<span class="built_in">queue</span>(osr);&#125;，把op添加到FileStore的op_wq队列中。</span><br><span class="line">|-- ondisk_finisher.<span class="built_in">queue</span>(to_queue);  —  这里通过ondisk_finisher来通知上层IO已经commit到journal，具体会调用到C_OSD_OnOpCommit.finish()函数。</span><br></pre></td></tr></table></figure>
+<p>FileStore workqueue处理过程：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">FileStore.OpWQ._process &#123;store-&gt;_do_op(osr, handle);&#125;</span><br><span class="line"><span class="keyword">void</span> FileStore::_do_op(OpSequencer *osr, ThreadPool::TPHandle &amp;handle)</span><br><span class="line">&#123;</span><br><span class="line">	...</span><br><span class="line">	apply_manager.op_apply_start(o-&gt;op);</span><br><span class="line">	<span class="keyword">int</span> r = _do_transactions(o-&gt;tls, o-&gt;op, &amp;handle);</span><br><span class="line">	apply_manager.op_apply_finish(o-&gt;op);</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">FileStore::_do_transactions() &#123;r = _do_transaction(**p, op_seq, trans_num, handle);&#125;</span><br><span class="line"><span class="keyword">unsigned</span> FileStore::_do_transaction() &#123;r = _write(cid, oid, off, len, bl, replica);<span class="comment">// case write&#125;</span></span><br></pre></td></tr></table></figure>
+<p><code>C_OSD_OnOpCommit.finish()</code>函数调用到：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> ReplicatedBackend::op_commit(InProgressOp *op)</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">    op-&gt;waiting_for_commit.erase(get_parent()-&gt;whoami_shard());       <span class="comment">// 把waiting_for_commit set里对应的信息清除</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (op-&gt;waiting_for_commit.empty()) &#123;            <span class="comment">// 为空是表明所有OSD写请求都已经返回</span></span><br><span class="line">        op-&gt;on_commit-&gt;complete(<span class="number">0</span>);                  <span class="comment">// 会调用到C_OSD_RepOpCommit.finish()</span></span><br><span class="line">        op-&gt;on_commit = <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (op-&gt;done()) &#123;</span><br><span class="line">        assert(!op-&gt;on_commit &amp;&amp; !op-&gt;on_applied);</span><br><span class="line">        in_progress_ops.erase(op-&gt;tid);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Replica-OSD-1"><a href="#Replica-OSD-1" class="headerlink" title="Replica OSD"></a>Replica OSD</h3><p>从OSD写请求返回后处理流程：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> ReplicatedBackend::sub_op_modify_reply(OpRequestRef op)</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">    <span class="keyword">if</span> (in_progress_ops.count(rep_tid)) &#123;</span><br><span class="line">        ip_op.waiting_for_applied.erase(from);</span><br><span class="line">...</span><br><span class="line">        <span class="keyword">if</span> (ip_op.waiting_for_applied.empty() &amp;&amp;</span><br><span class="line">                ip_op.on_applied) &#123;</span><br><span class="line">            ip_op.on_applied-&gt;complete(<span class="number">0</span>);    <span class="comment">// C_OSD_RepOpApplied.finish()</span></span><br><span class="line">            ip_op.on_applied = <span class="number">0</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (ip_op.waiting_for_commit.empty() &amp;&amp;</span><br><span class="line">                ip_op.on_commit) &#123;</span><br><span class="line">            ip_op.on_commit-&gt;complete(<span class="number">0</span>);    <span class="comment">// C_OSD_RepOpCommit.finish()</span></span><br><span class="line">            ip_op.on_commit= <span class="number">0</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (ip_op.done()) &#123;</span><br><span class="line">            assert(!ip_op.on_commit &amp;&amp; !ip_op.on_applied);</span><br><span class="line">            in_progress_ops.erase(iter);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>C_OSD_RepOpCommit.finish()函数调用到：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> ReplicatedPG::repop_all_committed(RepGather *repop)</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">    repop-&gt;all_committed = <span class="literal">true</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!repop-&gt;rep_aborted) &#123;</span><br><span class="line">...</span><br><span class="line">        eval_repop(repop);  <span class="comment">// 返回reply给client端</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="sync数据到disk"><a href="#sync数据到disk" class="headerlink" title="sync数据到disk"></a>sync数据到disk</h2><p>filestore数据sync到disk(调底层fs的sync接口)：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">FileStore</span> :</span> <span class="keyword">public</span> JournalingObjectStore,</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">md_config_obs_t</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">SyncThread</span> :</span> <span class="keyword">public</span> Thread &#123;</span><br><span class="line">        FileStore *fs;</span><br><span class="line">        SyncThread(FileStore *f) : fs(f) &#123;&#125;</span><br><span class="line">        <span class="function"><span class="keyword">void</span> *<span class="title">entry</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            fs-&gt;sync_entry();</span><br><span class="line">            <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; sync_thread;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在<code>FileStore::mount</code>方法中，会创建sync线程<code>sync_thread.create()</code>, 该线程的入口函数为：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> FileStore::sync_entry()</span><br><span class="line">&#123;</span><br><span class="line">     <span class="keyword">utime_t</span> max_interval;</span><br><span class="line">     max_interval.set_from_double(m_filestore_max_sync_interval);   <span class="comment">// 参数可配</span></span><br><span class="line">     <span class="keyword">utime_t</span> min_interval;</span><br><span class="line">     min_interval.set_from_double(m_filestore_min_sync_interval);   <span class="comment">// 参数可配</span></span><br><span class="line">...</span><br><span class="line">     sync_cond.WaitInterval(g_ceph_context, lock, max_interval);    <span class="comment">// 等待interval时间</span></span><br><span class="line">     ...</span><br><span class="line">     <span class="keyword">if</span> (apply_manager.commit_start()) &#123;</span><br><span class="line">     ...</span><br><span class="line">     apply_manager.commit_started();</span><br><span class="line">     <span class="keyword">int</span> err = backend-&gt;syncfs();</span><br><span class="line">     err = write_op_seq(op_fd, cp);</span><br><span class="line">     err = ::fsync(op_fd);</span><br><span class="line">     apply_manager.commit_finish();</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>主要通过sync函数，将FileStore打开的文件进行数据的flush磁盘操作。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> GenericFileStoreBackend::syncfs()</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">    <span class="keyword">if</span> (m_filestore_fsync_flushes_journal_data) &#123;</span><br><span class="line">        ret = ::fsync(get_op_fd());</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        ret = sync_filesystem(get_current_fd());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>commit_finish会把commit_waiters加入finisher队列，由finisher函数通知commit完成：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> JournalingObjectStore::ApplyManager::commit_finish()</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">    <span class="keyword">if</span> (journal)</span><br><span class="line">        journal-&gt;committed_thru(committing_seq);</span><br><span class="line"></span><br><span class="line">    committed_seq = committing_seq;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">map</span>&lt;<span class="keyword">version_t</span>, <span class="built_in">vector</span>&lt;Context*&gt; &gt;::iterator p = commit_waiters.begin();</span><br><span class="line">    <span class="keyword">while</span> (p != commit_waiters.end() &amp;&amp;</span><br><span class="line">            p-&gt;first &lt;= committing_seq) &#123;</span><br><span class="line">        finisher.<span class="built_in">queue</span>(p-&gt;second);</span><br><span class="line">        commit_waiters.erase(p++);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>何时唤醒sync线程：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">— sync_cond.Signal();</span><br><span class="line"><span class="keyword">void</span> FileStore::_start_sync()                &lt;- <span class="keyword">unsigned</span> FileStore::_do_transaction() &#123;<span class="keyword">case</span> Transaction::OP_STARTSYNC:&#125;</span><br><span class="line">&#123;</span><br><span class="line">   <span class="keyword">if</span> (!journal) &#123;</span><br><span class="line">      sync_cond.Signal();</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">void</span> FileStore::do_force_sync()              &lt;- <span class="keyword">int</span> FileStore::umount()</span><br><span class="line"><span class="keyword">void</span> FileStore::start_sync(Context *onsafe)  &lt;- <span class="keyword">void</span> FileStore::sync()</span><br></pre></td></tr></table></figure>
+<p>FileJournal的<code>do_sync_cond</code>也指向FileStore的sync_cond：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> FileStore::open_journal()</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">        journal = <span class="keyword">new</span> FileJournal(fsid, &amp;finisher, &amp;sync_cond, journalpath.c_str(),</span><br><span class="line">                                  m_journal_dio, m_journal_aio, m_journal_force_aio);</span><br><span class="line">...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">FileJournal.Writer.entry()</span><br><span class="line">-&gt; FileJournal::write_thread_entry()</span><br><span class="line">-&gt; FileJournal::prepare_multi_write()</span><br><span class="line">-&gt; FileJournal::prepare_single_write()</span><br><span class="line">-&gt; FileJournal::check_for_full()</span><br><span class="line">&#123;</span><br><span class="line">     <span class="comment">// passing half full mark, triggering commit</span></span><br><span class="line">     do_sync_cond-&gt;SloppySignal();  <span class="comment">// initiate a real commit so we can trim</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/osd/" rel="tag"># osd</a>
+          
+            <a href="/tags/filestore/" rel="tag"># filestore</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/06/12/rgw-perf-with-memstore-cachetiering/" rel="next" title="RGW performance with MemStore and CacheTiering">
+                <i class="fa fa-chevron-left"></i> RGW performance with MemStore and CacheTiering
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/08/06/ceph-osd-write-op-tracker-analysis/" rel="prev" title="Ceph osd write op tracker analysis">
+                Ceph osd write op tracker analysis <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#OSD-Message示例分析"><span class="nav-number">1.</span> <span class="nav-text">OSD Message示例分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#OSD-Message处理流程"><span class="nav-number">2.</span> <span class="nav-text">OSD Message处理流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Message在Primary-OSD的处理流程"><span class="nav-number">2.1.</span> <span class="nav-text">Message在Primary OSD的处理流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#异步journal写数据"><span class="nav-number">2.2.</span> <span class="nav-text">异步journal写数据</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Message在Replica-OSD的处理流程"><span class="nav-number">2.3.</span> <span class="nav-text">Message在Replica OSD的处理流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#回调函数"><span class="nav-number">3.</span> <span class="nav-text">回调函数</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Primary-OSD"><span class="nav-number">3.1.</span> <span class="nav-text">Primary OSD</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Replica-OSD"><span class="nav-number">3.2.</span> <span class="nav-text">Replica OSD</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Finisher类"><span class="nav-number">4.</span> <span class="nav-text">Finisher类</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#IO相关finisher"><span class="nav-number">4.1.</span> <span class="nav-text">IO相关finisher</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#写数据到FileStore和IO回调"><span class="nav-number">5.</span> <span class="nav-text">写数据到FileStore和IO回调</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Primary-OSD-1"><span class="nav-number">5.1.</span> <span class="nav-text">Primary OSD</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Replica-OSD-1"><span class="nav-number">5.2.</span> <span class="nav-text">Replica OSD</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#sync数据到disk"><span class="nav-number">6.</span> <span class="nav-text">sync数据到disk</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.ictfox.cn/2015/06/18/ceph-osd-requst-analysis/';
+          this.page.identifier = '2015/06/18/ceph-osd-requst-analysis/';
+          this.page.title = 'Ceph osd request分析';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

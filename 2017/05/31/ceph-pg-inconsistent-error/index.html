@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="问题ceph集群状态为HEALTH_ERR，ceph -s显示有pg状态不一致，ceph health detail输出如下： 12345# ceph health detailHEALTH_ERR 2 pgs inconsistent; 1 pgs repair; 8 scrub errorspg 14.16a is active+clean+scrubbing+deep+inconsisten">
+<meta name="keywords" content="ceph">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Ceph PG Inconsistent Error处理">
+<meta property="og:url" content="http://www.ictfox.cn/2017/05/31/ceph-pg-inconsistent-error/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="问题ceph集群状态为HEALTH_ERR，ceph -s显示有pg状态不一致，ceph health detail输出如下： 12345# ceph health detailHEALTH_ERR 2 pgs inconsistent; 1 pgs repair; 8 scrub errorspg 14.16a is active+clean+scrubbing+deep+inconsisten">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.363Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Ceph PG Inconsistent Error处理">
+<meta name="twitter:description" content="问题ceph集群状态为HEALTH_ERR，ceph -s显示有pg状态不一致，ceph health detail输出如下： 12345# ceph health detailHEALTH_ERR 2 pgs inconsistent; 1 pgs repair; 8 scrub errorspg 14.16a is active+clean+scrubbing+deep+inconsisten">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.ictfox.cn/2017/05/31/ceph-pg-inconsistent-error/"/>
+
+
+
+
+
+  <title>Ceph PG Inconsistent Error处理 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/05/31/ceph-pg-inconsistent-error/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Ceph PG Inconsistent Error处理</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-05-31T00:31:17+08:00">
+                2017-05-31
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/05/31/ceph-pg-inconsistent-error/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/05/31/ceph-pg-inconsistent-error/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>ceph集群状态为<code>HEALTH_ERR</code>，<code>ceph -s</code>显示有pg状态不一致，<code>ceph health detail</code>输出如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph health detail</span></span><br><span class="line">HEALTH_ERR 2 pgs inconsistent; 1 pgs repair; 8 scrub errors</span><br><span class="line">pg 14.16a is active+clean+scrubbing+deep+inconsistent+repair, acting [1,27,16]</span><br><span class="line">pg 15.118 is active+clean+inconsistent, acting [0,15,27]</span><br><span class="line">8 scrub errors</span><br></pre></td></tr></table></figure>
+<h2 id="分析-amp-解决"><a href="#分析-amp-解决" class="headerlink" title="分析 &amp; 解决"></a>分析 &amp; 解决</h2><ol>
+<li><p>手动执行pg修复<br> <code>ceph pg repair 14.16a</code><br> <code>ceph pg deep-scrub 14.16a</code><br> <strong>结果</strong>：集群状态依旧<code>HEALTH_ERR</code></p>
+</li>
+<li><p>重启对应osd daemon<br> <code>systemctl restart ceph-osd@&lt;osdid&gt;.service</code><br> <strong>结果</strong>：集群状态依旧<code>HEALTH_ERR</code></p>
+</li>
+<li><p>检查ceph-osd log</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># vim ceph-osd.1.log-20170531.gz</span></span><br><span class="line">...</span><br><span class="line">2017-05-31 02:30:14.166348 7f7aeefff700 -1 log_channel(cluster) <span class="built_in">log</span> [ERR] : 14.16a shard 27: soid 14:56a14fcc:::10000002380.0000061d:head candidate had a <span class="built_in">read</span> error</span><br><span class="line">2017-05-31 02:30:14.166358 7f7aeefff700 -1 log_channel(cluster) <span class="built_in">log</span> [ERR] : 14.16a shard 27: soid 14:56a7ab13:::10000002380.00000446:head candidate had a <span class="built_in">read</span> error</span><br><span class="line">2017-05-31 02:30:14.166361 7f7aeefff700 -1 log_channel(cluster) <span class="built_in">log</span> [ERR] : 14.16a shard 27: soid 14:56b34a7a:::10000002356.00000218:head candidate had a <span class="built_in">read</span> error</span><br><span class="line">2017-05-31 02:30:14.166363 7f7aeefff700 -1 log_channel(cluster) <span class="built_in">log</span> [ERR] : 14.16a shard 27: soid 14:56c557e8:::10000002380.0000007a:head candidate had a <span class="built_in">read</span> error</span><br><span class="line">2017-05-31 02:30:14.166366 7f7aeefff700 -1 log_channel(cluster) <span class="built_in">log</span> [ERR] : 14.16a shard 27: soid 14:56c8ceeb:::10000002380.00000854:head candidate had a <span class="built_in">read</span> error</span><br><span class="line">2017-05-31 02:30:14.166372 7f7aeefff700 -1 log_channel(cluster) <span class="built_in">log</span> [ERR] : 14.16a shard 27: soid 14:56f50799:::1000000237c.0000019a:head candidate had a <span class="built_in">read</span> error</span><br><span class="line">2017-05-31 02:30:14.168485 7f7acebff700 -1 log_channel(cluster) <span class="built_in">log</span> [ERR] : 14.16a deep-scrub 0 missing, 6 inconsistent objects</span><br><span class="line">2017-05-31 02:30:14.168499 7f7acebff700 -1 log_channel(cluster) <span class="built_in">log</span> [ERR] : 14.16a deep-scrub 6 errors</span><br></pre></td></tr></table></figure>
+<p> 上面可以看出<code>pg 14.16a</code>里有几个objects报告<code>candidate had a read error</code></p>
+<p> 查看出错的object的md5值</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># md5sum /var/lib/ceph/osd/ceph-1/current/14.16a_head/10000002380.0000061d__head_33F2856A__e</span></span><br><span class="line">dc191d3144c49077952ed059425d68b1  /var/lib/ceph/osd/ceph-1/current/14.16a_head/10000002380.0000061d__head_33F2856A__e</span><br><span class="line"></span><br><span class="line"><span class="comment"># md5sum /var/lib/ceph/osd/ceph-16/current/14.16a_head/10000002380.0000061d__head_33F2856A__e</span></span><br><span class="line">dc191d3144c49077952ed059425d68b1  /var/lib/ceph/osd/ceph-16/current/14.16a_head/10000002380.0000061d__head_33F2856A__e</span><br><span class="line"></span><br><span class="line"><span class="comment"># md5sum /var/lib/ceph/osd/ceph-27/current/14.16a_head/10000002380.0000061d__head_33F2856A__e</span></span><br><span class="line">md5sum: /var/lib/ceph/osd/ceph-27/current/14.16a_head/10000002380.0000061d__head_33F2856A__e: Input/output error</span><br></pre></td></tr></table></figure>
+<p> 上面得出<code>ceph-27</code>上的object获取md5值失败，报<code>Input/output error</code>，这里猜测其对应的磁盘有问题；<br> 查看<code>ceph-27</code>上<code>pg 14.16a</code>里别的object的md5值，输出正常，则证明磁盘还能工作，可能是文件有损坏，也可能磁盘上有部分坏道；</p>
+<p> 删除md5sum报IO错误的文件，然后执行<code>ceph pg repair 14.16a</code>，pg状态恢复正常；</p>
+</li>
+</ol>
+<h2 id="磁盘检查与恢复"><a href="#磁盘检查与恢复" class="headerlink" title="磁盘检查与恢复"></a>磁盘检查与恢复</h2><p>那磁盘是否有问题呢？执行以下步骤来检测并恢复：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># systemctl stop ceph-osd@27.service</span></span><br><span class="line"><span class="comment"># umount /dev/sdi1</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># badblocks -svn /dev/sdi1 -o badblocks.log</span></span><br><span class="line">Checking <span class="keyword">for</span> bad blocks <span class="keyword">in</span> non-destructive <span class="built_in">read</span>-write mode</span><br><span class="line">From block 0 to 3906984774</span><br><span class="line">Checking <span class="keyword">for</span> bad blocks (non-destructive <span class="built_in">read</span>-write <span class="built_in">test</span>)</span><br><span class="line">Testing with random pattern: 0.00% <span class="keyword">done</span>, 16:22 elapsed. (223/0/0 errors)</span><br></pre></td></tr></table></figure>
+<p>上述检查会花费比较长时间，一般SATA盘的read速度为100-120MB/s，4TB大小的SATA盘，约需要<code>4*1024*1024/120/3600 = 9.7</code>小时；</p>
+<p>不过你可以在别的窗口查看输出文件<code>badblocks.log</code>的内容，如果里面有信息，那证明你的磁盘确实有坏块，就需要尝试恢复检查了:</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># head -n 10 badblocks.log</span></span><br><span class="line">10624</span><br><span class="line">10625</span><br><span class="line">10626</span><br><span class="line">10627</span><br><span class="line">10628</span><br><span class="line">10629</span><br><span class="line">10630</span><br><span class="line">10631</span><br><span class="line">10632</span><br><span class="line">10633</span><br><span class="line"></span><br><span class="line"><span class="built_in">kill</span> badblocks检查进程</span><br><span class="line"><span class="comment"># ps aux | pgrep badblocks | xargs kill -9</span></span><br><span class="line">[1]+  Killed                  badblocks -v /dev/sdi1 &gt; badblocks</span><br></pre></td></tr></table></figure>
+<p>通过badblocks修复坏块，<strong>注意会丢失坏块里的数据</strong></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># badblocks -ws /dev/sdi1 10633 10624</span></span><br><span class="line">Testing with pattern 0xaa: <span class="keyword">done</span></span><br><span class="line">Reading and comparing: <span class="keyword">done</span></span><br><span class="line">Testing with pattern 0x55: <span class="keyword">done</span></span><br><span class="line">Reading and comparing: <span class="keyword">done</span></span><br><span class="line">Testing with pattern 0xff: <span class="keyword">done</span></span><br><span class="line">Reading and comparing: <span class="keyword">done</span></span><br><span class="line">Testing with pattern 0x00: <span class="keyword">done</span></span><br><span class="line">Reading and comparing: <span class="keyword">done</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># badblocks -svn /dev/sdi1 10633 10624</span></span><br><span class="line">Checking <span class="keyword">for</span> bad blocks <span class="keyword">in</span> non-destructive <span class="built_in">read</span>-write mode</span><br><span class="line">From block 10624 to 10633</span><br><span class="line">Checking <span class="keyword">for</span> bad blocks (non-destructive <span class="built_in">read</span>-write <span class="built_in">test</span>)</span><br><span class="line">Testing with random pattern: <span class="keyword">done</span></span><br><span class="line">Pass completed, 0 bad blocks found. (0/0/0 errors)</span><br></pre></td></tr></table></figure>
+<p>通过上述步骤恢复了磁盘中的坏块，有如下两种情况：</p>
+<ol>
+<li><p>坏块中有xfs的元数据信息<br> 执行xfs_repair修复磁盘上的xfs系统，很可能报错；<br> 没有办法，只能重新格式化磁盘，然后执行ceph的recovery了；</p>
+</li>
+<li><p>坏块中无xfs的元数据信息<br> 通过xfs_repair修复磁盘上的xfs系统，报告done</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># xfs_repair  -f /dev/sdi1</span></span><br><span class="line">Phase 1 - find and verify superblock...</span><br><span class="line">Cannot get host filesystem geometry.</span><br><span class="line">Repair may fail <span class="keyword">if</span> there is a sector size mismatch between</span><br><span class="line">the image and the host filesystem.</span><br><span class="line">        - reporting progress <span class="keyword">in</span> intervals of 15 minutes</span><br><span class="line">Phase 2 - using internal <span class="built_in">log</span></span><br><span class="line">        - zero <span class="built_in">log</span>...</span><br><span class="line">        - scan filesystem freespace and inode maps...</span><br><span class="line">        - 15:23:37: scanning filesystem freespace - 32 of 32 allocation groups <span class="keyword">done</span></span><br><span class="line">        - found root inode chunk</span><br><span class="line">Phase 3 - <span class="keyword">for</span> each AG...</span><br><span class="line">        - scan and clear agi unlinked lists...</span><br><span class="line">        - 15:23:37: scanning agi unlinked lists - 32 of 32 allocation groups <span class="keyword">done</span></span><br><span class="line">        - process known inodes and perform inode discovery...</span><br><span class="line">        - agno = 15</span><br><span class="line">        - agno = 0</span><br><span class="line">        - agno = 30</span><br><span class="line">        - agno = 31</span><br><span class="line">        - agno = 16</span><br><span class="line">        - agno = 1</span><br><span class="line">        - agno = 2</span><br><span class="line">        - agno = 17</span><br><span class="line">        - agno = 18</span><br><span class="line">        - agno = 19</span><br><span class="line">        - agno = 3</span><br><span class="line">        - agno = 4</span><br><span class="line">        - agno = 5</span><br><span class="line">        - agno = 6</span><br><span class="line">        - agno = 7</span><br><span class="line">        - agno = 20</span><br><span class="line">        - agno = 21</span><br><span class="line">        - agno = 22</span><br><span class="line">        - agno = 23</span><br><span class="line">        - agno = 24</span><br><span class="line">        - agno = 25</span><br><span class="line">        - agno = 26</span><br><span class="line">        - agno = 8</span><br><span class="line">        - agno = 9</span><br><span class="line">        - agno = 10</span><br><span class="line">        - agno = 11</span><br><span class="line">        - agno = 12</span><br><span class="line">        - agno = 27</span><br><span class="line">        - agno = 28</span><br><span class="line">        - agno = 29</span><br><span class="line">        - agno = 13</span><br><span class="line">        - agno = 14</span><br><span class="line">        - 15:23:42: process known inodes and inode discovery - 3584 of 3584 inodes <span class="keyword">done</span></span><br><span class="line">        - process newly discovered inodes...</span><br><span class="line">        - 15:23:42: process newly discovered inodes - 32 of 32 allocation groups <span class="keyword">done</span></span><br><span class="line">Phase 4 - check <span class="keyword">for</span> duplicate blocks...</span><br><span class="line">        - setting up duplicate extent list...</span><br><span class="line">        - 15:23:42: setting up duplicate extent list - 32 of 32 allocation groups <span class="keyword">done</span></span><br><span class="line">        - check <span class="keyword">for</span> inodes claiming duplicate blocks...</span><br><span class="line">        - agno = 0</span><br><span class="line">        - agno = 1</span><br><span class="line">        - agno = 2</span><br><span class="line">        - agno = 3</span><br><span class="line">        - agno = 4</span><br><span class="line">        - agno = 5</span><br><span class="line">        - agno = 7</span><br><span class="line">        - agno = 6</span><br><span class="line">        - agno = 8</span><br><span class="line">        - agno = 11</span><br><span class="line">        - agno = 15</span><br><span class="line">        - agno = 19</span><br><span class="line">        - agno = 22</span><br><span class="line">        - agno = 24</span><br><span class="line">        - agno = 14</span><br><span class="line">        - agno = 28</span><br><span class="line">        - agno = 16</span><br><span class="line">        - agno = 18</span><br><span class="line">        - agno = 31</span><br><span class="line">        - agno = 20</span><br><span class="line">        - agno = 9</span><br><span class="line">        - agno = 10</span><br><span class="line">        - agno = 21</span><br><span class="line">        - agno = 23</span><br><span class="line">        - agno = 12</span><br><span class="line">        - agno = 13</span><br><span class="line">        - agno = 25</span><br><span class="line">        - agno = 26</span><br><span class="line">        - agno = 27</span><br><span class="line">        - agno = 17</span><br><span class="line">        - agno = 30</span><br><span class="line">        - agno = 29</span><br><span class="line">        - 15:23:42: check <span class="keyword">for</span> inodes claiming duplicate blocks - 3584 of 3584 inodes <span class="keyword">done</span></span><br><span class="line">Phase 5 - rebuild AG headers and trees...</span><br><span class="line">        - 15:23:42: rebuild AG headers and trees - 32 of 32 allocation groups <span class="keyword">done</span></span><br><span class="line">        - reset superblock...</span><br><span class="line">Phase 6 - check inode connectivity...</span><br><span class="line">        - resetting contents of realtime bitmap and summary inodes</span><br><span class="line">        - traversing filesystem ...</span><br><span class="line">        - traversal finished ...</span><br><span class="line">        - moving disconnected inodes to lost+found ...</span><br><span class="line">Phase 7 - verify and correct link counts...</span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+<p> 这时mount，start ceph-osd damon后，ceph报<code>HEALTH_OK</code>，但其实osd上的部分数据已经丢失，这个等ceph的deep scrub触发后会自动修复；</p>
+</li>
+</ol>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://ceph.com/planet/ceph-manually-repair-object/" target="_blank" rel="noopener">http://ceph.com/planet/ceph-manually-repair-object/</a><br><a href="https://linux.cn/article-7961-1.html" target="_blank" rel="noopener">https://linux.cn/article-7961-1.html</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/05/25/Ceph-BackoffThrottle/" rel="next" title=" Ceph BackoffThrottle分析">
+                <i class="fa fa-chevron-left"></i>  Ceph BackoffThrottle分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/06/02/cephfs-intro-fun/" rel="prev" title="cephfs介绍和功能测试">
+                cephfs介绍和功能测试 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#问题"><span class="nav-number">1.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#分析-amp-解决"><span class="nav-number">2.</span> <span class="nav-text">分析 &amp; 解决</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#磁盘检查与恢复"><span class="nav-number">3.</span> <span class="nav-text">磁盘检查与恢复</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.ictfox.cn/2017/05/31/ceph-pg-inconsistent-error/';
+          this.page.identifier = '2017/05/31/ceph-pg-inconsistent-error/';
+          this.page.title = 'Ceph PG Inconsistent Error处理';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,cephfs," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="cephfs简介cephfs是ceph提供的兼容POSIX协议的文件系统，对比rbd和rgw功能，这个是ceph里最晚满足production ready的一个功能，它底层还是使用rados存储数据 cephfs的架构 使用cephfs的两种方式 cephfs kernel module cephfs-fuse  从上面的架构可以看出，cephfs-fuse的IO path比较长，性能会比ceph">
+<meta name="keywords" content="ceph,cephfs">
+<meta property="og:type" content="article">
+<meta property="og:title" content="cephfs的测试简报">
+<meta property="og:url" content="http://www.ictfox.cn/2017/07/16/cephfs-test-method-lite/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="cephfs简介cephfs是ceph提供的兼容POSIX协议的文件系统，对比rbd和rgw功能，这个是ceph里最晚满足production ready的一个功能，它底层还是使用rados存储数据 cephfs的架构 使用cephfs的两种方式 cephfs kernel module cephfs-fuse  从上面的架构可以看出，cephfs-fuse的IO path比较长，性能会比ceph">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.ictfox.cn/images/cephfs-intro-fun1.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/ceph-used-in-cloudin7.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/cephfs-tstenv-structure.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/fio-randwrite-bw-mds-crush.jpg">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.368Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="cephfs的测试简报">
+<meta name="twitter:description" content="cephfs简介cephfs是ceph提供的兼容POSIX协议的文件系统，对比rbd和rgw功能，这个是ceph里最晚满足production ready的一个功能，它底层还是使用rados存储数据 cephfs的架构 使用cephfs的两种方式 cephfs kernel module cephfs-fuse  从上面的架构可以看出，cephfs-fuse的IO path比较长，性能会比ceph">
+<meta name="twitter:image" content="http://www.ictfox.cn/images/cephfs-intro-fun1.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.ictfox.cn/2017/07/16/cephfs-test-method-lite/"/>
+
+
+
+
+
+  <title>cephfs的测试简报 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/07/16/cephfs-test-method-lite/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">cephfs的测试简报</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-07-16T19:11:17+08:00">
+                2017-07-16
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/07/16/cephfs-test-method-lite/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/07/16/cephfs-test-method-lite/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="cephfs简介"><a href="#cephfs简介" class="headerlink" title="cephfs简介"></a>cephfs简介</h2><p>cephfs是ceph提供的兼容POSIX协议的文件系统，对比rbd和rgw功能，这个是ceph里最晚满足production ready的一个功能，它底层还是使用rados存储数据</p>
+<h3 id="cephfs的架构"><a href="#cephfs的架构" class="headerlink" title="cephfs的架构"></a>cephfs的架构</h3><p><img src="/images/cephfs-intro-fun1.jpg" alt="cephfs arch"></p>
+<h3 id="使用cephfs的两种方式"><a href="#使用cephfs的两种方式" class="headerlink" title="使用cephfs的两种方式"></a>使用cephfs的两种方式</h3><ol>
+<li>cephfs kernel module</li>
+<li>cephfs-fuse</li>
+</ol>
+<p>从上面的架构可以看出，cephfs-fuse的IO path比较长，性能会比cephfs kernel module的方式差一些；</p>
+<h3 id="client端访问cephfs的流程"><a href="#client端访问cephfs的流程" class="headerlink" title="client端访问cephfs的流程"></a>client端访问cephfs的流程</h3><p><img src="/images/ceph-used-in-cloudin7.jpg" alt="mds work"></p>
+<ol>
+<li>client端与mds节点通讯，获取metadata信息（metadata也存在osd上）</li>
+<li>client直接写数据到osd</li>
+</ol>
+<h2 id="cephfs测试环境"><a href="#cephfs测试环境" class="headerlink" title="cephfs测试环境"></a>cephfs测试环境</h2><p>三台物理机搭建了ceph集群，配置了Active-Standby的MDS，作为测试cephfs的cluster，详细配置如下：</p>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ceph Version</td>
+<td>Jewel 10.2.7</td>
+</tr>
+<tr>
+<td>Ceph Cluster OS</td>
+<td>CentOS Linux release 7.2.1511 (Core)</td>
+</tr>
+<tr>
+<td>Ceph Cluster kernel version</td>
+<td>3.10.0-327.el7.x86_64</td>
+</tr>
+<tr>
+<td>Cephfs Client OS</td>
+<td>CentOS Linux release 7.2.1511 (Core)  </td>
+</tr>
+<tr>
+<td>Cephfs kernel version</td>
+<td>4.11.3-1.el7.elrepo.x86_64</td>
+</tr>
+</tbody>
+</table>
+<p>三台物理机上，每个上面有10个4T 7200RPM SATA盘，两个480GB的SATA SSD盘做journal设备，每个SSD盘分出5个20GB的分区做5个OSD的journal。<br>三个物理机上部署了三个monitor，其中两台部署了两个MDS。</p>
+<p><img src="/images/cephfs-tstenv-structure.jpg" alt="mds work"></p>
+<p>Ceph默认配置replica=3，所以三台物理机组成的Ceph Cluster的整体写性能约等于一台物理机上的硬件的性能。</p>
+<p>每个物理机上，2个SSD做10个OSD的journal，其整体性能约为：<code>2 * (单个ssd盘的性能)</code> 或 <code>10 * (单个sata盘的性能)</code></p>
+<p>使用的SSD盘型号为：Intel S3500系列，其性能指标为：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>性能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>容量</td>
+<td>480GB</td>
+</tr>
+<tr>
+<td>顺序读取(最高)</td>
+<td>500 MB/s</td>
+</tr>
+<tr>
+<td>顺序写入(最高)</td>
+<td>410 MB/s</td>
+</tr>
+<tr>
+<td>随机读取(100% 跨度)</td>
+<td>75000 IOPS</td>
+</tr>
+<tr>
+<td>随机写入(100% 跨度)</td>
+<td>11000 IOPS</td>
+</tr>
+</tbody>
+</table>
+<h2 id="创建mds"><a href="#创建mds" class="headerlink" title="创建mds"></a>创建mds</h2><p>使用ceph-deploy部署ceph mds很方便，只需要简单的一条命令就搞定，不过它依赖之前ceph-deploy时候生成的一些配置和keyring文件；<br>在之前部署ceph集群的节点目录，执行ceph-deploy mds create：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy --overwrite-conf mds create cephfs-host2:mds-daemon-37</span></span><br><span class="line"><span class="comment"># ceph-deploy --overwrite-conf mds create cephfs-host3:mds-daemon-38</span></span><br><span class="line">// 去节点检查下daemon</span><br><span class="line">[root@cephfs-host2 yangguanjun]<span class="comment"># ps ax | grep ceph-mds</span></span><br><span class="line"> 283564 ?        Ssl    0:38 /usr/bin/ceph-mds -f --cluster ceph --id mds-daemon-37 --setuser ceph --setgroup ceph</span><br></pre></td></tr></table></figure>
+<h2 id="创建测试cephfs"><a href="#创建测试cephfs" class="headerlink" title="创建测试cephfs"></a>创建测试cephfs</h2><p>在上述的测试集群里搭建cephfs，因为都是内部使用，测试集群没有打开ceph的认证。</p>
+<p>创建cephfs的步骤如下</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph osd pool create cephfs_data 512 512 // 创建data pool</span></span><br><span class="line">pool <span class="string">'cephfs_data'</span> created</span><br><span class="line"><span class="comment"># ceph osd pool create cephfs_metadata 512 512 // 创建metadata pool</span></span><br><span class="line">pool <span class="string">'cephfs_metadata'</span> created</span><br><span class="line"><span class="comment"># ceph fs new tstfs cephfs_metadata cephfs_data // 创建cephfs</span></span><br><span class="line">new fs with metadata pool 1 and data pool 2</span><br><span class="line"><span class="comment"># ceph fs ls</span></span><br><span class="line">name: tstfs, metadata pool: cephfs_metadata, data pools: [cephfs_data ]</span><br></pre></td></tr></table></figure>
+<p>查看cephfs对应的active MDS</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph mds stat</span></span><br><span class="line">e229: 1/1/1 up &#123;0=mds-daemon-37=up:active&#125;, 1 up:standby</span><br></pre></td></tr></table></figure>
+<h2 id="cephfs测试"><a href="#cephfs测试" class="headerlink" title="cephfs测试"></a>cephfs测试</h2><p>为了评估cephfs的稳定性和性能，结合常用的测试场景和测试工具，我们对cephfs的测试进行了分类，然后在选定的另一台测试节点上mount并测试cephfs。</p>
+<p>在测试节点mount上cephfs</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@cephfs-client yangguanjun]<span class="comment"># mount -t ceph 10.1.1.6:6789:/ /home/yangguanjun/cephfs/</span></span><br></pre></td></tr></table></figure>
+<h3 id="cephfs功能测试"><a href="#cephfs功能测试" class="headerlink" title="cephfs功能测试"></a>cephfs功能测试</h3><p>cephfs是兼容POSIX协议的文件系统，这里通过手动和自动测试工具的方式来验证cephfs的可用性。</p>
+<h4 id="手动模式"><a href="#手动模式" class="headerlink" title="手动模式"></a>手动模式</h4><p>通过手动模式测试常见的文件系统操作</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">创建测试dir和file</span><br><span class="line"><span class="comment"># cd /home/yangguanjun/cephfs/</span></span><br><span class="line"><span class="comment"># mkdir tstdir</span></span><br><span class="line"><span class="comment"># cd tstdir</span></span><br><span class="line"><span class="comment"># touch tstfile</span></span><br><span class="line"></span><br><span class="line">测试file的读写</span><br><span class="line"><span class="comment"># echo "hello cephfs" &gt; tstfile</span></span><br><span class="line"><span class="comment"># cat tstfile</span></span><br><span class="line">hello cephfs</span><br><span class="line"></span><br><span class="line">测试file的chmod</span><br><span class="line"><span class="comment"># ll tstfile</span></span><br><span class="line">-rw-r--r-- 1 root root 13 Jul  7 10:33 tstfile</span><br><span class="line"><span class="comment"># chmod 755 tstfile</span></span><br><span class="line"><span class="comment"># ll tstfile</span></span><br><span class="line">-rwxr-xr-x 1 root root 13 Jul  7 10:33 tstfile</span><br><span class="line"></span><br><span class="line">测试file的chown</span><br><span class="line"><span class="comment"># chown yangguanjun:yangguanjun tstfile</span></span><br><span class="line"><span class="comment"># ll tstfile</span></span><br><span class="line">-rwxr-xr-x 1 yangguanjun yangguanjun 13 Jul  7 10:33 tstfile</span><br><span class="line"></span><br><span class="line">测试file的symlink</span><br><span class="line"><span class="comment"># ln -s tstfile lnfile</span></span><br><span class="line"><span class="comment"># ll lnfile</span></span><br><span class="line">lrwxrwxrwx 1 root root 7 Jul  7 10:31 lnfile -&gt; tstfile</span><br><span class="line"></span><br><span class="line">删除测试dir和file</span><br><span class="line"><span class="comment"># rm -f tstfile</span></span><br><span class="line"><span class="comment"># cd ../</span></span><br><span class="line"><span class="comment"># rm -rf tstdir</span></span><br></pre></td></tr></table></figure>
+<h4 id="自动测试工具"><a href="#自动测试工具" class="headerlink" title="自动测试工具"></a>自动测试工具</h4><p>这里使用fstest测试工具对cephfs进行测试。</p>
+<p>fstest是一套简化版的文件系统POSIX兼容性测试套件，它可以工作在FreeBSD, Solaris, Linux上用于测试UFS, ZFS, ext3, XFS and the NTFS-3G等文件系统。fstest目前有3601个回归测试用例，测试的系统调用覆盖chmod, chown, link, mkdir, mkfifo, open, rename, rmdir, symlink, truncate, unlink。</p>
+<ul>
+<li>获取fstest</li>
+</ul>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">网站：http://www.tuxera.com/community/posix-test-suite/</span><br><span class="line"><span class="comment"># wget http://tuxera.com/sw/qa/pjd-fstest-20090130-RC.tgz</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li>安装fstest</li>
+</ul>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yum install -y libacl-devel</span></span><br><span class="line"><span class="comment"># tar -zxf pjd-fstest-20090130-RC.tgz</span></span><br><span class="line"><span class="comment"># cd pjd-fstest-20090130-RC</span></span><br><span class="line"><span class="comment"># make</span></span><br><span class="line">gcc -Wall -DHAS_ACL -lacl fstest.c -o fstest</span><br></pre></td></tr></table></figure>
+<ul>
+<li>运行fstest</li>
+</ul>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cd /home/yangguanjun/cephfs/</span></span><br><span class="line"><span class="comment"># prove -r /home/yangguanjun/pjd-fstest-20090130-RC/</span></span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/chflags/00.t ... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/chflags/13.t ... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/chmod/00.t ..... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/chmod/11.t ..... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/chown/00.t ..... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/chown/10.t ..... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/link/00.t ...... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/link/17.t ...... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/mkdir/00.t ..... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/mkdir/12.t ..... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/mkfifo/00.t .... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/mkfifo/12.t .... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/open/00.t ...... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/open/23.t ...... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/rename/00.t .... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/rename/20.t .... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/rmdir/00.t ..... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/rmdir/15.t ..... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/symlink/00.t ... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/symlink/12.t ... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/truncate/00.t .. ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/truncate/14.t .. ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/unlink/00.t .... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/unlink/13.t .... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/xacl/00.t ...... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/xacl/06.t ...... ok</span><br><span class="line">All tests successful.</span><br><span class="line">Files=191, Tests=1964, 92 wallclock secs ( 0.63 usr  0.11 sys +  4.58 cusr 10.40 csys = 15.72 CPU)</span><br><span class="line">Result: PASS</span><br></pre></td></tr></table></figure>
+<h4 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h4><p>cephfs的功能性验证通过。</p>
+<h3 id="cephfs性能测试"><a href="#cephfs性能测试" class="headerlink" title="cephfs性能测试"></a>cephfs性能测试</h3><p>文件系统的性能测试工具有很多，这里我们选择常用的dd, fio, iozone和filebench。</p>
+<p>cephfs的所有数据和元数据都是直接存在RADOS上的，并且cephfs支持stripe配置，这里我们做了以下stripe配置，作为测试cephfs性能的几种应用场景：</p>
+<ol>
+<li><p>stripe_unit=1M, stripe_count=4, object_size=4M</p>
+<p> 条带大小为1M，条带数目为4，object大小为4M</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">配置测试目录attr</span><br><span class="line">setfattr -n ceph.dir.layout -v <span class="string">"stripe_unit=1048576 stripe_count=4 object_size=4194304"</span> dir-1M-4-4M</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>stripe_unit=4M, stripe_count=1, object_size=4M</p>
+<p> ceph的默认配置：无条带化</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">配置测试目录attr</span><br><span class="line">setfattr -n ceph.dir.layout -v <span class="string">"stripe_unit= 4194304 stripe_count=1 object_size=4194304"</span> dir-4M-1-4M</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>stripe_unit=4M, stripe_count=4, object_size=64M</p>
+<p> 条带大小为4M，条带数目为4，object大小为64M</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">配置测试目录attr</span><br><span class="line">setfattr -n ceph.dir.layout -v <span class="string">"stripe_unit=4194304 stripe_count=4 object_size=67108864"</span> dir-4M-4-64M</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p><strong>参考</strong></p>
+<p><a href="http://www.yangguanjun.com/2017/06/15/cephfs-stripe/" target="_blank" rel="noopener">cephfs的stripe配置</a></p>
+<h4 id="dd"><a href="#dd" class="headerlink" title="dd"></a>dd</h4><p>dd是linux系统常用的测试设备和系统性能的工具。</p>
+<p><strong>测试分类与测试命令</strong></p>
+<ol>
+<li><p>Direct IO</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">写：dd <span class="keyword">if</span>=/dev/zero of=tstfile bs=&lt;bs-size&gt; count=&lt;2G/bs-size&gt; oflag=direct</span><br><span class="line">读：dd <span class="keyword">if</span>=tstfile of=/dev/null bs=&lt;bs-size&gt; count=&lt;2G/bs-size&gt; iflag=direct</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Sync IO  </p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">写：dd <span class="keyword">if</span>=/dev/zero of=tstfile bs=&lt;bs-size&gt; count=&lt;2G/bs-size&gt; oflag=sync</span><br><span class="line">读：dd <span class="keyword">if</span>=tstfile of=/dev/null bs=&lt;bs-size&gt; count=&lt;2G/bs-size&gt; iflag=sync</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Normal IO</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">写：dd <span class="keyword">if</span>=/dev/zero of=tstfile bs=&lt;bs-size&gt; count=&lt;2G/bs-size&gt;</span><br><span class="line">读：dd <span class="keyword">if</span>=tstfile of=/dev/null bs=&lt;bs-size&gt; count=&lt;2G/bs-size&gt;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h4 id="fio"><a href="#fio" class="headerlink" title="fio"></a>fio</h4><p>fio是一个I/O标准测试和硬件压力验证工具，它支持13种不同类型的I/O引擎（sync, mmap, libaio, posixaio, SG v3, splice, null, network, syslet, guasi, solarisaio等），I/O priorities (for newer Linux kernels), rate I/O, forked or threaded jobs等等。fio可以支持块设备和文件系统测试，广泛用于标准测试、QA、验证测试等，支持Linux, FreeBSD, NetBSD, OS X, OpenSolaris, AIX, HP-UX, Windows等操作系统。</p>
+<p><strong>fio安装</strong></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yum install -y fio</span></span><br></pre></td></tr></table></figure>
+<p><strong>测试分类与测试命令</strong></p>
+<p>固定配置</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">-filename=tstfile   指定测试文件的name</span><br><span class="line">-size=20G           指定测试文件的size为20G</span><br><span class="line">-direct=1           指定测试IO为DIRECT IO</span><br><span class="line">-thread				指定使用thread模式</span><br><span class="line">-name=fio-tst-name  指定job name</span><br></pre></td></tr></table></figure>
+<p>测试bandwidth时</p>
+<ol>
+<li>-ioengine=libaio/sync</li>
+<li>-bs=512k/1M/4M/16M</li>
+<li>-rw=write/read</li>
+<li>-iodepth=64 -iodepth_batch=8 -iodepth_batch_complete=8</li>
+</ol>
+<p>测试iops时：</p>
+<ol>
+<li>-ioengine=libaio</li>
+<li>-bs=4k</li>
+<li>-runtime=300</li>
+<li>-rw=randwrite/randread</li>
+<li>-iodepth=64 -iodepth_batch=1 -iodepth_batch_complete=1</li>
+</ol>
+<p>命令示例：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">测试bandwidth：</span><br><span class="line">fio -filename=tstfile -size=10G -direct=1 -ioengine=libaio -thread -bs=512k -rw=write -iodepth=64 -iodepth_batch_submit=8 -iodepth_batch_complete=8 -name=write-bw-tst</span><br><span class="line"></span><br><span class="line">测试iops：</span><br><span class="line">fio -filename=tstfile -size=10G -direct=1 -ioengine=libaio -thread -bs=4k -rw=randwrite -iodepth=64 -runtime=300 -iodepth_batch=1 -iodepth_batch_complete=1 -name=randwrite-iops-tst</span><br></pre></td></tr></table></figure>
+<h4 id="iozone"><a href="#iozone" class="headerlink" title="iozone"></a>iozone</h4><p>iozone是目前应用非常广泛的文件系统测试标准工具，它能够产生并测量各种的操作性能，包括read, write, re-read, re-write, read backwards, read strided, fread, fwrite, random read, pread ,mmap, aio_read, aio_write等操作。Iozone目前已经被移植到各种体系结构计算机和操作系统上，广泛用于文件系统性能测试、分析与评估的标准工具。</p>
+<p><strong>iozone安装</strong></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># wget http://www.iozone.org/src/current/iozone-3-465.i386.rpm</span></span><br><span class="line"><span class="comment"># rpm -ivh iozone-3-465.i386.rpm</span></span><br><span class="line"><span class="comment"># ln -s /opt/iozone/bin/iozone /usr/bin/iozone</span></span><br></pre></td></tr></table></figure>
+<p><strong>测试分类与测试命令</strong></p>
+<p>iozone参数说明：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">指定使用自动模式</span><br><span class="line">-a</span><br><span class="line"></span><br><span class="line">指定测试模式</span><br><span class="line">-i 0 -i 1 -i 2 </span><br><span class="line">    0=write/rewrite</span><br><span class="line">    1=<span class="built_in">read</span>/re-read</span><br><span class="line">    2=random <span class="built_in">read</span>/random write</span><br><span class="line"></span><br><span class="line">指定自动模式测试文件的大小范围，会依次翻倍</span><br><span class="line">-n 1m -g 2G</span><br><span class="line">    -n 1m : 指定测试文件的最小值为1m</span><br><span class="line">    -g 2G : 指定测试文件的最大值为2G</span><br><span class="line"></span><br><span class="line">指定自动模式下记录块的大小范围，会依次翻倍；记录块大小类似于dd的bs</span><br><span class="line">-y 128k -q 16m</span><br><span class="line">    -y 128k : 指定记录块的最小值为128k</span><br><span class="line">    -q 16m  : 指定记录块的最小值为16m</span><br><span class="line"></span><br><span class="line">指定使用DIRECT IO</span><br><span class="line">-I</span><br><span class="line"></span><br><span class="line">指定写用O_SYNC</span><br><span class="line">-o</span><br><span class="line"></span><br><span class="line">指定threads个数测试系统吞吐量</span><br><span class="line">-t</span><br><span class="line"></span><br><span class="line">指定创建Excel reqport</span><br><span class="line">-R</span><br><span class="line"></span><br><span class="line">指定创建的Excel文件的name</span><br><span class="line">-b</span><br><span class="line"></span><br><span class="line">指定测试使用的record size</span><br><span class="line">-r</span><br><span class="line"></span><br><span class="line">指定测试文件的size</span><br><span class="line">-s</span><br></pre></td></tr></table></figure>
+<ol>
+<li><p>测试DIRET IO / SYNC IO - 非throughput模式</p>
+<p> 不指定threads，测试单个线程的iozone性能</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">iozone -a -i 0 -i 1 -i 2 -n 1m -g 10G -y 128k -q 16m -I -Rb iozone-directio-output.xls</span><br><span class="line">iozone -a -i 0 -i 1 -i 2 -n 1m -g 10G -y 128k -q 16m -o -Rb iozone-syncio-output.xls</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>测试系统吞吐量 - throughput模式</p>
+<p> 指定threads=16，获取整个系统的throughput</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">iozone -a -i 0 -i 1 -i 2 -r 16m -s 2G -I -t 16 -Rb iozone-directio-throughput-output.xls</span><br><span class="line">iozone -a -i 0 -i 1 -i 2 -r 16m -s 2G -o -t 16 -Rb iozone-syncio-throughput-output.xls</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h4 id="filebench"><a href="#filebench" class="headerlink" title="filebench"></a>filebench</h4><p>Filebench 是一款文件系统性能的自动化测试工具，它通过快速模拟真实应用服务器的负载来测试文件系统的性能。它不仅可以仿真文件系统微操作（如 copyfiles, createfiles, randomread, randomwrite ），而且可以仿真复杂的应用程序（如 varmail, fileserver, oltp, dss, webserver, webproxy ）。 Filebench 比较适合用来测试文件服务器性能，但同时也是一款负载自动生成工具，也可用于文件系统的性能。</p>
+<p><strong>filebench安装</strong></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">源码：https://github.com/filebench/filebench</span><br><span class="line">下载后在测试节点解压缩</span><br><span class="line"></span><br><span class="line"><span class="comment"># yum install libtool automake</span></span><br><span class="line"><span class="comment"># libtoolize</span></span><br><span class="line"><span class="comment"># aclocal</span></span><br><span class="line"><span class="comment"># autoheader</span></span><br><span class="line"><span class="comment"># automake --add-missing</span></span><br><span class="line"><span class="comment"># autoconf</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># yum install gcc flex bison</span></span><br><span class="line"><span class="comment"># ./configure</span></span><br><span class="line"><span class="comment"># make</span></span><br><span class="line"><span class="comment"># make install</span></span><br></pre></td></tr></table></figure>
+<p>安装后，在目录 <code>/usr/local/share/filebench/workloads/</code> 下有很多定义好的workload，可以直接拿来使用。<br>配置里面的 <code>$dir</code> 为测试cephfs的目录，若文件后没有 run <secs> 命令，添加：run <secs></secs></secs></p>
+<p><strong>测试分类</strong></p>
+<p>filebench有很多定义好的workload，如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ls /usr/local/share/filebench/workloads/</span></span><br><span class="line">compflow_demo.f                 filemicro_rwrite.f              fivestreamreaddirect.f          openfiles.f                     singlestreamwrite.f</span><br><span class="line">copyfiles.f                     filemicro_rwritefsync.f         fivestreamread.f                randomfileaccess.f              tpcso.f</span><br><span class="line">createfiles.f                   filemicro_seqread.f             fivestreamwritedirect.f         randomread.f                    varmail.f</span><br><span class="line">cvar_example.f                  filemicro_seqwrite.f            fivestreamwrite.f               randomrw.f                      videoserver.f</span><br><span class="line">filemicro_create.f              filemicro_seqwriterand.f        listdirs.f                      randomwrite.f                   webproxy.f</span><br><span class="line">filemicro_createfiles.f         filemicro_seqwriterandvargam.f  makedirs.f                      ratelimcopyfiles.f              webserver.f</span><br><span class="line">filemicro_createrand.f          filemicro_seqwriterandvartab.f  mongo.f                         removedirs.f</span><br><span class="line">filemicro_delete.f              filemicro_statfile.f            netsfs.f                        singlestreamreaddirect.f</span><br><span class="line">filemicro_rread.f               filemicro_writefsync.f          networkfs.f                     singlestreamread.f</span><br><span class="line">filemicro_rwritedsync.f         fileserver.f                    oltp.f                          singlestreamwritedirect.f</span><br></pre></td></tr></table></figure>
+<p>因为最新的filebench修改了变量的定义，所以这里面的一些workload并不能成功运行，只需选择可用的有代表性的workload测试即可。</p>
+<p><strong>参考</strong></p>
+<p><a href="http://www.yangguanjun.com/2017/07/08/fs-testtool-filebench/" target="_blank" rel="noopener">filesystem测试工具之filebench</a></p>
+<h4 id="结论-1"><a href="#结论-1" class="headerlink" title="结论"></a>结论</h4><ol>
+<li>cephfs的direct IO性能有限</li>
+<li>cephfs读写能跑满ceph cluster集群性能</li>
+<li>客户端缓存和OSD缓存对读写的影响很大</li>
+</ol>
+<h3 id="cephfs稳定性测试"><a href="#cephfs稳定性测试" class="headerlink" title="cephfs稳定性测试"></a>cephfs稳定性测试</h3><p>为了测试cephfs是否能在线上提供服务，需要测试下其稳定性，这里采用两种方式测试。</p>
+<h4 id="读写数据模式"><a href="#读写数据模式" class="headerlink" title="读写数据模式"></a>读写数据模式</h4><p>针对读写数据模式，我们选择工具<code>fio</code>，在cephfs client端长时间运行，看会不会报错。</p>
+<p>测试逻辑大概如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># fio循环测试读写</span></span><br><span class="line"><span class="keyword">while</span> now &lt; time</span><br><span class="line">	fio write 10G file</span><br><span class="line">	fio <span class="built_in">read</span> 10G file</span><br><span class="line">	delete file</span><br></pre></td></tr></table></figure>
+<h4 id="读写元数据模式"><a href="#读写元数据模式" class="headerlink" title="读写元数据模式"></a>读写元数据模式</h4><p>针对读写元数据模式，我们采用自写脚本，大规模创建目录、文件、写很小数据到文件中，在cephfs client端长时间运行，看会不会报错。</p>
+<p>测试逻辑大概如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 百万级别的文件个数</span></span><br><span class="line"><span class="keyword">while</span> now &lt; time</span><br><span class="line">	create <span class="built_in">dirs</span></span><br><span class="line">	touch files</span><br><span class="line">	write little data to each file</span><br><span class="line">	delete files</span><br><span class="line">	delete <span class="built_in">dirs</span></span><br></pre></td></tr></table></figure>
+<h4 id="结论-2"><a href="#结论-2" class="headerlink" title="结论"></a>结论</h4><p>通过几天的连续测试，cephfs一切正常，这说明cephfs是可以应用到生产环境的。<br>但在上亿级别的文件测试中，也遇到点问题，会在下面章节的问题里说明。</p>
+<h3 id="cephfs异常测试"><a href="#cephfs异常测试" class="headerlink" title="cephfs异常测试"></a>cephfs异常测试</h3><p>cephfs的功能依赖于MDS和Ceph Cluster，关键的元数据都通过MDS获取，这里测试的异常也主要基于MDS的异常进行分类的。</p>
+<p>查看ceph MDS与interl和timeout相关的配置有：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">OPTION(mds_tick_interval, OPT_FLOAT, 5)</span><br><span class="line">OPTION(mds_mon_shutdown_timeout, OPT_DOUBLE, 5)</span><br><span class="line">OPTION(mds_op_complaint_time, OPT_FLOAT, 30)</span><br></pre></td></tr></table></figure>
+<p>所以这里测试对MDS stop/start的时间间隔取为：2s，10s，60s</p>
+<h4 id="测试分类"><a href="#测试分类" class="headerlink" title="测试分类"></a>测试分类</h4><ol>
+<li>主从MDS</li>
+<li>单MDS</li>
+</ol>
+<p>测试中启停MDS service的命令为：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># systemctl stop ceph-mds.target</span></span><br><span class="line"><span class="comment"># systemctl start ceph-mds.target</span></span><br></pre></td></tr></table></figure>
+<h4 id="测试结果"><a href="#测试结果" class="headerlink" title="测试结果"></a>测试结果</h4><ul>
+<li>fio随机写单个文件</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>MDS模式</th>
+<th>启停interval</th>
+<th>io影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单MDS</td>
+<td>2s, 10s</td>
+<td>无</td>
+</tr>
+<tr>
+<td></td>
+<td>60s</td>
+<td>约40s时影响IO</td>
+</tr>
+<tr>
+<td>主从MDS</td>
+<td>2s, 10s</td>
+<td>无</td>
+</tr>
+<tr>
+<td></td>
+<td>60s</td>
+<td>主从不同时停止时无影响 <br> 同时停止主从MDS时，影响与单MDS一致</td>
+</tr>
+</tbody>
+</table>
+<p>下面展示了单MDS停止约60s的时候，对fio测试的影响：</p>
+<p><img src="/images/fio-randwrite-bw-mds-crush.jpg" alt="fio rw bw"></p>
+<ul>
+<li>iozone测试direct IO</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>MDS模式</th>
+<th>启停interval</th>
+<th>io影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单MDS</td>
+<td>2s，10s，60s</td>
+<td>对当前文件的IO影响同fio测试 <br> 对读写新文件的影响会立刻体现</td>
+</tr>
+<tr>
+<td>主从MDS</td>
+<td>2s，10s，60s</td>
+<td>主从不同时停止时无影响 <br> 同时停止主从MDS时，影响与单MDS一致</td>
+</tr>
+</tbody>
+</table>
+<h4 id="结论-3"><a href="#结论-3" class="headerlink" title="结论"></a>结论</h4><ol>
+<li>单MDS的情况下，短暂的MDS crush并不会影响客户端对一个file的读写</li>
+<li>单MDS的情况下，MDS crush后，client端对没有缓存过caps的文件操作会hang住</li>
+<li>主从MDS的情况下，只要有一个MDS正常，cephfs的服务就不会中断</li>
+<li>主从MDS的情况下，两个MDS都crush后，影响与单MDS的一致</li>
+</ol>
+<p>所以生产环境中，我们建议配置主从MDS的模式，提高cephfs的高可用性。</p>
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><h3 id="cephfs配置较大stripe-unit的问题"><a href="#cephfs配置较大stripe-unit的问题" class="headerlink" title="cephfs配置较大stripe unit的问题"></a>cephfs配置较大stripe unit的问题</h3><p>测试中，对于指定cephfs的laylout如下时，发现了一个cephfs的bug，已经提交给ceph社区.</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># setfattr -n ceph.dir.layout -v "stripe_unit=67108864 stripe_count=1 object_size=67108864" dir-64M-1-64M</span></span><br></pre></td></tr></table></figure>
+<p>详情参阅：<a href="http://tracker.ceph.com/issues/20528" target="_blank" rel="noopener">http://tracker.ceph.com/issues/20528</a></p>
+<p><strong>最新更新</strong></p>
+<p>cephfs client端的配置限制了read message的最大size为16M。<br>==所以实际使用中的 stripe_unit 不能大于16M==</p>
+<h3 id="cephfs读写上亿级文件"><a href="#cephfs读写上亿级文件" class="headerlink" title="cephfs读写上亿级文件"></a>cephfs读写上亿级文件</h3><p>为了查看cephfs对大规模小文件应用的支持效果，我们这里通过脚本测试了5亿个文件的场景。</p>
+<p>测试的脚本如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 5000个目录，每个目录10万个文件</span></span><br><span class="line">round=5000</span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> `date` &gt;&gt; /root/mds_testlog</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> j <span class="keyword">in</span> `seq <span class="variable">$round</span>`;<span class="keyword">do</span></span><br><span class="line">	mkdir /mnt/<span class="built_in">test</span><span class="variable">$j</span></span><br><span class="line">	<span class="keyword">for</span> i <span class="keyword">in</span> `seq 100000`;<span class="keyword">do</span></span><br><span class="line">		<span class="built_in">echo</span> hello &gt; /mnt/<span class="built_in">test</span><span class="variable">$j</span>/file<span class="variable">$&#123;i&#125;</span>;</span><br><span class="line">	<span class="keyword">done</span></span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> j <span class="keyword">in</span> `seq <span class="variable">$round</span>`;<span class="keyword">do</span></span><br><span class="line">	rm -rf /mnt/<span class="built_in">test</span><span class="variable">$j</span></span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+<p><strong>问题：</strong></p>
+<ol>
+<li>单线程运行耗时较长</li>
+<li>单线程删除文件时，rm命令报<code>No space left on device</code>错误</li>
+<li>单线程删除文件时，日志中报<code>_send skipping beacon, heartbeat map not healthy</code></li>
+<li>多线程并发创建、删除测试和深目录层级测试待验证</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>经过功能测试、性能测试、稳定性测试和异常测试后，我们得出如下结论：</p>
+<ol>
+<li>cephfs是production ready的，能满足基本生产环境对文件存储的需求</li>
+<li>cephfs的主从MDS是稳定的</li>
+<li>cephfs的direct IO性能有限，分析后明确是cephfs kernel client的IO处理逻辑限制的</li>
+<li>cephfs是能跑满整个ceph cluster集群性能的</li>
+<li>默认的stripe模式下(stripe unit=4M, stripe count=1, object size=4M)，cephfs的性能就挺好</li>
+<li>受到cephfs client端的系统缓存影响，非direct IO的读写性能都会比较高，这个不具有太大参考意义</li>
+</ol>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/cephfs/" rel="tag"># cephfs</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/07/08/fs-testtool-filebench/" rel="next" title="filesystem测试工具之filebench">
+                <i class="fa fa-chevron-left"></i> filesystem测试工具之filebench
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/07/18/cephfs-io-hang-analysis/" rel="prev" title="Cephfs测试中IO hang问题分析">
+                Cephfs测试中IO hang问题分析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#cephfs简介"><span class="nav-number">1.</span> <span class="nav-text">cephfs简介</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#cephfs的架构"><span class="nav-number">1.1.</span> <span class="nav-text">cephfs的架构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用cephfs的两种方式"><span class="nav-number">1.2.</span> <span class="nav-text">使用cephfs的两种方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#client端访问cephfs的流程"><span class="nav-number">1.3.</span> <span class="nav-text">client端访问cephfs的流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#cephfs测试环境"><span class="nav-number">2.</span> <span class="nav-text">cephfs测试环境</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建mds"><span class="nav-number">3.</span> <span class="nav-text">创建mds</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建测试cephfs"><span class="nav-number">4.</span> <span class="nav-text">创建测试cephfs</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#cephfs测试"><span class="nav-number">5.</span> <span class="nav-text">cephfs测试</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#cephfs功能测试"><span class="nav-number">5.1.</span> <span class="nav-text">cephfs功能测试</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#手动模式"><span class="nav-number">5.1.1.</span> <span class="nav-text">手动模式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#自动测试工具"><span class="nav-number">5.1.2.</span> <span class="nav-text">自动测试工具</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#结论"><span class="nav-number">5.1.3.</span> <span class="nav-text">结论</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cephfs性能测试"><span class="nav-number">5.2.</span> <span class="nav-text">cephfs性能测试</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#dd"><span class="nav-number">5.2.1.</span> <span class="nav-text">dd</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#fio"><span class="nav-number">5.2.2.</span> <span class="nav-text">fio</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#iozone"><span class="nav-number">5.2.3.</span> <span class="nav-text">iozone</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#filebench"><span class="nav-number">5.2.4.</span> <span class="nav-text">filebench</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#结论-1"><span class="nav-number">5.2.5.</span> <span class="nav-text">结论</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cephfs稳定性测试"><span class="nav-number">5.3.</span> <span class="nav-text">cephfs稳定性测试</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#读写数据模式"><span class="nav-number">5.3.1.</span> <span class="nav-text">读写数据模式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#读写元数据模式"><span class="nav-number">5.3.2.</span> <span class="nav-text">读写元数据模式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#结论-2"><span class="nav-number">5.3.3.</span> <span class="nav-text">结论</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cephfs异常测试"><span class="nav-number">5.4.</span> <span class="nav-text">cephfs异常测试</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#测试分类"><span class="nav-number">5.4.1.</span> <span class="nav-text">测试分类</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#测试结果"><span class="nav-number">5.4.2.</span> <span class="nav-text">测试结果</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#结论-3"><span class="nav-number">5.4.3.</span> <span class="nav-text">结论</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#问题"><span class="nav-number">6.</span> <span class="nav-text">问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#cephfs配置较大stripe-unit的问题"><span class="nav-number">6.1.</span> <span class="nav-text">cephfs配置较大stripe unit的问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cephfs读写上亿级文件"><span class="nav-number">6.2.</span> <span class="nav-text">cephfs读写上亿级文件</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">7.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.ictfox.cn/2017/07/16/cephfs-test-method-lite/';
+          this.page.identifier = '2017/07/16/cephfs-test-method-lite/';
+          this.page.title = 'cephfs的测试简报';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

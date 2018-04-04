@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,rbd,cephfs," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="概述在测试cephfs的性能中，发现其direct IO性能较差，而rbd的direct IO性能就较好，很奇怪为什么，这里做测试对比和分析 性能测试rbd设备12345678# rbd create test -p cephfs_data3 --size=1024# rbd feature disable cephfs_data3/test exclusive-lock, object-map,">
+<meta name="keywords" content="ceph,rbd,cephfs">
+<meta property="og:type" content="article">
+<meta property="og:title" content="cephfs与rbd的direct IO测试分析">
+<meta property="og:url" content="http://www.ictfox.cn/2017/06/26/cephfs-dd-direct-io-tst-analysis/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述在测试cephfs的性能中，发现其direct IO性能较差，而rbd的direct IO性能就较好，很奇怪为什么，这里做测试对比和分析 性能测试rbd设备12345678# rbd create test -p cephfs_data3 --size=1024# rbd feature disable cephfs_data3/test exclusive-lock, object-map,">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.ictfox.cn/images/rbd-dd-io-flow.jpg">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.367Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="cephfs与rbd的direct IO测试分析">
+<meta name="twitter:description" content="概述在测试cephfs的性能中，发现其direct IO性能较差，而rbd的direct IO性能就较好，很奇怪为什么，这里做测试对比和分析 性能测试rbd设备12345678# rbd create test -p cephfs_data3 --size=1024# rbd feature disable cephfs_data3/test exclusive-lock, object-map,">
+<meta name="twitter:image" content="http://www.ictfox.cn/images/rbd-dd-io-flow.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.ictfox.cn/2017/06/26/cephfs-dd-direct-io-tst-analysis/"/>
+
+
+
+
+
+  <title>cephfs与rbd的direct IO测试分析 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/06/26/cephfs-dd-direct-io-tst-analysis/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">cephfs与rbd的direct IO测试分析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-06-26T18:31:17+08:00">
+                2017-06-26
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/06/26/cephfs-dd-direct-io-tst-analysis/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/06/26/cephfs-dd-direct-io-tst-analysis/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在测试cephfs的性能中，发现其direct IO性能较差，而rbd的direct IO性能就较好，很奇怪为什么，这里做测试对比和分析</p>
+<h2 id="性能测试"><a href="#性能测试" class="headerlink" title="性能测试"></a>性能测试</h2><h3 id="rbd设备"><a href="#rbd设备" class="headerlink" title="rbd设备"></a>rbd设备</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rbd create test -p cephfs_data3 --size=1024</span></span><br><span class="line"><span class="comment"># rbd feature disable cephfs_data3/test exclusive-lock, object-map, fast-diff, deep-flatten</span></span><br><span class="line"><span class="comment"># rbd map cephfs_data3/test</span></span><br><span class="line"> </span><br><span class="line"><span class="comment"># dd if=/dev/zero of=/dev/rbd0 bs=1024M count=1 oflag=direct</span></span><br><span class="line">1+0 records <span class="keyword">in</span></span><br><span class="line">1+0 records out</span><br><span class="line">1073741824 bytes (1.1 GB) copied, 1.72135 s, 624 MB/s</span><br></pre></td></tr></table></figure>
+<h3 id="cephfs"><a href="#cephfs" class="headerlink" title="cephfs"></a>cephfs</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph 10.10.2.1:6789:/foo mike -o name=foo,secret=AQCddEtZC8n5KRAAPw5qd3BWLzlgqiEuRR5AYg==</span></span><br><span class="line"><span class="comment"># cd mike/</span></span><br><span class="line"><span class="comment"># dd if=/dev/zero of=file bs=1024M count=1 oflag=direct</span></span><br><span class="line">1+0 records <span class="keyword">in</span></span><br><span class="line">1+0 records out</span><br><span class="line">1073741824 bytes (1.1 GB) copied, 7.31779 s, 147 MB/s</span><br></pre></td></tr></table></figure>
+<p>结论：为什么对于direct IO，rbd与cephfs的差别这么大？ </p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><h3 id="cephfs-1"><a href="#cephfs-1" class="headerlink" title="cephfs"></a>cephfs</h3><h4 id="代码分析"><a href="#代码分析" class="headerlink" title="代码分析"></a>代码分析</h4><p>cephfs client端写操作接口：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> <span class="title">ceph_file_fops</span> = &#123;</span>    <span class="comment">// cephfs中文件的file操作集</span></span><br><span class="line">    .open = ceph_open,</span><br><span class="line">    .release = ceph_release,</span><br><span class="line">    .llseek = ceph_llseek,</span><br><span class="line">    .read_iter = ceph_read_iter,</span><br><span class="line">    .write_iter = ceph_write_iter,</span><br><span class="line">    .mmap = ceph_mmap,</span><br><span class="line">    .fsync = ceph_fsync,</span><br><span class="line">    .lock = ceph_lock,</span><br><span class="line">    .flock = ceph_flock,</span><br><span class="line">    .splice_read = generic_file_splice_read,</span><br><span class="line">    .splice_write = iter_file_splice_write,</span><br><span class="line">    .unlocked_ioctl = ceph_ioctl,</span><br><span class="line">    .compat_ioctl   = ceph_ioctl,</span><br><span class="line">    .fallocate  = ceph_fallocate,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>针对direct IO的处理过程如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> ssize_t <span class="title">ceph_write_iter</span><span class="params">(struct kiocb *iocb, struct iov_iter *from)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">...</span><br><span class="line">        <span class="keyword">if</span> (iocb-&gt;ki_flags &amp; IOCB_DIRECT)</span><br><span class="line">            written = ceph_direct_read_write(iocb, &amp;data, snapc,        <span class="comment">// direct IO处理函数</span></span><br><span class="line">                             &amp;prealloc_cf);</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">            written = ceph_sync_write(iocb, &amp;data, pos, snapc);</span><br><span class="line">...</span><br><span class="line">&#125;</span><br><span class="line">  </span><br><span class="line"><span class="keyword">static</span> <span class="keyword">ssize_t</span></span><br><span class="line">ceph_direct_read_write(struct kiocb *iocb, struct iov_iter *iter,</span><br><span class="line">               struct ceph_snap_context *snapc,</span><br><span class="line">               struct ceph_cap_flush **pcf)</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">    <span class="keyword">while</span> (iov_iter_count(iter) &gt; <span class="number">0</span>) &#123;                                   <span class="comment">// 循环发送数据</span></span><br><span class="line">...</span><br><span class="line">        req = ceph_osdc_new_request(&amp;fsc-&gt;client-&gt;osdc, &amp;ci-&gt;i_layout, <span class="comment">// 初始化osd request</span></span><br><span class="line">                        vino, pos, &amp;size, <span class="number">0</span>,</span><br><span class="line">                        <span class="comment">/*include a 'startsync' command*/</span></span><br><span class="line">                        write ? <span class="number">2</span> : <span class="number">1</span>,</span><br><span class="line">                        write ? CEPH_OSD_OP_WRITE :</span><br><span class="line">                            CEPH_OSD_OP_READ,</span><br><span class="line">                        flags, snapc,</span><br><span class="line">                        ci-&gt;i_truncate_seq,</span><br><span class="line">                        ci-&gt;i_truncate_size,</span><br><span class="line">                        <span class="literal">false</span>);</span><br><span class="line">...</span><br><span class="line">        ret = ceph_osdc_start_request(req-&gt;r_osdc, req, <span class="literal">false</span>);          <span class="comment">// 发送osd request写数据</span></span><br><span class="line">        <span class="keyword">if</span> (!ret)</span><br><span class="line">            ret = ceph_osdc_wait_request(&amp;fsc-&gt;client-&gt;osdc, req);        <span class="comment">// 等待osd request写返回</span></span><br><span class="line">...</span><br><span class="line">    &#125;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>所以从上面的逻辑看：cephfs写direct IO是会被切分为一个个写osd的request，顺序的每个osd request都会等待写成功返回。这样就无法发挥出分布式集群的整体性能，所以cephfs的direct IO写性能较低。</p>
+<h4 id="测试验证"><a href="#测试验证" class="headerlink" title="测试验证"></a>测试验证</h4><p>按照 <a href="http://www.yangguanjun.com/2017/06/08/cephfs-client-debug/" target="_blank" rel="noopener">cephfs kernel client debug</a> 方法 打开cephfs client端的log，测试一个12M的direct IO；</p>
+<p>命令：<code>dd if=/dev/zero of=file bs=12M count=1 oflag=direct</code></p>
+<p>log信息：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">[260262.367080] aio_write ffff8801f403b418 10000002393.fffffffffffffffe 0~12582912 getting caps. i_size 0</span><br><span class="line">[260262.367085] aio_write ffff8801f403b418 10000002393.fffffffffffffffe 0~12582912 got <span class="built_in">cap</span> refs on Fwb  // get caps花了5us</span><br><span class="line">[260262.367086] sync_direct_read_write (write) on file ffff88142f83ba00 0~12582912</span><br><span class="line"> </span><br><span class="line">// 第一个osd写4M</span><br><span class="line">[260262.367092] ceph_osdc_alloc_request req ffff881257eb8000</span><br><span class="line">[260262.367173] ----- ffff88142f83a200 to osd23 42=osd_op len 201+0+4194304 ——</span><br><span class="line">[260262.367177] wait_request_timeout req ffff881257eb8000 tid 4</span><br><span class="line">[260262.394196] ===== ffff88142f83b400 4 from osd23 43=osd_opreply len 182+0 (1765759831 0 0) =====</span><br><span class="line"> </span><br><span class="line">// 第二个osd写4M</span><br><span class="line">[260262.394264] ceph_osdc_alloc_request req ffff881257eb8000</span><br><span class="line">[260262.394379] ----- ffff88142f83b400 to osd3 42=osd_op len 201+0+4194304 ——</span><br><span class="line">[260262.394380] wait_request_timeout req ffff881257eb8000 tid 5</span><br><span class="line">[260262.433310] ===== ffff88142f83be00 1 from osd3 43=osd_opreply len 182+0 (93139192 0 0) =====</span><br><span class="line"> </span><br><span class="line">// 第三个osd写4M</span><br><span class="line">[260262.433426] ceph_osdc_alloc_request req ffff881257eb8000</span><br><span class="line">[260262.433534] ----- ffff88142f83a200 to osd26 42=osd_op len 201+0+4194304 ——</span><br><span class="line">[260262.433535] wait_request_timeout req ffff881257eb8000 tid 6</span><br><span class="line">[260262.464063] ===== ffff88142f83b700 1 from osd26 43=osd_opreply len 182+0 (3847263551 0 0) =====</span><br><span class="line"> </span><br><span class="line">[260262.464151] aio_write ffff8801f403b418 10000002393.fffffffffffffffe 0~12582912  dropping <span class="built_in">cap</span> refs on Fwb</span><br></pre></td></tr></table></figure>
+<h4 id="测试增大object-size"><a href="#测试增大object-size" class="headerlink" title="测试增大object size"></a>测试增大object size</h4><p>增大cephfs中file对应的object size和stripe unit都为64M，然后测试性能</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># touch file</span></span><br><span class="line"><span class="comment"># setfattr -n ceph.file.layout.object_size -v 67108864 file</span></span><br><span class="line"><span class="comment"># setfattr -n ceph.file.layout.stripe_unit -v 67108864 file</span></span><br><span class="line"><span class="comment"># getfattr -n ceph.file.layout file</span></span><br><span class="line"><span class="comment"># file: file</span></span><br><span class="line">ceph.file.layout=<span class="string">"stripe_unit=67108864 stripe_count=1 object_size=67108864 pool=cephfs_data"</span></span><br><span class="line"> </span><br><span class="line"><span class="comment"># dd if=/dev/zero of=file bs=1024M count=1 oflag=direct</span></span><br><span class="line">1+0 records <span class="keyword">in</span></span><br><span class="line">1+0 records out</span><br><span class="line">1073741824 bytes (1.1 GB) copied, 6.77491 s, 158 MB/s</span><br></pre></td></tr></table></figure>
+<p>测试性能发现，对比4M的object size和stripe unit，性能并没有提升。</p>
+<h4 id="分析osd端的op时间开销"><a href="#分析osd端的op时间开销" class="headerlink" title="分析osd端的op时间开销"></a>分析osd端的op时间开销</h4><p>获取cephfs文件的数据的location信息：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cephfs file show_location</span></span><br><span class="line">WARNING: This tool is deprecated.  Use the layout.* xattrs to query and modify layouts.</span><br><span class="line">location.file_offset:  0</span><br><span class="line">location.object_offset:0</span><br><span class="line">location.object_no:    0</span><br><span class="line">location.object_size:  67108864</span><br><span class="line">location.object_name:  100000720de.00000000</span><br><span class="line">location.block_offset: 0</span><br><span class="line">location.block_size:   67108864</span><br><span class="line">location.osd:          25        // 数据存储在osd 25上</span><br></pre></td></tr></table></figure>
+<p>在osd 25上打开optracker：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">修改/etc/ceph/ceph.conf，在osd域添加下面两行：</span><br><span class="line">osd_enable_op_tracker = <span class="literal">true</span></span><br><span class="line">osd_op_history_size = 100</span><br><span class="line"></span><br><span class="line">然后重启osd服务</span><br><span class="line"><span class="comment"># systemctl restart ceph-osd@25.service</span></span><br></pre></td></tr></table></figure>
+<p>重新跑dd命令后，在osd端收集ops信息：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph daemon osd.25 dump_historic_ops</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"num to keep"</span>: 20,</span><br><span class="line">    <span class="string">"duration to keep"</span>: 600,</span><br><span class="line">    <span class="string">"Ops"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"osd_op(mds.0.75:987357 13.844f3494 200.00000000 [] snapc 0=[] ondisk+write+known_if_redirected+full_force e452)"</span>,  // mds操作</span><br><span class="line">            <span class="string">"initiated_at"</span>: <span class="string">"2017-06-27 09:55:39.196572"</span>,</span><br><span class="line">            <span class="string">"age"</span>: 8.391089,</span><br><span class="line">            <span class="string">"duration"</span>: 0.001696,   // 花费1ms</span><br><span class="line">            <span class="string">"type_data"</span>: [</span><br><span class="line">                <span class="string">"commit sent; apply or cleanup"</span>,</span><br><span class="line">                [</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.196572"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"initiated"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.196629"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"queued_for_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.196735"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"reached_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.196799"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"started"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.196861"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"waiting for subops from 1,18"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.196962"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"commit_queued_for_journal_write"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.197011"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"write_thread_in_journal_buffer"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.197206"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"journaled_completion_queued"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.197280"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"op_commit"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.197738"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"op_applied"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.198125"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"sub_op_commit_rec from 1"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.198225"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"sub_op_commit_rec from 18"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.198236"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"commit_sent"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.198268"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"done"</span></span><br><span class="line">                    &#125;</span><br><span class="line">                ]</span><br><span class="line">            ]</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"osd_op(mds.0.75:987359 9.a30e34e0 100000720de.00000000 [] snapc 1=[] ondisk+write+known_if_redirected+full_force e452)"</span>,  // mds操作</span><br><span class="line">            <span class="string">"initiated_at"</span>: <span class="string">"2017-06-27 09:55:39.200560"</span>,</span><br><span class="line">            <span class="string">"age"</span>: 8.387101,</span><br><span class="line">            <span class="string">"duration"</span>: 0.016664,   // 花费16ms</span><br><span class="line">            <span class="string">"type_data"</span>: [</span><br><span class="line">                <span class="string">"commit sent; apply or cleanup"</span>,</span><br><span class="line">                [</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.200560"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"initiated"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.200617"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"queued_for_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.200683"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"reached_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.200721"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"started"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.200813"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"waiting for subops from 7,15"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.200921"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"commit_queued_for_journal_write"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.200955"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"write_thread_in_journal_buffer"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.201047"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"journaled_completion_queued"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.201104"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"op_commit"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.201955"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"sub_op_commit_rec from 15"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.202224"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"sub_op_commit_rec from 7"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.202231"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"commit_sent"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.217210"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"op_applied"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.217224"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"done"</span></span><br><span class="line">                    &#125;</span><br><span class="line">                ]</span><br><span class="line">            ]</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"osd_op(client.372486.1:1048 9.a30e34e0 100000720de.00000000 [] snapc 1=[] ondisk+write+ordersnap e452)"</span>,</span><br><span class="line">            <span class="string">"initiated_at"</span>: <span class="string">"2017-06-27 09:55:39.228517"</span>,</span><br><span class="line">            <span class="string">"age"</span>: 8.359144,</span><br><span class="line">            <span class="string">"duration"</span>: 0.450798,   // 花费450ms</span><br><span class="line">            <span class="string">"type_data"</span>: [</span><br><span class="line">                <span class="string">"commit sent; apply or cleanup"</span>,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"client"</span>: <span class="string">"client.372486"</span>,</span><br><span class="line">                    <span class="string">"tid"</span>: 1048</span><br><span class="line">                &#125;,</span><br><span class="line">                [</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.228517”,   // 收到请求，创建OpRequest</span></span><br><span class="line"><span class="string">                        "</span>event<span class="string">": "</span>initiated<span class="string">"</span></span><br><span class="line"><span class="string">                    &#125;,</span></span><br><span class="line"><span class="string">                    &#123;</span></span><br><span class="line"><span class="string">                        "</span>time<span class="string">": "</span>2017-06-27 09:55:39.345624”,   // 花费117ms，simple messager，接收64MB数据的时延</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"queued_for_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.345691"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"reached_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.345738"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"started"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.348961"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"waiting for subops from 7,15"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.381379”,        // 花费33ms，- FileJournal::submit_entry 这部分的延时应该是reserve filestore throttle等待的时间</span></span><br><span class="line"><span class="string">                        "</span>event<span class="string">": "</span>commit_queued_for_journal_write<span class="string">"</span></span><br><span class="line"><span class="string">                    &#125;,</span></span><br><span class="line"><span class="string">                    &#123;</span></span><br><span class="line"><span class="string">                        "</span>time<span class="string">": "</span>2017-06-27 09:55:39.381441<span class="string">",</span></span><br><span class="line"><span class="string">                        "</span>event<span class="string">": "</span>write_thread_in_journal_buffer<span class="string">"</span></span><br><span class="line"><span class="string">                    &#125;,</span></span><br><span class="line"><span class="string">                    &#123;</span></span><br><span class="line"><span class="string">                        "</span>time<span class="string">": "</span>2017-06-27 09:55:39.524101”,        // 花费43ms，这部分延时是写journal的花费时间</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"journaled_completion_queued"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.524162”,        // commit到journal成功</span></span><br><span class="line"><span class="string">                        "</span>event<span class="string">": "</span>op_commit<span class="string">"</span></span><br><span class="line"><span class="string">                    &#125;,</span></span><br><span class="line"><span class="string">                    &#123;</span></span><br><span class="line"><span class="string">                        "</span>time<span class="string">": "</span>2017-06-27 09:55:39.570412”,        // 花费46ms，apply到filestore成功</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"op_applied"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.658194"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"sub_op_commit_rec from 7"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.679285”,        // sub从发送到收到reply花费约330ms，subop commit返回</span></span><br><span class="line"><span class="string">                        "</span>event<span class="string">": "</span>sub_op_commit_rec from 15<span class="string">"</span></span><br><span class="line"><span class="string">                    &#125;,</span></span><br><span class="line"><span class="string">                    &#123;</span></span><br><span class="line"><span class="string">                        "</span>time<span class="string">": "</span>2017-06-27 09:55:39.679298”,        // 返回给客户端</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"commit_sent"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.679315"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"done"</span></span><br><span class="line">                    &#125;</span><br><span class="line">                ]</span><br><span class="line">            ]</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>结论：</strong><br>大的object size写，在osd这段处理时间很长，从 <code>simple messager -&gt; pg -&gt; journal -&gt; filestore</code> 每一步都是串行的，单<code>simple messager</code>接受64M的数据就花费了117ms（10G网络），所以性能比较低，很难提升；</p>
+<h3 id="rbd设备-1"><a href="#rbd设备-1" class="headerlink" title="rbd设备"></a>rbd设备</h3><h4 id="rbd到object的映射"><a href="#rbd到object的映射" class="headerlink" title="rbd到object的映射"></a>rbd到object的映射</h4><p>创建一个object size为32M的rbd设备</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rbd create foxtst -p cephfs_data3 --size=1024 --object-size 32M</span></span><br><span class="line"><span class="comment"># rbd feature disable cephfs_data3/foxtst exclusive-lock, object-map, fast-diff, deep-flatten</span></span><br><span class="line"><span class="comment"># rbd map cephfs_data3/foxtst</span></span><br><span class="line">/dev/rbd0</span><br></pre></td></tr></table></figure>
+<p>先写64M数据到该rbd设备</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># dd if=/dev/zero of=/dev/rbd0 bs=64M count=1 oflag=direct</span></span><br></pre></td></tr></table></figure>
+<p>获取rbd设备的id</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rados -p cephfs_data3 get rbd_id.foxtst myfile</span></span><br><span class="line"><span class="comment"># cat myfile</span></span><br><span class="line">56092238e1f29</span><br></pre></td></tr></table></figure>
+<p>找到rbd设备对应的rados object，这里我们就写了64M数据，所以就能找到两个32M的objects</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rados ls -p cephfs_data3 | grep 56092238e1f29</span></span><br><span class="line">rbd_data.56092238e1f29.0000000000000001</span><br><span class="line">rbd_header.56092238e1f29</span><br><span class="line">rbd_data.56092238e1f29.0000000000000000</span><br></pre></td></tr></table></figure>
+<p>找到上述两个object的location</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph osd map cephfs_data3 rbd_data.56092238e1f29.0000000000000000</span></span><br><span class="line">osdmap e467 pool <span class="string">'cephfs_data3'</span> (15) object <span class="string">'rbd_data.56092238e1f29.0000000000000000'</span> -&gt; pg 15.47ba6daa (15.1aa) -&gt; up ([21,14,2], p21) acting ([21,14,2], p21)</span><br><span class="line"><span class="comment"># ceph osd map cephfs_data3 rbd_data.56092238e1f29.0000000000000001</span></span><br><span class="line">osdmap e467 pool <span class="string">'cephfs_data3'</span> (15) object <span class="string">'rbd_data.56092238e1f29.0000000000000001'</span> -&gt; pg 15.46295241 (15.41) -&gt; up ([4,23,13], p4) acting ([4,23,13], p4)</span><br></pre></td></tr></table></figure>
+<h4 id="性能测试-1"><a href="#性能测试-1" class="headerlink" title="性能测试"></a>性能测试</h4><p>在对应osd节点上打开op tracker后，开始测试</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># dd if=/dev/zero of=/dev/rbd0 bs=64M count=1 oflag=direct</span></span><br></pre></td></tr></table></figure>
+<p>在对应的osd节点上收集ops信息：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph daemon osd.21 dump_historic_ops &gt; osd-21-dump_historic_ops</span></span><br><span class="line"><span class="comment"># ceph daemon osd.4 dump_historic_ops &gt; osd-4-dump_historic_ops</span></span><br></pre></td></tr></table></figure>
+<p><strong>分析这些ops信息可以得到以下结果：</strong></p>
+<ol>
+<li>写单个32M object会拆分很多个ops，拆分规则与device的max_sectors_kb配置有关系，默认这个值为：512</li>
+<li>写单个32M object的ops会顺序发给osd，但不是等待一个op返回后再发下一个</li>
+<li>写单个32M object的ops是流水线的处理模式；<code>simple messager -&gt; pg -&gt; journal -&gt; filestore</code>，所以这样处理多个小请求的效率更高，不会有cephfs中大object写会在simple messager里等待数据都全部接受后再走下一步的问题</li>
+<li>写两个32M object的ops是并行的，因为这里指定的bs=64M，对应到两个不同的osd上，不同osd上的ops没先后关系 </li>
+</ol>
+<p>如下图所示：<br><img src="/images/rbd-dd-io-flow.jpg" alt="rbd-dd-io-flow"></p>
+<p>所以rbd设备的direct IO写的性能随着bs的增大是逐渐提高的。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/rbd/" rel="tag"># rbd</a>
+          
+            <a href="/tags/cephfs/" rel="tag"># cephfs</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/06/15/cephfs-stripe/" rel="next" title="cephfs的stripe配置">
+                <i class="fa fa-chevron-left"></i> cephfs的stripe配置
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/07/01/cephfs-client-authentication/" rel="prev" title="cephfs开启client端认证">
+                cephfs开启client端认证 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#性能测试"><span class="nav-number">2.</span> <span class="nav-text">性能测试</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#rbd设备"><span class="nav-number">2.1.</span> <span class="nav-text">rbd设备</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cephfs"><span class="nav-number">2.2.</span> <span class="nav-text">cephfs</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#分析"><span class="nav-number">3.</span> <span class="nav-text">分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#cephfs-1"><span class="nav-number">3.1.</span> <span class="nav-text">cephfs</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#代码分析"><span class="nav-number">3.1.1.</span> <span class="nav-text">代码分析</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#测试验证"><span class="nav-number">3.1.2.</span> <span class="nav-text">测试验证</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#测试增大object-size"><span class="nav-number">3.1.3.</span> <span class="nav-text">测试增大object size</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#分析osd端的op时间开销"><span class="nav-number">3.1.4.</span> <span class="nav-text">分析osd端的op时间开销</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#rbd设备-1"><span class="nav-number">3.2.</span> <span class="nav-text">rbd设备</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#rbd到object的映射"><span class="nav-number">3.2.1.</span> <span class="nav-text">rbd到object的映射</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#性能测试-1"><span class="nav-number">3.2.2.</span> <span class="nav-text">性能测试</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.ictfox.cn/2017/06/26/cephfs-dd-direct-io-tst-analysis/';
+          this.page.identifier = '2017/06/26/cephfs-dd-direct-io-tst-analysis/';
+          this.page.title = 'cephfs与rbd的direct IO测试分析';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

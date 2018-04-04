@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="backup,multisite," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="概述在金融行业 ，特别是银行业，对数据的安全性要求特别高，对业务的连续性也是一样。传统的单数据中心模式和同城双中心的高可用模式也不能满足其需求，于是就诞生了最新的一种超高可用架构 - 两地三中心。 两地三中心，两地是指同城、异地，三中心是指生产中心、同城容灾中心、异地容灾中心。充分结合了同城的距离优势和异地的灾备优势，提供了超高可用的服务架构，模式如下图： 友商提供服务的友商有: 阿里云，腾讯云，">
+<meta name="keywords" content="backup,multisite">
+<meta property="og:type" content="article">
+<meta property="og:title" content="金融云存储灾备之两地三中心">
+<meta property="og:url" content="http://www.ictfox.cn/2017/09/12/storage-backup-multisite/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述在金融行业 ，特别是银行业，对数据的安全性要求特别高，对业务的连续性也是一样。传统的单数据中心模式和同城双中心的高可用模式也不能满足其需求，于是就诞生了最新的一种超高可用架构 - 两地三中心。 两地三中心，两地是指同城、异地，三中心是指生产中心、同城容灾中心、异地容灾中心。充分结合了同城的距离优势和异地的灾备优势，提供了超高可用的服务架构，模式如下图： 友商提供服务的友商有: 阿里云，腾讯云，">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.ictfox.cn/images/storage-backup-multisite-arch.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/storage-backup-mutisite-aliyun-bank-arch.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/storage-backup-mutisite-qcloud-bank-arch.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/storage-backup-mutisite-qcloud-bank-sql.jpg">
+<meta property="og:image" content="http://www.ictfox.cn/images/storage-backup-mutisite-baidu-bank-arch.jpg">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.373Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="金融云存储灾备之两地三中心">
+<meta name="twitter:description" content="概述在金融行业 ，特别是银行业，对数据的安全性要求特别高，对业务的连续性也是一样。传统的单数据中心模式和同城双中心的高可用模式也不能满足其需求，于是就诞生了最新的一种超高可用架构 - 两地三中心。 两地三中心，两地是指同城、异地，三中心是指生产中心、同城容灾中心、异地容灾中心。充分结合了同城的距离优势和异地的灾备优势，提供了超高可用的服务架构，模式如下图： 友商提供服务的友商有: 阿里云，腾讯云，">
+<meta name="twitter:image" content="http://www.ictfox.cn/images/storage-backup-multisite-arch.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.ictfox.cn/2017/09/12/storage-backup-multisite/"/>
+
+
+
+
+
+  <title>金融云存储灾备之两地三中心 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/09/12/storage-backup-multisite/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">金融云存储灾备之两地三中心</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-09-12T09:41:17+08:00">
+                2017-09-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/storage/" itemprop="url" rel="index">
+                    <span itemprop="name">storage</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/09/12/storage-backup-multisite/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/09/12/storage-backup-multisite/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在金融行业 ，特别是银行业，对数据的安全性要求特别高，对业务的连续性也是一样。传统的单数据中心模式和同城双中心的高可用模式也不能满足其需求，于是就诞生了最新的一种超高可用架构 - <code>两地三中心</code>。</p>
+<p><code>两地三中心</code>，两地是指同城、异地，三中心是指生产中心、同城容灾中心、异地容灾中心。充分结合了同城的距离优势和异地的灾备优势，提供了超高可用的服务架构，模式如下图：<br><img src="/images/storage-backup-multisite-arch.jpg" alt="multisite arch"></p>
+<h2 id="友商"><a href="#友商" class="headerlink" title="友商"></a>友商</h2><p>提供服务的友商有: 阿里云，腾讯云，百度云</p>
+<h2 id="产品功能"><a href="#产品功能" class="headerlink" title="产品功能"></a>产品功能</h2><ol>
+<li>前端负载均衡</li>
+<li>同城双活</li>
+<li>同城数据中心实时同步</li>
+<li>异地数据中心异步复制</li>
+<li>VPN专线</li>
+<li>物理机独享</li>
+</ol>
+<h2 id="友商实现"><a href="#友商实现" class="headerlink" title="友商实现"></a>友商实现</h2><p>金融云方面，友商提供了很多解决方案，一般都采用独立的机房集群，与公有云物理隔离，且满足一行三会金融监管要求。</p>
+<h3 id="阿里云"><a href="#阿里云" class="headerlink" title="阿里云"></a>阿里云</h3><h4 id="金融云解决方案"><a href="#金融云解决方案" class="headerlink" title="金融云解决方案"></a>金融云解决方案</h4><p>为新金融行业提供量身定制的云计算服务，具备低成本、高弹性、高可用、安全合规的特性。帮助金融客户实现从传统IT向云计算的转型，为客户提供完整的“云.端.数”的能力。</p>
+<p>链接：<a href="https://www.aliyun.com/solution/finance" target="_blank" rel="noopener">https://www.aliyun.com/solution/finance</a></p>
+<h4 id="金融云专属产品"><a href="#金融云专属产品" class="headerlink" title="金融云专属产品"></a>金融云专属产品</h4><ol>
+<li><p>云服务器ECS - 专属物理集群，高级安全服务，高质量IO保障，高品质客户服务</p>
+<ul>
+<li>更高规格SLA保障，可用性为99.95%，可靠性达到99.9999%</li>
+<li>IO性能保障，采用更可靠宽裕的资源分配机制</li>
+<li>对外端口检测，默认不开放互联网访问端口</li>
+<li>图形化安全组配置工具，方便用户操作，提升安全级别</li>
+</ul>
+</li>
+<li><p>云数据库RDS - 专属物理集群，异地灾备服务，高级备份和回滚服务</p>
+<ul>
+<li>更高规格SLA保障，可用性99.97%，可靠性达99.999999%</li>
+<li>数据更加安全，支持SQL Server 2008R2和MySQL5.5、5.6，使用强同步模式确保数据安全性</li>
+<li>主备双中心和异地灾备，同城双中心，异地单向数据复制功能</li>
+<li>高级备份和回滚策略，默认备份时间为30天，支持自定义数据备份时间</li>
+</ul>
+</li>
+</ol>
+<h4 id="银行架构部署图"><a href="#银行架构部署图" class="headerlink" title="银行架构部署图"></a>银行架构部署图</h4><p><img src="/images/storage-backup-mutisite-aliyun-bank-arch.jpg" alt="aliyun bank arch"></p>
+<blockquote>
+<p>==<strong>数据库</strong>== 实现主备数据同步，==<strong>数据传输</strong>== 实现文件同步</p>
+</blockquote>
+<p>链接： <a href="https://www.aliyun.com/solution/finance/bank.html" target="_blank" rel="noopener">https://www.aliyun.com/solution/finance/bank.html</a></p>
+<h4 id="使用产品"><a href="#使用产品" class="headerlink" title="使用产品"></a>使用产品</h4><ol>
+<li>云服务器</li>
+<li>负载均衡</li>
+<li>云数据库</li>
+<li>对象存储</li>
+<li>云监控</li>
+<li>数据传输</li>
+</ol>
+<p><strong>金融云数据库</strong></p>
+<p>MySQL 金融版 是一款具有金融级强一致性，高可靠性，能跨机房部署的增强型MySQL数据库集群，是阿里云关系型数据库的升级版本，面向对数据一致性、高可用、高安全性有强烈要求的高端企业用户。<br>链接：<a href="https://www.aliyun.com/product/mysqlenterprise" target="_blank" rel="noopener">https://www.aliyun.com/product/mysqlenterprise</a></p>
+<p><strong>数据传输服务</strong></p>
+<p>数据传输(Data Transmission)是阿里云提供的一种支持RDBMS(关系型数据库)、NoSQL、OLAP等多种数据源之间数据交互的数据服务。它提供了数据迁移、实时数据订阅及数据实时同步等多种数据传输能力。通过数据传输可实现不停服数据迁移、数据异地灾备、跨境数据同步、缓存更新策略等多种业务应用场景，助您构建安全、可扩展、高可用的数据架构。<br>链接：<a href="https://www.aliyun.com/product/dts" target="_blank" rel="noopener">https://www.aliyun.com/product/dts</a></p>
+<blockquote>
+<p>数据传输服务的描述里只写了数据库，没写支持文件同步，比较奇怪</p>
+</blockquote>
+<h3 id="腾讯云"><a href="#腾讯云" class="headerlink" title="腾讯云"></a>腾讯云</h3><h4 id="金融云解决方案-1"><a href="#金融云解决方案-1" class="headerlink" title="金融云解决方案"></a>金融云解决方案</h4><p>全系列云计算产品，为您实施高可用的业务容灾架构，随心打造。</p>
+<p>链接：<a href="https://www.qcloud.com/solution/finance" target="_blank" rel="noopener">https://www.qcloud.com/solution/finance</a></p>
+<h4 id="金融云专属产品-1"><a href="#金融云专属产品-1" class="headerlink" title="金融云专属产品"></a>金融云专属产品</h4><ol>
+<li>专用宿主机 - 支持独享宿主机资源，灵活自主规划，避免资源竞争</li>
+<li>金融大数据 - 独享大数据分析平台，提供精准个性化用户分析报告</li>
+<li>金融数据库 - 兼容Mysql，数据强一致、异地自动同步、万级QPS高性能、自动扩容、灵活智能恢复</li>
+<li>金融安全 - 专享攻击防护能力以及协同防御方案，保障金融业务安全</li>
+</ol>
+<h4 id="银行架构部署图-1"><a href="#银行架构部署图-1" class="headerlink" title="银行架构部署图"></a>银行架构部署图</h4><p><img src="/images/storage-backup-mutisite-qcloud-bank-arch.jpg" alt="qcloud bank arch"></p>
+<p>链接：<a href="https://www.qcloud.com/solution/solutionSubpage/finance-bank" target="_blank" rel="noopener">https://www.qcloud.com/solution/solutionSubpage/finance-bank</a></p>
+<p><strong>基于云的同城业务双活，两地三中心</strong></p>
+<p>在腾讯云上构建的IT应用系统，可以利用腾讯云多地的合规机房和<code>分布式云数据库TDSQL</code>方便的建立同城业务双活、两地三中心的高可用架构应用。<br>两地三中心灾备部署架构如下图所示。<code>TDSQL云数据库</code>提供金融级的容灾架构支持两地三中心部署结构（异地节点直线距离一般大于100km），数据库的所有组件全部实现跨机房、跨地域部署。<br>在同城的生产中心和灾备中心之间，<code>TDSQL</code>实现数据实时同步；生产中心与异地灾备中心之间实现异步数据复制。</p>
+<p><img src="/images/storage-backup-mutisite-qcloud-bank-sql.jpg" alt="qcloud bank arch"></p>
+<p>通过上述架构可以以较低的成本实现同城双活，数据异地自动备份，不依赖IOE架构，以低于商业数据库1/2的成本实现99.99999%的超高可靠性。在实际应用中，以腾讯计费为例，TDSQL云数据库承载的账户量超过100亿，每日请求超10亿，99.95%的请求在5ms以内响应。连续两年多的运营零中断、零数据误差。</p>
+<blockquote>
+<p>可以推断是通过 ==<strong>分布式云数据库TDSQL</strong>== 实现的灾备</p>
+</blockquote>
+<p><strong>云数据库 MariaDB</strong></p>
+<p>云数据库 MariaDB (又名 TDSQL) 是基于 MariaDB 内核高度兼容 MySQL 的关系数据库，同时具有商用数据库的高安全性、可用性和开源数据库的低成本，主要应用于企业级服务场景；您只需付出商用数据库的 1/10 费用，即可拥有商用数据库的安全性、数据一致性和可靠性。</p>
+<table>
+<thead>
+<tr>
+<th>产品特性</th>
+<th>介绍</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据强一致性</td>
+<td>默认配置强同步复制</td>
+</tr>
+<tr>
+<td>更高安全</td>
+<td>全面的安全防护</td>
+</tr>
+<tr>
+<td>更高可用性</td>
+<td>提供高于99.99%的可用性，透明的故障转移</td>
+</tr>
+<tr>
+<td>更高性能</td>
+<td>基于PCI-E SSD、强大IO性能</td>
+</tr>
+<tr>
+<td>与 MySQL 兼容</td>
+<td>高度兼容 MySQL5.5、5.6</td>
+</tr>
+</tbody>
+</table>
+<p>链接：<a href="https://www.qcloud.com/product/tdsql" target="_blank" rel="noopener">https://www.qcloud.com/product/tdsql</a></p>
+<h4 id="使用产品-1"><a href="#使用产品-1" class="headerlink" title="使用产品"></a>使用产品</h4><ol>
+<li>金融服务器/专用宿主机</li>
+<li>金融数据库</li>
+<li>金融大数据</li>
+<li>负载均衡</li>
+<li>私有网络</li>
+<li>对象存储</li>
+<li>云安全</li>
+<li>云监控</li>
+</ol>
+<h3 id="百度云"><a href="#百度云" class="headerlink" title="百度云"></a>百度云</h3><h4 id="金融云解决方案-2"><a href="#金融云解决方案-2" class="headerlink" title="金融云解决方案"></a>金融云解决方案</h4><p>百度金融云解决方案为银行、证券、保险及互联网金融行业提供安全可靠的IT基础设施、大数据分析、人工智能及百度生态支持等整体方案，为金融机构的效率提升及业务创新提供技术支撑</p>
+<p>链接：<a href="https://cloud.baidu.com/solution/finance.html" target="_blank" rel="noopener">https://cloud.baidu.com/solution/finance.html</a></p>
+<h4 id="金融云专属产品-2"><a href="#金融云专属产品-2" class="headerlink" title="金融云专属产品"></a>金融云专属产品</h4><ol>
+<li>专属资源池 - 独享的计算存储资源池</li>
+<li>安全体系</li>
+<li>VPN/专线 + VPC</li>
+<li>大数据分析 - 提供完整的大数据分析服务</li>
+<li>人工智能 - 人脸识别/文字识别</li>
+<li>容灾体系 - 同城多可用区及异地云机房，构建两地三中心容灾体系</li>
+</ol>
+<h4 id="银行架构部署图-2"><a href="#银行架构部署图-2" class="headerlink" title="银行架构部署图"></a>银行架构部署图</h4><p><img src="/images/storage-backup-mutisite-baidu-bank-arch.jpg" alt="baidu bank arch"></p>
+<blockquote>
+<p>可以看出图中画的只是 ==<strong>数据库</strong>== 的同步</p>
+</blockquote>
+<h4 id="使用产品-2"><a href="#使用产品-2" class="headerlink" title="使用产品"></a>使用产品</h4><ol>
+<li>应用服务器</li>
+<li>数据库</li>
+<li>负载均衡</li>
+<li>云安全</li>
+<li>云监控</li>
+<li>大数据分析服务</li>
+<li>人工智能服务</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>对比国内几家大的公有云厂商的金融云服务方案，可以得出<code>两地三中心</code>的数据灾备是其核心，其业务有可以拆分为：</p>
+<ol>
+<li>同城数据中心数据实时同步</li>
+<li>异地数据中心数据异步复制</li>
+</ol>
+<h3 id="同城数据实时同步"><a href="#同城数据实时同步" class="headerlink" title="同城数据实时同步"></a>同城数据实时同步</h3><p>同城数据中心之间一般都要求数据实时同步，RPO为0，RTO为秒级。</p>
+<p>上文提到的几种数据同步有：</p>
+<ol>
+<li><p>数据库实时同步</p>
+<p> 几家的解决方案里，都提到了<code>分布式数据库</code>，实现同城两个数据中心的数据强一致性，这个可以通过部署<code>分布式数据库</code>的实例分别在两个数据中心，然后配置<code>分布式数据库</code>为<code>实时同步</code>即可。</p>
+<p> 所以这里的关键为：<strong>实现<code>跨数据中心</code>的，<code>实时同步</code>的<code>分布式数据库</code></strong></p>
+</li>
+<li><p>主备文件同步</p>
+<p> 阿里云架构图里体现了通过<code>数据传输</code>服务实现文件同步，这个不是实时的。</p>
+</li>
+<li><p>对象存储同步</p>
+<p> 腾讯云架构图里体现了对象存储的数据同步，通过分析，这个也不是实时的。</p>
+</li>
+</ol>
+<h3 id="异地数据异步复制"><a href="#异地数据异步复制" class="headerlink" title="异地数据异步复制"></a>异地数据异步复制</h3><p>异地数据中心之间一般只要求数据异步复制即可，RPO为秒或分钟级，RTO为分钟级。</p>
+<p>上文提到的几种数据异步复制有：</p>
+<ol>
+<li><p>数据库异步复制</p>
+<p> 这个可以通过配置数据库的<code>主从关系</code>和<code>异步复制</code>即可。</p>
+</li>
+<li><p>文件异步复制</p>
+<p> 阿里云架构图里的文件异步复制是通过<code>数据传输</code>服务实现的。</p>
+</li>
+<li><p>对象存储异步复制</p>
+<p> 腾讯云架构图里体现了对象存储的异步复制，应该为内部实现。</p>
+</li>
+</ol>
+<h3 id="自研需求"><a href="#自研需求" class="headerlink" title="自研需求"></a>自研需求</h3><h4 id="分布式数据库"><a href="#分布式数据库" class="headerlink" title="分布式数据库"></a>分布式数据库</h4><p><strong>要求</strong><br>跨数据中心 + 实时同步  </p>
+<p><strong>自研</strong><br>参考阿里云和腾讯云，基于<code>MySQL</code>/<code>MariaDB</code>上，配置开发跨数据中心配置的数据库<br>难度：★★★★☆</p>
+<h4 id="文件同步"><a href="#文件同步" class="headerlink" title="文件同步"></a>文件同步</h4><p><strong>要求</strong><br>同城秒级，异地分钟级延迟  </p>
+<p><strong>建议</strong><br><code>rsync + inotify</code>实现  </p>
+<p><strong>分析</strong><br>文件同步的<code>rsync + inotify</code>方案，应用较多，比较成熟，难道不大。<br>难度：★★☆☆☆</p>
+<h4 id="对象存储同步"><a href="#对象存储同步" class="headerlink" title="对象存储同步"></a>对象存储同步</h4><p><strong>要求</strong><br>同城秒级，异地分钟级延迟  </p>
+<p><strong>自研</strong><br>Ceph Radosgw 支持跨区域的同步<br>难度：★★★☆☆</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/backup/" rel="tag"># backup</a>
+          
+            <a href="/tags/multisite/" rel="tag"># multisite</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/09/04/kubernetes-storage-confuse/" rel="next" title="kubernetes里存储概念的解疑">
+                <i class="fa fa-chevron-left"></i> kubernetes里存储概念的解疑
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/09/18/cephfs-knowledge-share-part2/" rel="prev" title="cephfs架构解读与测试分析-part2">
+                cephfs架构解读与测试分析-part2 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#友商"><span class="nav-number">2.</span> <span class="nav-text">友商</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#产品功能"><span class="nav-number">3.</span> <span class="nav-text">产品功能</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#友商实现"><span class="nav-number">4.</span> <span class="nav-text">友商实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#阿里云"><span class="nav-number">4.1.</span> <span class="nav-text">阿里云</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#金融云解决方案"><span class="nav-number">4.1.1.</span> <span class="nav-text">金融云解决方案</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#金融云专属产品"><span class="nav-number">4.1.2.</span> <span class="nav-text">金融云专属产品</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#银行架构部署图"><span class="nav-number">4.1.3.</span> <span class="nav-text">银行架构部署图</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#使用产品"><span class="nav-number">4.1.4.</span> <span class="nav-text">使用产品</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#腾讯云"><span class="nav-number">4.2.</span> <span class="nav-text">腾讯云</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#金融云解决方案-1"><span class="nav-number">4.2.1.</span> <span class="nav-text">金融云解决方案</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#金融云专属产品-1"><span class="nav-number">4.2.2.</span> <span class="nav-text">金融云专属产品</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#银行架构部署图-1"><span class="nav-number">4.2.3.</span> <span class="nav-text">银行架构部署图</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#使用产品-1"><span class="nav-number">4.2.4.</span> <span class="nav-text">使用产品</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#百度云"><span class="nav-number">4.3.</span> <span class="nav-text">百度云</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#金融云解决方案-2"><span class="nav-number">4.3.1.</span> <span class="nav-text">金融云解决方案</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#金融云专属产品-2"><span class="nav-number">4.3.2.</span> <span class="nav-text">金融云专属产品</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#银行架构部署图-2"><span class="nav-number">4.3.3.</span> <span class="nav-text">银行架构部署图</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#使用产品-2"><span class="nav-number">4.3.4.</span> <span class="nav-text">使用产品</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#同城数据实时同步"><span class="nav-number">5.1.</span> <span class="nav-text">同城数据实时同步</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#异地数据异步复制"><span class="nav-number">5.2.</span> <span class="nav-text">异地数据异步复制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#自研需求"><span class="nav-number">5.3.</span> <span class="nav-text">自研需求</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#分布式数据库"><span class="nav-number">5.3.1.</span> <span class="nav-text">分布式数据库</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#文件同步"><span class="nav-number">5.3.2.</span> <span class="nav-text">文件同步</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#对象存储同步"><span class="nav-number">5.3.3.</span> <span class="nav-text">对象存储同步</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.ictfox.cn/2017/09/12/storage-backup-multisite/';
+          this.page.identifier = '2017/09/12/storage-backup-multisite/';
+          this.page.title = '金融云存储灾备之两地三中心';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

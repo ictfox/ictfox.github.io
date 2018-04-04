@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,radosgw," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="概述通过Radosgw的Admin ops api，可以执行radosgw-admin对应的很多管理操作。 创建管理用户要通过Restful请求管理Radosgw，必须先创建一个管理账户，user自己制定，可以命名为admin，例如： 1radosgw-admin user create --uid=admin --display-name=admin 此时admin还仅仅是普通的权限，需要通过–">
+<meta name="keywords" content="ceph,radosgw">
+<meta property="og:type" content="article">
+<meta property="og:title" content="如何使用radosgw admin ops api?">
+<meta property="og:url" content="http://www.ictfox.cn/2016/08/29/rgw-admin-ops-api/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述通过Radosgw的Admin ops api，可以执行radosgw-admin对应的很多管理操作。 创建管理用户要通过Restful请求管理Radosgw，必须先创建一个管理账户，user自己制定，可以命名为admin，例如： 1radosgw-admin user create --uid=admin --display-name=admin 此时admin还仅仅是普通的权限，需要通过–">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.352Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="如何使用radosgw admin ops api?">
+<meta name="twitter:description" content="概述通过Radosgw的Admin ops api，可以执行radosgw-admin对应的很多管理操作。 创建管理用户要通过Restful请求管理Radosgw，必须先创建一个管理账户，user自己制定，可以命名为admin，例如： 1radosgw-admin user create --uid=admin --display-name=admin 此时admin还仅仅是普通的权限，需要通过–">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.ictfox.cn/2016/08/29/rgw-admin-ops-api/"/>
+
+
+
+
+
+  <title>如何使用radosgw admin ops api? | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2016/08/29/rgw-admin-ops-api/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">如何使用radosgw admin ops api?</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-08-29T10:31:21+08:00">
+                2016-08-29
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2016/08/29/rgw-admin-ops-api/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2016/08/29/rgw-admin-ops-api/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>通过Radosgw的Admin ops api，可以执行radosgw-admin对应的很多管理操作。</p>
+<h2 id="创建管理用户"><a href="#创建管理用户" class="headerlink" title="创建管理用户"></a>创建管理用户</h2><p>要通过Restful请求管理Radosgw，必须先创建一个管理账户，user自己制定，可以命名为admin，例如：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin user create --uid=admin --display-name=admin</span><br></pre></td></tr></table></figure>
+<p>此时admin还仅仅是普通的权限，需要通过–cap添加user的capabilities，例如：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin caps add --uid=admin --caps=<span class="string">"users=read, write"</span></span><br><span class="line">radosgw-admin caps add --uid=admin --caps=<span class="string">"usage=read, write"</span></span><br></pre></td></tr></table></figure>
+<h2 id="GET-USER-INFO"><a href="#GET-USER-INFO" class="headerlink" title="GET USER INFO"></a>GET USER INFO</h2><p>Get user information. If no user is specified returns the list of all users along with suspension information.</p>
+<table>
+<thead>
+<tr>
+<th>caps:</th>
+<th>users=read</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="SYNTAX"><a href="#SYNTAX" class="headerlink" title="SYNTAX"></a>SYNTAX</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">GET /&#123;admin&#125;/user?format=json HTTP/1.1</span><br><span class="line">Host: &#123;fqdn&#125;</span><br></pre></td></tr></table></figure>
+<p>比如上述的“GET USER INFO”的API，需要使用的{admin}用户有“users=read”的caps。</p>
+<h2 id="API示例"><a href="#API示例" class="headerlink" title="API示例"></a>API示例</h2><h3 id="创建user"><a href="#创建user" class="headerlink" title="创建user"></a>创建user</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">$ cat usercreate.sh</span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">token=5L65QDE4df8JJ8RM7MN5 <span class="comment">## USER_TOKEN</span></span><br><span class="line">secret=Y9HPiBCwLDeSMSaiQhmPT2h7NgNUndvLERhktnIZ <span class="comment">## USER_SECRET</span></span><br><span class="line">query=<span class="variable">$1</span></span><br><span class="line">name=<span class="variable">$2</span></span><br><span class="line"><span class="built_in">echo</span> <span class="variable">$query</span>, <span class="variable">$name</span></span><br><span class="line">query3=<span class="string">"&amp;uid="</span></span><br><span class="line">query2=admin/user</span><br><span class="line">date=$(<span class="keyword">for</span> i <span class="keyword">in</span> $(date <span class="string">"+%H"</span>) ; <span class="keyword">do</span> date <span class="string">"+%a, %d %b %Y <span class="variable">$(( 10#$i-8 )</span>):%M:%S +0000"</span> ; <span class="keyword">done</span>)</span><br><span class="line">header=<span class="string">"PUT\n\n\n<span class="variable">$&#123;date&#125;</span>\n/<span class="variable">$&#123;query2&#125;</span>"</span></span><br><span class="line">sig=$(<span class="built_in">echo</span> -en <span class="variable">$&#123;header&#125;</span> | openssl sha1 -hmac <span class="variable">$&#123;secret&#125;</span> -binary | base64)</span><br><span class="line">curl -v -H <span class="string">"Date: <span class="variable">$&#123;date&#125;</span>"</span> -H <span class="string">"Authorization: AWS <span class="variable">$&#123;token&#125;</span>:<span class="variable">$&#123;sig&#125;</span>"</span> -L -X PUT <span class="string">"http://&lt;your-host-ip&gt;/<span class="variable">$&#123;query2&#125;</span>?format=json<span class="variable">$&#123;query3&#125;</span><span class="variable">$&#123;query&#125;</span>&amp;display-name=<span class="variable">$&#123;name&#125;</span>"</span> -H <span class="string">"Host: &lt;your-host-ip&gt;"</span></span><br></pre></td></tr></table></figure>
+<h3 id="列出user-info"><a href="#列出user-info" class="headerlink" title="列出user info"></a>列出user info</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">$ cat userinfo.sh</span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">token=5L65QDE4238JJ8RM7MN5 <span class="comment">## USER_TOKEN</span></span><br><span class="line">secret=Y9HPiBCwLDeSMSaiQhmPT2h7NgNUnqVLERhktnIZ <span class="comment">## USER_SECRET</span></span><br><span class="line">query=<span class="variable">$1</span></span><br><span class="line">query3=<span class="string">"&amp;uid="</span></span><br><span class="line">query2=admin/user</span><br><span class="line">date=$(<span class="keyword">for</span> i <span class="keyword">in</span> $(date <span class="string">"+%H"</span>) ; <span class="keyword">do</span> date <span class="string">"+%a, %d %b %Y <span class="variable">$(( 10#$i-8 )</span>):%M:%S +0000"</span> ; <span class="keyword">done</span>)</span><br><span class="line">header=<span class="string">"GET\n\n\n<span class="variable">$&#123;date&#125;</span>\n/<span class="variable">$&#123;query2&#125;</span>"</span></span><br><span class="line">sig=$(<span class="built_in">echo</span> -en <span class="variable">$&#123;header&#125;</span> | openssl sha1 -hmac <span class="variable">$&#123;secret&#125;</span> -binary | base64)</span><br><span class="line">curl -v -H <span class="string">"Date: <span class="variable">$&#123;date&#125;</span>"</span> -H <span class="string">"Authorization: AWS <span class="variable">$&#123;token&#125;</span>:<span class="variable">$&#123;sig&#125;</span>"</span> -L -X GET <span class="string">"http://&lt;your-host-ip&gt;/<span class="variable">$&#123;query2&#125;</span>?format=json<span class="variable">$&#123;query3&#125;</span><span class="variable">$&#123;query&#125;</span>"</span> -H <span class="string">"Host: &lt;your-host-ip&gt;"</span></span><br></pre></td></tr></table></figure>
+<h3 id="删除user"><a href="#删除user" class="headerlink" title="删除user"></a>删除user</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">$ cat userdelete.sh</span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">token=5L65QDE4238JJ8RM7MN5 <span class="comment">## USER_TOKEN</span></span><br><span class="line">secret=Y9HPiBCwLDeSMSaiQhmPT2h7NgNUnqVLERhktnIZ <span class="comment">## USER_SECRET</span></span><br><span class="line">query=<span class="variable">$1</span></span><br><span class="line">query3=<span class="string">"&amp;uid="</span></span><br><span class="line">query2=admin/user</span><br><span class="line">date=$(<span class="keyword">for</span> i <span class="keyword">in</span> $(date <span class="string">"+%H"</span>) ; <span class="keyword">do</span> date <span class="string">"+%a, %d %b %Y <span class="variable">$(( 10#$i-8 )</span>):%M:%S +0000"</span> ; <span class="keyword">done</span>)</span><br><span class="line">header=<span class="string">"DELETE\n\n\n<span class="variable">$&#123;date&#125;</span>\n/<span class="variable">$&#123;query2&#125;</span>"</span></span><br><span class="line">sig=$(<span class="built_in">echo</span> -en <span class="variable">$&#123;header&#125;</span> | openssl sha1 -hmac <span class="variable">$&#123;secret&#125;</span> -binary | base64)</span><br><span class="line">curl -v -H <span class="string">"Date: <span class="variable">$&#123;date&#125;</span>"</span> -H <span class="string">"Authorization: AWS <span class="variable">$&#123;token&#125;</span>:<span class="variable">$&#123;sig&#125;</span>"</span> -L -X DELETE <span class="string">"http://&lt;your-host-ip&gt;/<span class="variable">$&#123;query2&#125;</span>?format=json<span class="variable">$&#123;query3&#125;</span><span class="variable">$&#123;query&#125;</span>"</span> -H <span class="string">"Host: &lt;your-host-ip&gt;"</span></span><br></pre></td></tr></table></figure>
+<h3 id="获取usage-info"><a href="#获取usage-info" class="headerlink" title="获取usage info"></a>获取usage info</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">$ cat usageinfo.sh</span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">token=5L65QDE4238JJ8RM7MN5 <span class="comment">## USER_TOKEN</span></span><br><span class="line">secret=Y9HPiBCwLDeSMSaiQhmPT2h7NgNUnqVLERhktnIZ <span class="comment">## USER_SECRET</span></span><br><span class="line">query=<span class="variable">$1</span></span><br><span class="line">query3=<span class="string">"&amp;uid="</span></span><br><span class="line">query2=admin/usage</span><br><span class="line">date=$(<span class="keyword">for</span> i <span class="keyword">in</span> $(date <span class="string">"+%H"</span>) ; <span class="keyword">do</span> date <span class="string">"+%a, %d %b %Y <span class="variable">$(( 10#$i-8 )</span>):%M:%S +0000"</span> ; <span class="keyword">done</span>)</span><br><span class="line">header=<span class="string">"GET\n\n\n<span class="variable">$&#123;date&#125;</span>\n/<span class="variable">$&#123;query2&#125;</span>"</span></span><br><span class="line">sig=$(<span class="built_in">echo</span> -en <span class="variable">$&#123;header&#125;</span> | openssl sha1 -hmac <span class="variable">$&#123;secret&#125;</span> -binary | base64)</span><br><span class="line">curl -v -H <span class="string">"Date: <span class="variable">$&#123;date&#125;</span>"</span> -H <span class="string">"Authorization: AWS <span class="variable">$&#123;token&#125;</span>:<span class="variable">$&#123;sig&#125;</span>"</span> -L -X GET <span class="string">"http://&lt;your-host-ip&gt;/<span class="variable">$&#123;query2&#125;</span>?format=json<span class="variable">$&#123;query3&#125;</span><span class="variable">$&#123;query&#125;</span>"</span> -H <span class="string">"Host: &lt;your-host-ip&gt;"</span></span><br></pre></td></tr></table></figure>
+<p><strong>RadosGW Admin ops API还有很多其他的APIs</strong><br>详情见：<br><a href="http://docs.ceph.com/docs/master/radosgw/adminops/" target="_blank" rel="noopener">http://docs.ceph.com/docs/master/radosgw/adminops/</a></p>
+<h2 id="问题记录"><a href="#问题记录" class="headerlink" title="问题记录"></a>问题记录</h2><h3 id="AccessDenied"><a href="#AccessDenied" class="headerlink" title="AccessDenied"></a>AccessDenied</h3><p>脚本报错：<code>&lt; HTTP/1.1 403 Forbidden … {&quot;Code&quot;:&quot;AccessDenied&quot;}</code><br>radosgw的log里报错：<code>rgw/rgw_auth_s3.cc:188 NOTICE: failed to parse date for auth header</code>  </p>
+<p>从上述log中看出是请求header中的date解析不出来，修改脚本中date如下：<br><code>date=$(for i in $(date &quot;+%H&quot;) ; do date &quot;+%a, %d %b %Y $(( 10#$i-2 )):%M:%S +0000&quot; ; done)</code></p>
+<h3 id="RequestTimeTooSkewed"><a href="#RequestTimeTooSkewed" class="headerlink" title="RequestTimeTooSkewed"></a>RequestTimeTooSkewed</h3><p>脚本报错：<code>&lt; HTTP/1.1 403 Forbidden … {&quot;Code&quot;:&quot;RequestTimeTooSkewed&quot;}</code><br>radosgw的log里报错：<code>rgw/rgw_rest_s3.cc:2398 NOTICE: request time skew too big now=2016-08-29 15:09:40.000000 req_time=2016-08-29 21:09:40.000000</code></p>
+<p>从上述log中看出是request的time跟服务器时间差别较大，修改脚本中date如下：<br><code>date=$(for i in $(date &quot;+%H&quot;) ; do date &quot;+%a, %d %b %Y $(( 10#$i-8 )):%M:%S +0000&quot; ; done)</code></p>
+<h3 id="权限问题"><a href="#权限问题" class="headerlink" title="权限问题"></a>权限问题</h3><p>参考具体命令的caps需求，添加user的caps</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="http://docs.ceph.com/docs/master/radosgw/adminops/" target="_blank" rel="noopener">http://docs.ceph.com/docs/master/radosgw/adminops/</a><br><a href="http://egonzalez.org/ceph-radosgw-admin-ops-how-to-use-it/" target="_blank" rel="noopener">http://egonzalez.org/ceph-radosgw-admin-ops-how-to-use-it/</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/radosgw/" rel="tag"># radosgw</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/08/12/Ceph-used-in-cloudin/" rel="next" title="Ceph在云英的实践">
+                <i class="fa fa-chevron-left"></i> Ceph在云英的实践
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/08/30/rgw-user-statistics/" rel="prev" title="Radosgw如何统计用户使用信息?">
+                Radosgw如何统计用户使用信息? <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建管理用户"><span class="nav-number">2.</span> <span class="nav-text">创建管理用户</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#GET-USER-INFO"><span class="nav-number">3.</span> <span class="nav-text">GET USER INFO</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#SYNTAX"><span class="nav-number">3.1.</span> <span class="nav-text">SYNTAX</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#API示例"><span class="nav-number">4.</span> <span class="nav-text">API示例</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#创建user"><span class="nav-number">4.1.</span> <span class="nav-text">创建user</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#列出user-info"><span class="nav-number">4.2.</span> <span class="nav-text">列出user info</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除user"><span class="nav-number">4.3.</span> <span class="nav-text">删除user</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#获取usage-info"><span class="nav-number">4.4.</span> <span class="nav-text">获取usage info</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#问题记录"><span class="nav-number">5.</span> <span class="nav-text">问题记录</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#AccessDenied"><span class="nav-number">5.1.</span> <span class="nav-text">AccessDenied</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RequestTimeTooSkewed"><span class="nav-number">5.2.</span> <span class="nav-text">RequestTimeTooSkewed</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#权限问题"><span class="nav-number">5.3.</span> <span class="nav-text">权限问题</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考资料"><span class="nav-number">6.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.ictfox.cn/2016/08/29/rgw-admin-ops-api/';
+          this.page.identifier = '2016/08/29/rgw-admin-ops-api/';
+          this.page.title = '如何使用radosgw admin ops api?';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

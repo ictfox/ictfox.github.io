@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,osd," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="概述本文分析Ceph OpTracker相关实现，提供osd_enable_op_tracker的配置分析，并做相关测试对比性能； 代码分析op_tracker定义osd_enable_op_tracker对应的配置是osd中的op_tracker，每个osd会初始化一个op_tracker，代码如下： 123456789101112131415161718192021## op_tracker的">
+<meta name="keywords" content="ceph,osd">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Ceph osd_enable_op_tracker配置分析">
+<meta property="og:url" content="http://www.ictfox.cn/2017/05/23/Ceph-osd_enable_op_tracker/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述本文分析Ceph OpTracker相关实现，提供osd_enable_op_tracker的配置分析，并做相关测试对比性能； 代码分析op_tracker定义osd_enable_op_tracker对应的配置是osd中的op_tracker，每个osd会初始化一个op_tracker，代码如下： 123456789101112131415161718192021## op_tracker的">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.362Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Ceph osd_enable_op_tracker配置分析">
+<meta name="twitter:description" content="概述本文分析Ceph OpTracker相关实现，提供osd_enable_op_tracker的配置分析，并做相关测试对比性能； 代码分析op_tracker定义osd_enable_op_tracker对应的配置是osd中的op_tracker，每个osd会初始化一个op_tracker，代码如下： 123456789101112131415161718192021## op_tracker的">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.ictfox.cn/2017/05/23/Ceph-osd_enable_op_tracker/"/>
+
+
+
+
+
+  <title>Ceph osd_enable_op_tracker配置分析 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/05/23/Ceph-osd_enable_op_tracker/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Ceph osd_enable_op_tracker配置分析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-05-23T11:31:17+08:00">
+                2017-05-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/05/23/Ceph-osd_enable_op_tracker/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/05/23/Ceph-osd_enable_op_tracker/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>本文分析Ceph OpTracker相关实现，提供<code>osd_enable_op_tracker</code>的配置分析，并做相关测试对比性能；</p>
+<h2 id="代码分析"><a href="#代码分析" class="headerlink" title="代码分析"></a>代码分析</h2><h3 id="op-tracker定义"><a href="#op-tracker定义" class="headerlink" title="op_tracker定义"></a>op_tracker定义</h3><p><code>osd_enable_op_tracker</code>对应的配置是osd中的<code>op_tracker</code>，每个osd会初始化一个<code>op_tracker</code>，代码如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">## op_tracker的定义</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">OSD</span> :</span> <span class="keyword">public</span> Dispatcher, <span class="keyword">public</span> <span class="keyword">md_config_obs_t</span> &#123;</span><br><span class="line">...</span><br><span class="line">    <span class="comment">// -- op tracking --</span></span><br><span class="line">    OpTracker op_tracker;</span><br><span class="line">...</span><br><span class="line">&#125;;</span><br><span class="line">  </span><br><span class="line">## op_tracker的初始化</span><br><span class="line">OSD::OSD(...) :</span><br><span class="line">...</span><br><span class="line">    op_tracker(cct, cct-&gt;_conf-&gt;osd_enable_op_tracker,  <span class="comment">// 是否enable op tracker</span></span><br><span class="line">               cct-&gt;_conf-&gt;osd_num_op_tracker_shard),   <span class="comment">// op tracker shard数，每个shard一个mutex锁，多个shard可以避免op更新的性能瓶颈问题</span></span><br><span class="line">...</span><br><span class="line">&#123;</span><br><span class="line">    monc-&gt;set_messenger(client_messenger);</span><br><span class="line">    op_tracker.set_complaint_and_threshold(cct-&gt;_conf-&gt;osd_op_complaint_time, <span class="comment">// op complaint time配置，超出后有warning log</span></span><br><span class="line">                                           cct-&gt;_conf-&gt;osd_op_log_threshold); <span class="comment">// op log的阈值</span></span><br><span class="line">    op_tracker.set_history_size_and_duration(cct-&gt;_conf-&gt;osd_op_history_size, <span class="comment">// op history的最大size</span></span><br><span class="line">                                             cct-&gt;_conf-&gt;osd_op_history_duration); <span class="comment">// op history的最长保留时间</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>OpTracker</code>的定义如下，里面维护了一个sharded list，会把op映射到对应的list上，每个shard有一个mutex锁，保证这里的track操作不会成为性能瓶颈；</p>
+<p>每个list的单位是<code>TrackedOp</code></p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">OpTracker</span> &#123;</span></span><br><span class="line">...</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">ShardedTrackingData</span> &#123;</span></span><br><span class="line">        Mutex ops_in_flight_lock_sharded;</span><br><span class="line">        xlist&lt;TrackedOp *&gt; ops_in_flight_sharded;</span><br><span class="line">        explicit ShardedTrackingData(string lock_name):</span><br><span class="line">            ops_in_flight_lock_sharded(lock_name.c_str()) &#123;&#125;</span><br><span class="line">    &#125;;</span><br><span class="line">    <span class="built_in">vector</span>&lt;ShardedTrackingData*&gt; sharded_in_flight_list;</span><br><span class="line">    <span class="keyword">uint32_t</span> num_optracker_shards;</span><br><span class="line">    OpHistory history;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="TrackedOp定义"><a href="#TrackedOp定义" class="headerlink" title="TrackedOp定义"></a>TrackedOp定义</h3><p><code>TrackedOp</code>是一个tracked的operation，它会指向所属的<code>OpTracker</code>，定义如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">TrackedOp</span> &#123;</span></span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    <span class="keyword">friend</span> <span class="class"><span class="keyword">class</span> <span class="title">OpHistory</span>;</span></span><br><span class="line">    <span class="keyword">friend</span> <span class="class"><span class="keyword">class</span> <span class="title">OpTracker</span>;</span></span><br><span class="line">    xlist&lt;TrackedOp*&gt;::item xitem;</span><br><span class="line"><span class="keyword">protected</span>:</span><br><span class="line">    OpTracker *tracker; <span class="comment">/// the tracker we are associated with</span></span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>ceph osd中的每个op都是<code>TrackedOp</code>的子类；</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">OpRequest</span> :</span> <span class="keyword">public</span> TrackedOp &#123;</span><br><span class="line">    <span class="keyword">friend</span> <span class="class"><span class="keyword">class</span> <span class="title">OpTracker</span>;</span></span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>OpRequest</code>会在osd dispatch的时候初始化，会根据是否enable op tracker初始化对应值：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">osd/OSD.cc &lt;&lt;ms_fast_dispatch&gt;&gt;</span><br><span class="line">    OpRequestRef op = op_tracker.create_request&lt;OpRequest, Message*&gt;(m);</span><br><span class="line"> osd/OSD.cc &lt;&lt;_dispatch&gt;&gt;</span><br><span class="line">    OpRequestRef op = op_tracker.create_request&lt;OpRequest, Message*&gt;(m);</span><br><span class="line">  </span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">OpTracker</span> &#123;</span></span><br><span class="line">...</span><br><span class="line">    <span class="keyword">template</span> &lt;<span class="keyword">typename</span> T, <span class="keyword">typename</span> U&gt;</span><br><span class="line">    <span class="keyword">typename</span> T::<span class="function">Ref <span class="title">create_request</span><span class="params">(U params)</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        typename T::Ref retval(new T(params, this),     // 初始化OpRequest类</span><br><span class="line">                               RemoveOnDelete(<span class="keyword">this</span>));</span><br><span class="line">        retval-&gt;tracking_start();    <span class="comment">// OpRequest放到OpTracker的shard list里，设置 is_tracked = true；后于OpReuest类的初始化</span></span><br><span class="line">        <span class="keyword">return</span> retval;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line">  </span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">TrackedOp</span> &#123;</span></span><br><span class="line">...</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">tracking_start</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (tracker-&gt;register_inflight_op(&amp;xitem)) &#123;</span><br><span class="line">            events.push_back(make_pair(initiated_at, <span class="string">"initiated"</span>));</span><br><span class="line">            is_tracked = <span class="literal">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">  </span><br><span class="line">OpRequest::OpRequest(Message *req, OpTracker *tracker) :</span><br><span class="line">    TrackedOp(tracker, req-&gt;get_recv_stamp()),   <span class="comment">// TrackedOp的is_tracked默认为false</span></span><br><span class="line">    rmw_flags(<span class="number">0</span>), request(req),</span><br><span class="line">    hit_flag_points(<span class="number">0</span>), latest_flag_point(<span class="number">0</span>),</span><br><span class="line">    send_map_update(<span class="literal">false</span>), sent_epoch(<span class="number">0</span>),</span><br><span class="line">    hitset_inserted(<span class="literal">false</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (req-&gt;get_priority() &lt; tracker-&gt;cct-&gt;_conf-&gt;osd_client_op_priority) &#123;</span><br><span class="line">        <span class="comment">// don't warn as quickly for low priority ops</span></span><br><span class="line">        warn_interval_multiplier = tracker-&gt;cct-&gt;_conf-&gt;osd_recovery_op_warn_multiple;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (req-&gt;get_type() == CEPH_MSG_OSD_OP) &#123;</span><br><span class="line">        reqid = <span class="keyword">static_cast</span>&lt;MOSDOp*&gt;(req)-&gt;get_reqid();</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (req-&gt;get_type() == MSG_OSD_SUBOP) &#123;</span><br><span class="line">        reqid = <span class="keyword">static_cast</span>&lt;MOSDSubOp*&gt;(req)-&gt;reqid;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (req-&gt;get_type() == MSG_OSD_REPOP) &#123;</span><br><span class="line">        reqid = <span class="keyword">static_cast</span>&lt;MOSDRepOp*&gt;(req)-&gt;reqid;</span><br><span class="line">    &#125;</span><br><span class="line">    tracker-&gt;mark_event(<span class="keyword">this</span>, <span class="string">"header_read"</span>, request-&gt;get_recv_stamp());  <span class="comment">//??? 因为此时is_tracked为false，所以这些event log不会打印出来</span></span><br><span class="line">    tracker-&gt;mark_event(<span class="keyword">this</span>, <span class="string">"throttled"</span>, request-&gt;get_throttle_stamp());</span><br><span class="line">    tracker-&gt;mark_event(<span class="keyword">this</span>, <span class="string">"all_read"</span>, request-&gt;get_recv_complete_stamp());</span><br><span class="line">    tracker-&gt;mark_event(<span class="keyword">this</span>, <span class="string">"dispatched"</span>, request-&gt;get_dispatch_stamp());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="OpTracker记录op"><a href="#OpTracker记录op" class="headerlink" title="OpTracker记录op"></a>OpTracker记录op</h3><p>在创建一个op request的时候，就会把op分到<code>OpTracker</code>的不同shard list上</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">bool</span> OpTracker::register_inflight_op(xlist&lt;TrackedOp*&gt;::item *i)</span><br><span class="line">&#123;</span><br><span class="line">    RWLock::<span class="function">RLocker <span class="title">l</span><span class="params">(lock)</span></span>;</span><br><span class="line">    <span class="keyword">if</span> (!tracking_enabled)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line"> </span><br><span class="line">    <span class="keyword">uint64_t</span> current_seq = seq.inc();</span><br><span class="line">    <span class="keyword">uint32_t</span> shard_index = current_seq % num_optracker_shards;</span><br><span class="line">    ShardedTrackingData* sdata = sharded_in_flight_list[shard_index];</span><br><span class="line">    assert(<span class="literal">NULL</span> != sdata);</span><br><span class="line">    &#123;</span><br><span class="line">        Mutex::<span class="function">Locker <span class="title">locker</span><span class="params">(sdata-&gt;ops_in_flight_lock_sharded)</span></span>;</span><br><span class="line">        sdata-&gt;ops_in_flight_sharded.push_back(i);</span><br><span class="line">        sdata-&gt;ops_in_flight_sharded.back()-&gt;seq = current_seq;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>之后可以通过<code>ceph daemon &lt;osd.id&gt; dump_ops_in_flight/dump_historic_ops</code>查看该osd上的op情况；</p>
+<h3 id="TrackedOp-mark-event"><a href="#TrackedOp-mark-event" class="headerlink" title="TrackedOp mark event"></a>TrackedOp mark event</h3><p>当开启了op tracker，<code>TrackedOp</code>就会根据配置的debug等级把一些event打印到osd的log文件里，这个操作会影响系统性能；但也可以帮我们分析出一个op哪个阶段比较费时，找出系统瓶颈；</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> TrackedOp::mark_event(<span class="keyword">const</span> <span class="built_in">string</span> &amp;event)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (!is_tracked)</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    <span class="keyword">utime_t</span> now = ceph_clock_now(g_ceph_context);</span><br><span class="line">    &#123;</span><br><span class="line">        Mutex::<span class="function">Locker <span class="title">l</span><span class="params">(lock)</span></span>;</span><br><span class="line">        events.push_back(make_pair(now, event));    <span class="comment">// events记录一个op所有的event信息</span></span><br><span class="line">    &#125;</span><br><span class="line">    tracker-&gt;mark_event(<span class="keyword">this</span>, event);    <span class="comment">// mark event，打印log</span></span><br><span class="line">    _event_marked();    <span class="comment">// 可以自己实现event mark后的操作，现在为空</span></span><br><span class="line">&#125;</span><br><span class="line">  </span><br><span class="line"><span class="keyword">void</span> OpTracker::mark_event(TrackedOp *op, <span class="keyword">const</span> <span class="built_in">string</span> &amp;dest, <span class="keyword">utime_t</span> time)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (!op-&gt;is_tracked)</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    <span class="keyword">return</span> _mark_event(op, dest, time);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">void</span> OpTracker::_mark_event(TrackedOp *op, <span class="keyword">const</span> <span class="built_in">string</span> &amp;evt,</span><br><span class="line">                            <span class="keyword">utime_t</span> time)</span><br><span class="line">&#123;</span><br><span class="line">    dout(<span class="number">5</span>);</span><br><span class="line">    *_dout  &lt;&lt;  <span class="string">"seq: "</span> &lt;&lt; op-&gt;seq</span><br><span class="line">            &lt;&lt; <span class="string">", time: "</span> &lt;&lt; time &lt;&lt; <span class="string">", event: "</span> &lt;&lt; evt</span><br><span class="line">            &lt;&lt; <span class="string">", op: "</span>;</span><br><span class="line">    op-&gt;_dump_op_descriptor_unlocked(*_dout);</span><br><span class="line">    *_dout &lt;&lt; dendl;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="性能测试"><a href="#性能测试" class="headerlink" title="性能测试"></a>性能测试</h2><p>基于之前搭建的RGW cosbench，对比测试了<code>osd_enable_op_tracker</code>为false/true的情况下的性能，结果如下：</p>
+<p>测试参数：两个cosbench driver，写一个bucket 5,000,000个objects，workers=100，runtime=2000；</p>
+<h3 id="debug-optracker-0-0-amp-osd-enable-op-tracker-false"><a href="#debug-optracker-0-0-amp-osd-enable-op-tracker-false" class="headerlink" title="debug_optracker = 0/0 &amp; osd_enable_op_tracker = false"></a><code>debug_optracker = 0/0</code> &amp; <code>osd_enable_op_tracker = false</code></h3><p>先写两个bucket的结果如下：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Op-Type</th>
+<th>OOp-Count</th>
+<th>OByte-Count</th>
+<th>OAvg-ResTime</th>
+<th>OAvg-ProcTime</th>
+<th>OThroughput</th>
+<th>OBandwidth</th>
+<th>OSucc-Ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>write</td>
+<td>2.57 mops</td>
+<td>82.15 GB</td>
+<td>77.79 ms</td>
+<td>77.64 ms</td>
+<td>1284.26 op/s</td>
+<td>41.1 MB/S</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>2</td>
+<td>write</td>
+<td>1.32 mops</td>
+<td>42.28 GB</td>
+<td>151.05 ms</td>
+<td>150.8 ms</td>
+<td>661.69 op/s</td>
+<td>21.17 MB/S</td>
+<td>100%</td>
+</tr>
+</tbody>
+</table>
+<p>【第二次写入的性能较差，感觉应该是测试误差导致的，或者是当时有别的io影响，没再重复测试】</p>
+<p>删除之前写的bucket的结果如下：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Op-Type</th>
+<th>OOp-Count</th>
+<th>OByte-Count</th>
+<th>OAvg-ResTime</th>
+<th>OAvg-ProcTime</th>
+<th>OThroughput</th>
+<th>OBandwidth</th>
+<th>OSucc-Ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>cleanup-delete</td>
+<td>5 mops</td>
+<td>0 B</td>
+<td>8.03 ms</td>
+<td>8.03 ms</td>
+<td>12468.13 op/s</td>
+<td>0 B/S</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>2</td>
+<td>cleanup-delete</td>
+<td>5 mops</td>
+<td>0 B</td>
+<td>4.79 ms</td>
+<td>4.79 ms</td>
+<td>20898.72 op/s</td>
+<td>0 B/S</td>
+<td>100%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="debug-optracker-0-0-amp-osd-enable-op-tracker-true"><a href="#debug-optracker-0-0-amp-osd-enable-op-tracker-true" class="headerlink" title="debug_optracker = 0/0 &amp; osd_enable_op_tracker = true"></a><code>debug_optracker = 0/0</code> &amp; <code>osd_enable_op_tracker = true</code></h3><p>先写两个bucket的结果如下：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Op-Type</th>
+<th>OOp-Count</th>
+<th>OByte-Count</th>
+<th>OAvg-ResTime</th>
+<th>OAvg-ProcTime</th>
+<th>OThroughput</th>
+<th>OBandwidth</th>
+<th>OSucc-Ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>write</td>
+<td>2.67 mops</td>
+<td>85.47 GB</td>
+<td>74.79 ms</td>
+<td>74.59 ms</td>
+<td>1335.65 op/s</td>
+<td>42.74 MB/S</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>2</td>
+<td>write</td>
+<td>2.47 mops</td>
+<td>79.02 GB</td>
+<td>80.91 ms</td>
+<td>80.76 ms</td>
+<td>1234.71 op/s</td>
+<td>39.51 MB/S</td>
+<td>100%</td>
+</tr>
+</tbody>
+</table>
+<p>删除之前写的bucket的结果如下：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Op-Type</th>
+<th>OOp-Count</th>
+<th>OByte-Count</th>
+<th>OAvg-ResTime</th>
+<th>OAvg-ProcTime</th>
+<th>OThroughput</th>
+<th>OBandwidth</th>
+<th>OSucc-Ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>cleanup-delete</td>
+<td>5 mops</td>
+<td>0 B</td>
+<td>10.3 ms</td>
+<td>10.3 ms</td>
+<td>9709.31 op/s</td>
+<td>0 B/S</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>2</td>
+<td>cleanup-delete</td>
+<td>5 mops</td>
+<td>0 B</td>
+<td>8.63 ms</td>
+<td>8.63 ms</td>
+<td>11581.92 op/s</td>
+<td>0 B/S</td>
+<td>100%</td>
+</tr>
+</tbody>
+</table>
+<p>【删除的相应时间比之前还是慢的比较多，不清晰是测试误差，还是别的原因】</p>
+<h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>从上述两项的对比可以看出，false/true的测试结果在误差范围内，印证了<code>osd_enable_op_tracker</code>设置为true对Ceph系统性能没什么影响；</p>
+<h3 id="打开debug-optracker"><a href="#打开debug-optracker" class="headerlink" title="打开debug_optracker"></a>打开debug_optracker</h3><p>为了追踪op在osd中各个阶段的时间开销，我们可以打开<code>debug_optracker</code>，然后在osd的log中查到对应的event log；</p>
+<p>打开关闭debug_optracker的方法：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ceph daemon &lt;osd-id&gt; config <span class="built_in">set</span> debug_optracker 5\/5  // 打开debug <span class="built_in">log</span></span><br><span class="line">ceph daemon &lt;osd-id&gt; config <span class="built_in">set</span> debug_optracker 0\/0  // 关闭debug <span class="built_in">log</span></span><br></pre></td></tr></table></figure>
+<p>之后可以在对应osd的log文件中看到如下log，以其中一个write op为例：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">2017-05-09 11:15:58.925362 7f556af0f700  5 -- op tracker -- seq: 682036, time: 2017-05-09 11:15:58.925362, event: queued_for_pg, op: osd_op(client.1027809.0:366525835 31.36c4e4e0 (undecoded) ondisk+write+known_if_redirected e2611)</span><br><span class="line">2017-05-09 11:15:58.925388 7f55b27ff700  5 -- op tracker -- seq: 682036, time: 2017-05-09 11:15:58.925388, event: reached_pg, op: osd_op(client.1027809.0:366525835 31.36c4e4e0 (undecoded) ondisk+write+known_if_redirected e2611)</span><br><span class="line">2017-05-09 11:15:58.925509 7f55b27ff700  5 -- op tracker -- seq: 682036, time: 2017-05-09 11:15:58.925509, event: started, op: osd_op(client.1027809.0:366525835 31.36c4e4e0 f31f020f-aaa2-4570-b6f7-19258064e5b5.1027809.13_myobjects449924 [create 0~0 [excl],setxattr user.rgw.idtag (55),writefull 0~32000,setxattr user.rgw.manifest (600),setxattr user.rgw.acl (145),setxattr user.rgw.content_type (25),setxattr user.rgw.etag (33),call rgw.obj_store_pg_ver,setxattr user.rgw.source_zone (4)] snapc 0=[] ondisk+write+known_if_redirected e2611)</span><br><span class="line">2017-05-09 11:15:58.925595 7f55b27ff700  5 -- op tracker -- seq: 682036, time: 2017-05-09 11:15:58.925595, event: waiting <span class="keyword">for</span> subops from 29,76, op: osd_op(client.1027809.0:366525835 31.36c4e4e0 f31f020f-aaa2-4570-b6f7-19258064e5b5.1027809.13_myobjects449924 [create 0~0 [excl],setxattr user.rgw.idtag (55),writefull 0~32000,setxattr user.rgw.manifest (600),setxattr user.rgw.acl (145),setxattr user.rgw.content_type (25),setxattr user.rgw.etag (33),call rgw.obj_store_pg_ver,setxattr user.rgw.source_zone (4)] snapc 0=[] ondisk+write+known_if_redirected e2611)</span><br><span class="line">2017-05-09 11:15:58.925735 7f55b27ff700  5 -- op tracker -- seq: 682036, time: 2017-05-09 11:15:58.925735, event: commit_queued_for_journal_write, op: osd_op(client.1027809.0:366525835 31.36c4e4e0 f31f020f-aaa2-4570-b6f7-19258064e5b5.1027809.13_myobjects449924 [create 0~0 [excl],setxattr user.rgw.idtag (55),writefull 0~32000,setxattr user.rgw.manifest (600),setxattr user.rgw.acl (145),setxattr user.rgw.content_type (25),setxattr user.rgw.etag (33),call rgw.obj_store_pg_ver,setxattr user.rgw.source_zone (4)] snapc 0=[] ondisk+write+known_if_redirected e2611)</span><br><span class="line">2017-05-09 11:15:58.925773 7f561cfec700  5 -- op tracker -- seq: 682036, time: 2017-05-09 11:15:58.925772, event: write_thread_in_journal_buffer, op: osd_op(client.1027809.0:366525835 31.36c4e4e0 f31f020f-aaa2-4570-b6f7-19258064e5b5.1027809.13_myobjects449924 [create 0~0 [excl],setxattr user.rgw.idtag (55),writefull 0~32000,setxattr user.rgw.manifest (600),setxattr user.rgw.acl (145),setxattr user.rgw.content_type (25),setxattr user.rgw.etag (33),call rgw.obj_store_pg_ver,setxattr user.rgw.source_zone (4)] snapc 0=[] ondisk+write+known_if_redirected e2611)</span><br><span class="line">2017-05-09 11:15:58.925947 7f561c7eb700  5 -- op tracker -- seq: 682036, time: 2017-05-09 11:15:58.925946, event: journaled_completion_queued, op: osd_op(client.1027809.0:366525835 31.36c4e4e0 f31f020f-aaa2-4570-b6f7-19258064e5b5.1027809.13_myobjects449924 [create 0~0 [excl],setxattr user.rgw.idtag (55),writefull 0~32000,setxattr user.rgw.manifest (600),setxattr user.rgw.acl (145),setxattr user.rgw.content_type (25),setxattr user.rgw.etag (33),call rgw.obj_store_pg_ver,setxattr user.rgw.source_zone (4)] snapc 0=[] ondisk+write+known_if_redirected e2611)</span><br><span class="line">2017-05-09 11:15:58.925962 7f5614fff700  5 -- op tracker -- seq: 682036, time: 2017-05-09 11:15:58.925961, event: op_commit, op: osd_op(client.1027809.0:366525835 31.36c4e4e0 f31f020f-aaa2-4570-b6f7-19258064e5b5.1027809.13_myobjects449924 [create 0~0 [excl],setxattr user.rgw.idtag (55),writefull 0~32000,setxattr user.rgw.manifest (600),setxattr user.rgw.acl (145),setxattr user.rgw.content_type (25),setxattr user.rgw.etag (33),call rgw.obj_store_pg_ver,setxattr user.rgw.source_zone (4)] snapc 0=[] ondisk+write+known_if_redirected e2611)</span><br><span class="line">2017-05-09 11:15:58.926400 7f55d3be3700  5 -- op tracker -- seq: 682036, time: 2017-05-09 11:15:58.926400, event: sub_op_commit_rec from 76, op: osd_op(client.1027809.0:366525835 31.36c4e4e0 f31f020f-aaa2-4570-b6f7-19258064e5b5.1027809.13_myobjects449924 [create 0~0 [excl],setxattr user.rgw.idtag (55),writefull 0~32000,setxattr user.rgw.manifest (600),setxattr user.rgw.acl (145),setxattr user.rgw.content_type (25),setxattr user.rgw.etag (33),call rgw.obj_store_pg_ver,setxattr user.rgw.source_zone (4)] snapc 0=[] ondisk+write+known_if_redirected e2611)</span><br><span class="line">2017-05-09 11:15:58.926440 7f55b27ff700  5 -- op tracker -- seq: 682036, time: 2017-05-09 11:15:58.926439, event: sub_op_commit_rec from 29, op: osd_op(client.1027809.0:366525835 31.36c4e4e0 f31f020f-aaa2-4570-b6f7-19258064e5b5.1027809.13_myobjects449924 [create 0~0 [excl],setxattr user.rgw.idtag (55),writefull 0~32000,setxattr user.rgw.manifest (600),setxattr user.rgw.acl (145),setxattr user.rgw.content_type (25),setxattr user.rgw.etag (33),call rgw.obj_store_pg_ver,setxattr user.rgw.source_zone (4)] snapc 0=[] ondisk+write+known_if_redirected e2611)</span><br><span class="line">2017-05-09 11:15:58.926456 7f55b27ff700  5 -- op tracker -- seq: 682036, time: 2017-05-09 11:15:58.926456, event: commit_sent, op: osd_op(client.1027809.0:366525835 31.36c4e4e0 f31f020f-aaa2-4570-b6f7-19258064e5b5.1027809.13_myobjects449924 [create 0~0 [excl],setxattr user.rgw.idtag (55),writefull 0~32000,setxattr user.rgw.manifest (600),setxattr user.rgw.acl (145),setxattr user.rgw.content_type (25),setxattr user.rgw.etag (33),call rgw.obj_store_pg_ver,setxattr user.rgw.source_zone (4)] snapc 0=[] ondisk+write+known_if_redirected e2611)</span><br><span class="line">2017-05-09 11:15:58.926793 7f5613ffd700  5 -- op tracker -- seq: 682036, time: 2017-05-09 11:15:58.926792, event: op_applied, op: osd_op(client.1027809.0:366525835 31.36c4e4e0 f31f020f-aaa2-4570-b6f7-19258064e5b5.1027809.13_myobjects449924 [create 0~0 [excl],setxattr user.rgw.idtag (55),writefull 0~32000,setxattr user.rgw.manifest (600),setxattr user.rgw.acl (145),setxattr user.rgw.content_type (25),setxattr user.rgw.etag (33),call rgw.obj_store_pg_ver,setxattr user.rgw.source_zone (4)] snapc 0=[] ondisk+write+known_if_redirected e2611)</span><br><span class="line">2017-05-09 11:15:58.926825 7f5613ffd700  5 -- op tracker -- seq: 682036, time: 2017-05-09 11:15:58.926824, event: <span class="keyword">done</span>, op: osd_op(client.1027809.0:366525835 31.36c4e4e0 f31f020f-aaa2-4570-b6f7-19258064e5b5.1027809.13_myobjects449924 [create 0~0 [excl],setxattr user.rgw.idtag (55),writefull 0~32000,setxattr user.rgw.manifest (600),setxattr user.rgw.acl (145),setxattr user.rgw.content_type (25),setxattr user.rgw.etag (33),call rgw.obj_store_pg_ver,setxattr user.rgw.source_zone (4)] snapc 0=[] ondisk+write+known_if_redirected e2611)</span><br></pre></td></tr></table></figure>
+<p>打开debug_optracker会有大量的osd log写入，严重影响osd的性能，所以这里只是建议在调试osd性能的时候偶尔打开收集下信息，然后分析osd的性能瓶颈；</p>
+<h3 id="dump-historic-ops"><a href="#dump-historic-ops" class="headerlink" title="dump_historic_ops"></a><code>dump_historic_ops</code></h3><p>在不打开<code>debug_optracker</code>的情况下，也可以获取部分<code>OpRequest</code>的event信息，这就是通过<code>dump_historic_ops</code>获取；然后就可以分析op的各个时间段开销了；</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph daemon osd.11 dump_historic_ops</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"num to keep"</span>: 20,</span><br><span class="line">    <span class="string">"duration to keep"</span>: 600,</span><br><span class="line">    <span class="string">"Ops"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"osd_op(client.1027809.0:458241652 17.e6e072e1 .dir.f31f020f-aaa2-4570-b6f7-19258064e5b5.859142.3.77 [] snapc 0=[] ack+ondisk+write+known_if_redirected e2850)"</span>,</span><br><span class="line">            <span class="string">"initiated_at"</span>: <span class="string">"2017-05-09 18:54:50.987435"</span>,</span><br><span class="line">            <span class="string">"age"</span>: 412.664363,</span><br><span class="line">            <span class="string">"duration"</span>: 0.338724,</span><br><span class="line">            <span class="string">"type_data"</span>: [</span><br><span class="line">                <span class="string">"commit sent; apply or cleanup"</span>,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"client"</span>: <span class="string">"client.1027809"</span>,</span><br><span class="line">                    <span class="string">"tid"</span>: 458241652</span><br><span class="line">                &#125;,</span><br><span class="line">                [</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:50.987435"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"initiated"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:50.987453"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"queued_for_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:50.987483"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"reached_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:50.987520"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"waiting for rw locks"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:51.052956"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"reached_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:51.052986"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"waiting for rw locks"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:51.197523"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"reached_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:51.197562"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"started"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:51.197812"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"waiting for subops from 33,43"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:51.198068"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"commit_queued_for_journal_write"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:51.198094"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"write_thread_in_journal_buffer"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:51.198195"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"journaled_completion_queued"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:51.198330"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"op_commit"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:51.198454"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"sub_op_commit_rec from 43"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:51.198851"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"sub_op_commit_rec from 33"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:51.198865"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"commit_sent"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:51.326034"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"op_applied"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-05-09 18:54:51.326158"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"done"</span></span><br><span class="line">                    &#125;</span><br><span class="line">                ]</span><br><span class="line">            ]</span><br><span class="line">        &#125;,</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/osd/" rel="tag"># osd</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/05/21/hexo-pagesgithub-build-website/" rel="next" title="基于Hexo + pages github搭建个人blog站点">
+                <i class="fa fa-chevron-left"></i> 基于Hexo + pages github搭建个人blog站点
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/05/24/Ceph-PGLock-RWState/" rel="prev" title="Ceph PG Lock and RWState">
+                Ceph PG Lock and RWState <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#代码分析"><span class="nav-number">2.</span> <span class="nav-text">代码分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#op-tracker定义"><span class="nav-number">2.1.</span> <span class="nav-text">op_tracker定义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TrackedOp定义"><span class="nav-number">2.2.</span> <span class="nav-text">TrackedOp定义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#OpTracker记录op"><span class="nav-number">2.3.</span> <span class="nav-text">OpTracker记录op</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TrackedOp-mark-event"><span class="nav-number">2.4.</span> <span class="nav-text">TrackedOp mark event</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#性能测试"><span class="nav-number">3.</span> <span class="nav-text">性能测试</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#debug-optracker-0-0-amp-osd-enable-op-tracker-false"><span class="nav-number">3.1.</span> <span class="nav-text">debug_optracker = 0/0 &amp; osd_enable_op_tracker = false</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#debug-optracker-0-0-amp-osd-enable-op-tracker-true"><span class="nav-number">3.2.</span> <span class="nav-text">debug_optracker = 0/0 &amp; osd_enable_op_tracker = true</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#结论"><span class="nav-number">3.3.</span> <span class="nav-text">结论</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#打开debug-optracker"><span class="nav-number">3.4.</span> <span class="nav-text">打开debug_optracker</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#dump-historic-ops"><span class="nav-number">3.5.</span> <span class="nav-text">dump_historic_ops</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.ictfox.cn/2017/05/23/Ceph-osd_enable_op_tracker/';
+          this.page.identifier = '2017/05/23/Ceph-osd_enable_op_tracker/';
+          this.page.title = 'Ceph osd_enable_op_tracker配置分析';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
