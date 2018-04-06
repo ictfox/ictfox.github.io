@@ -296,6 +296,477 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/08/25/cloud-storage-gateway/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/08/25/cloud-storage-gateway/" itemprop="url">公有云存储网关架构分析</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-08-25T09:41:17+08:00">
+                2017-08-25
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/storage/" itemprop="url" rel="index">
+                    <span itemprop="name">storage</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/08/25/cloud-storage-gateway/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/08/25/cloud-storage-gateway/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><h3 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h3><p>一种混合云解决方案，连接私有云/内部IT设施和公有云的Gateway，旨在帮助企业或个人实现本地存储与公有云存储的无缝衔接。<br>提供本地数据远端存储到OSS上，即可以保持本地盘的性能，又可以拥有云上的大容量。</p>
+<h3 id="友商"><a href="#友商" class="headerlink" title="友商"></a>友商</h3><p>提供服务的友商有： AWS，阿里云，腾讯云，百度云</p>
+<h3 id="产品架构"><a href="#产品架构" class="headerlink" title="产品架构"></a>产品架构</h3><p>存储网关的大致架构如下：<br><img src="/images/cloud-storage-gateway.jpg" alt="storage gateway"></p>
+<h3 id="产品功能"><a href="#产品功能" class="headerlink" title="产品功能"></a>产品功能</h3><ol>
+<li>本地/云端部署</li>
+<li>数据加密</li>
+<li>数据压缩</li>
+<li>缓存算法，优化本地访问性能</li>
+<li>支持NFS/CIFS文件协议</li>
+<li>支持ISCSI协议</li>
+<li>带宽管理功能</li>
+<li>日志功能</li>
+<li>提供包含存储网关服务的虚拟机镜像</li>
+</ol>
+<h2 id="友商实现"><a href="#友商实现" class="headerlink" title="友商实现"></a>友商实现</h2><h3 id="AWS"><a href="#AWS" class="headerlink" title="AWS"></a>AWS</h3><h4 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h4><p>AWS Storage Gateway 是一种混合存储服务，您的内部应用程序可以借助它来无缝地使用 AWS 云中的存储。您可以使用该服务进行备份、存档、灾难恢复、云突增、存储分层和迁移。您的应用程序可以使用 NFS、iSCSI 等标准存储协议通过网关设备连接到该服务。网关会连接到 Amazon S3、Amazon Glacier、Amazon EBS 等 AWS 存储服务，这些服务为 AWS 中的文件、卷和虚拟磁带提供存储。该服务包含高度优化的数据传输机制，能够进行带宽管理、自动实现网络弹性、高效传输数据，并为活动数据的低延迟内部访问提供本地缓存。</p>
+<p>链接：<a href="https://amazonaws-china.com/cn/storagegateway/" target="_blank" rel="noopener">https://amazonaws-china.com/cn/storagegateway/</a></p>
+<h4 id="使用场景"><a href="#使用场景" class="headerlink" title="使用场景"></a>使用场景</h4><ol>
+<li><p>作为文件存储连接</p>
+<p> File Gateway 配置通过 NFS 连接为本地服务器和应用程序提供网络文件共享。文件数据将缓存在 File Gateway 上以实现本地性能，并转换为对象存储在 Amazon S3 中。您可以通过本机 AWS 工具 (比如生命周期策略、版本控制和跨区域复制) 保护和归档对象。<br> <img src="/images/cloud-storage-gw-aws-file.jpg" alt="aws gw file"></p>
+</li>
+<li><p>作为块设备连接</p>
+<p> Volume Gateway 配置将使用 iSCSI 作为本地磁盘连接到本地服务器和应用程序。这些卷中的数据可以传输到 Amazon S3 云存储中，并通过 Volume Gateway 进行访问。将数据存储在本地以获得最高性能 (同时将快照备份到云中)，或者通过将常用数据存储在本地并将不常用的数据存储在云中 (同时创建快照和克隆以实现保护)，平衡延迟和规模。  </p>
+</li>
+<li><p>作为虚拟磁带库连接</p>
+<p> Tape Gateway 已配置为用本地磁盘和云存储取代备份磁带和磁带自动化设备。现有的备份和恢复软件可将原生备份任务写入存储在 Tape Gateway 上的虚拟磁带中。虚拟磁带可迁移到 Amazon S3 中，最终存档到 Amazon Glacier 中，以便实现最低成本。数据通过您的备份应用程序进行访问，而且备份目录中仍然可以看到所有备份任务和磁带。<br> <img src="/images/cloud-storage-gw-aws-vtl.jpg" alt="aws gw volume"></p>
+</li>
+<li><p>将数据传入传出AWS云</p>
+<p> Storage Gateway 会自动缓存本地数据，并将其高效移入 (和移出) 云存储服务。这可以降低在您的办公地点和 AWS 云之间转移数据所需的时间和成本。分段管理、增量传输、带宽限制和带宽计划等优化功能是所有接口的标准功能。</p>
+</li>
+</ol>
+<h4 id="特性"><a href="#特性" class="headerlink" title="特性"></a>特性</h4><ol>
+<li>支持多个客户端类型：file、volume、虚拟磁带库等</li>
+<li>虚拟设备既可以运行于本地，也能运行在 AWS 中</li>
+<li>内置压缩、加密和带宽管理功能</li>
+<li>支持数据存档到AWS Glacier中</li>
+</ol>
+<h4 id="使用步骤"><a href="#使用步骤" class="headerlink" title="使用步骤"></a>使用步骤</h4><ol>
+<li>从 AWS 管理控制台下载 AWS Storage Gateway 虚拟机 (VM) 映像</li>
+<li>在所选的虚拟机监控程序下安装虚拟机：VMware ESXi 或 Microsoft Hyper-V</li>
+<li>配置网关，从以下三种配置中进行选择：网关缓存卷、网关存储卷或网关虚拟磁带库 (VTL)</li>
+<li>从直连式存储 (DAS)、网络附加存储 (NAS) 或网络区域存储 (SAN) 向已安装的本地网关分配本地存储。在网关缓存配置中，本地存储用于存储您经常访问的数据。在网关存储配置中，它将用于存储您的原始数据。在网关-VTL 配置中，此本地存储用于持久缓存上传到 AWS 的数据以及缓存最近读取的虚拟磁带数据</li>
+<li>使用 AWS 管理控制台激活本地网关，方法是将网关的 IP 地址与 AWS 账户关联起来，并为网关选择 AWS 地区用于存储上传数据</li>
+<li>对于网关缓存和网关存储配置，将会创建卷，并将这些卷作为 iSCSI 设备连接到您的本地应用程序服务器。对于网关-VTL，将虚拟磁带驱动器和虚拟介质更换器安装到备份服务器上，并让备份软件能够发现虚拟磁带库和虚拟磁带</li>
+</ol>
+<h3 id="阿里云"><a href="#阿里云" class="headerlink" title="阿里云"></a>阿里云</h3><h4 id="介绍-1"><a href="#介绍-1" class="headerlink" title="介绍"></a>介绍</h4><p>云存储网关是一款可在线下和云上部署的软网关，以阿里云上的OSS作为后端存储，可在企业的内部IT环境和基于云的存储基础设施之间提供无缝、安全的集成。支持行业标准的文件存储协议，并通过在本地缓存经常访问的数据来提供低延迟性能， 您可以安全地将数据存储在阿里云OSS中。</p>
+<p>链接：<a href="https://www.aliyun.com/product/hcs" target="_blank" rel="noopener">https://www.aliyun.com/product/hcs</a></p>
+<h4 id="产品架构-1"><a href="#产品架构-1" class="headerlink" title="产品架构"></a>产品架构</h4><p><img src="/images/cloud-storage-gw-aliyun-arch.jpg" alt="aliyun arch"></p>
+<h4 id="特性-1"><a href="#特性-1" class="headerlink" title="特性"></a>特性</h4><ol>
+<li>支持本地数据中心/云端ECS部署</li>
+<li>基于OSS对象存储，提供NFS/CIFS文件协议</li>
+<li>缓存算法支持缓存模式和写透模式</li>
+<li>异步多线程上传，自动MD5校验</li>
+<li>提供存储网关端的操作日志和云端OSS的访问日志</li>
+</ol>
+<h4 id="使用步骤-1"><a href="#使用步骤-1" class="headerlink" title="使用步骤"></a>使用步骤</h4><p><strong>本地数据中心部署步骤</strong></p>
+<p>1, 本地安装网关VM</p>
+<p>不同的Hypervisor支持的安装方式和使用的安装文件都不相同，安装文件如下表所示：</p>
+<table>
+<thead>
+<tr>
+<th>Hypervisor</th>
+<th>支持的安装方式</th>
+<th>安装文件格式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>KVM</td>
+<td>使用VM Manager的方式通过qcow2安装存储网关</td>
+<td>qcow2</td>
+</tr>
+<tr>
+<td>VMware</td>
+<td>使用VM创建向导通过vmdk安装存储网关</td>
+<td>vmdk</td>
+</tr>
+<tr>
+<td>VMware</td>
+<td>使用OVF导入方式安装存储网关</td>
+<td>ovf</td>
+</tr>
+<tr>
+<td>Xen</td>
+<td>使用Xen的安装命令进行安装</td>
+<td>raw</td>
+</tr>
+</tbody>
+</table>
+<p>2, 登录网关VM并配置网络<br>3, 配置远端OSS<br>4, 激活存储网关<br>4, 配置NFS/CIFS服务<br>5, 开启缓存服务，设置缓存参数</p>
+<p><strong>云上部署步骤</strong></p>
+<ol>
+<li><p>用云存储网关镜像启动一ECS实例</p>
+<p> ECS实例的最低要求是:</p>
+<ul>
+<li>2核2GB内存</li>
+<li>40GB系统盘</li>
+<li>一个公网IP</li>
+<li>安全组设置需要允许控制台连接</li>
+<li>任意Linux操作系统</li>
+</ul>
+</li>
+<li><p>配置安全组</p>
+</li>
+<li>配置OSS</li>
+<li>激活存储网关</li>
+</ol>
+<h3 id="腾讯云"><a href="#腾讯云" class="headerlink" title="腾讯云"></a>腾讯云</h3><h4 id="介绍-2"><a href="#介绍-2" class="headerlink" title="介绍"></a>介绍</h4><p>存储网关（Cloud Storage Gateway）是一种混合云存储方案，旨在帮助企业或个人实现本地存储与公有云存储的无缝衔接。您无需关心多协议本地存储设备与云存储的兼容性，只需要在本地安装云存储网关即可实现混合云部署，并拥有媲美本地性能的海量云端存储。</p>
+<p>链接：<a href="https://www.qcloud.com/product/csg" target="_blank" rel="noopener">https://www.qcloud.com/product/csg</a></p>
+<h4 id="产品架构-2"><a href="#产品架构-2" class="headerlink" title="产品架构"></a>产品架构</h4><ol>
+<li><p>缓存卷网关（iscsi）</p>
+<p> 把腾讯云上volume通过存储网关映射到本地使用呢，提升本地访问腾讯云上volume的性能。<br> <img src="/images/cloud-storage-gw-qcloud-vcache.jpg" alt="qcloud cache volume"></p>
+</li>
+<li><p>存储卷网关（iscsi）</p>
+<p> 把本地volume的备份通过存储网关备份到腾讯云上。<br> <img src="/images/cloud-storage-gw-qcloud-svolume.jpg" alt="qcloud storage volume"></p>
+</li>
+<li><p>文件网关（NFS）</p>
+<p> 把本地NFS存储通过存储网关扩展到腾讯云上。<br> <img src="/images/cloud-storage-gw-qcloud-file.jpg" alt="qcloud file gw"></p>
+</li>
+</ol>
+<h4 id="特性-2"><a href="#特性-2" class="headerlink" title="特性"></a>特性</h4><ol>
+<li>支持在本地安装存储网关</li>
+<li>支持volume的映射扩展</li>
+<li>仅支持本地NFS文件协议</li>
+<li>本地缓存机制实现冷热数据分离</li>
+<li>数据在本地加密压缩后传到云端</li>
+</ol>
+<h4 id="使用步骤-2"><a href="#使用步骤-2" class="headerlink" title="使用步骤"></a>使用步骤</h4><ol>
+<li>控制台创建存储网关，选择地区</li>
+<li>选择存储网关类型：卷网关/文件网关</li>
+<li>选择网关运行的平台：本地VMware VM上/腾讯云CVM上<ul>
+<li>VMware上部署：下载镜像文件到本地，部署到VMware虚拟机</li>
+<li>CVM上部署：选择CVM地域和机型，选择存储网关镜像部署</li>
+</ul>
+</li>
+<li>连接到存储网关</li>
+<li>激活存储网关</li>
+<li>配置本地缓存磁盘</li>
+</ol>
+<h3 id="百度云"><a href="#百度云" class="headerlink" title="百度云"></a>百度云</h3><h4 id="介绍-3"><a href="#介绍-3" class="headerlink" title="介绍"></a>介绍</h4><p>存储网关是一种混合云存储方案，可以无缝衔接本地和云端存储。存储网关基于对象存储BOS提供NFS和CIFS协议的文件存储服务，您从此无需担心本地应用与云存储间的协议兼容性。此外，存储网关也可以部署在云端，实现云主机间的文件共享。</p>
+<p>链接：<a href="https://cloud.baidu.com/product/bsg.html" target="_blank" rel="noopener">https://cloud.baidu.com/product/bsg.html</a></p>
+<h4 id="产品架构-3"><a href="#产品架构-3" class="headerlink" title="产品架构"></a>产品架构</h4><ol>
+<li><p>混合云下存储扩展</p>
+<p> 本地IDC的存储空间往往是有限，通过使用存储网关，您可以像读写本地磁盘一样无缝使用云端的海量存储资源。存储网关可以部署在本地或者云端的虚拟机、物理机上。<br> <img src="/images/cloud-storage-gw-baiduyun-hybrid.jpg" alt="baiduyun hybrid"></p>
+</li>
+<li><p>云主机间文件共享</p>
+<p> 多台云主机间通常有文件共享的需求，例如应用服务器将日志存放在共享文件存储上以方便后续的日志集中处理和分析，负载均衡的后端云主机也可以将应用数据放在共享存储上从而实现云主机自身的无状态，方便搭建高可用业务架构。<br> <img src="/images/cloud-storage-gw-baiduyun-fileshare.jpg" alt="baiduyun share"></p>
+</li>
+</ol>
+<h4 id="特性-3"><a href="#特性-3" class="headerlink" title="特性"></a>特性</h4><ol>
+<li>支持部署在本地或云端的虚拟机、物理机上</li>
+<li>部署在云端，提供云主机间文件共享功能</li>
+<li>内置本地高速缓存</li>
+<li>提供NFS和CIFS协议的文件存储服务，数据持久化存储在BOS</li>
+</ol>
+<h4 id="使用步骤-3"><a href="#使用步骤-3" class="headerlink" title="使用步骤"></a>使用步骤</h4><ol>
+<li><p>创建存储网关：可以通过API/bgs.py脚本创建</p>
+<blockquote>
+<p>当前存储网关还只能创建在默认VPC内，后续会支持指定VPC进行创建<br>也既是只能在云主机上部署存储网关，还不支持本地部署</p>
+</blockquote>
+</li>
+<li><p>创建共享目标</p>
+<p> 一个存储网关上可以创建多个共享目标。一个共享目标对应一个BOS bucket</p>
+</li>
+<li>设置访问权限</li>
+<li>使用存储网关：NFS/Samba挂载</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>作为本地存储到公有云的一种扩展，存储网关是混合云中很重要的一部分，在各大公有云厂商中都有提供。<br>在提供存储网关的基本功能外，各个公有云厂商的存储网关功能会有些差异，详细参考下一节的功能对比。</p>
+<h3 id="功能对比"><a href="#功能对比" class="headerlink" title="功能对比"></a>功能对比</h3><p>对比友商的存储网关功能，列表如下：</p>
+<table>
+<thead>
+<tr>
+<th>对比项</th>
+<th>AWS</th>
+<th>阿里云</th>
+<th>腾讯云</th>
+<th>百度云</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NFS</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td>CIFS</td>
+<td>x</td>
+<td>√</td>
+<td>x</td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td>ISCSI</td>
+<td>√</td>
+<td>x</td>
+<td>√</td>
+<td>x</td>
+<td></td>
+</tr>
+<tr>
+<td>虚拟磁带库</td>
+<td>√</td>
+<td>x</td>
+<td>√</td>
+<td>x</td>
+<td></td>
+</tr>
+<tr>
+<td>缓存算法</td>
+<td>缓存</td>
+<td>缓存/写透</td>
+<td>缓存</td>
+<td>缓存</td>
+<td></td>
+</tr>
+<tr>
+<td>本地部署</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td>云端部署</td>
+<td>x</td>
+<td>√</td>
+<td>√</td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td>后端存储</td>
+<td>OSS/Glacier</td>
+<td>OSS</td>
+<td>OSS</td>
+<td>OSS</td>
+<td></td>
+</tr>
+<tr>
+<td>数据加密</td>
+<td>√</td>
+<td>x(OSS传输加密)</td>
+<td>√</td>
+<td>x(OSS传输加密)</td>
+<td></td>
+</tr>
+<tr>
+<td>数据压缩</td>
+<td>√</td>
+<td>x</td>
+<td>√</td>
+<td>x</td>
+<td></td>
+</tr>
+<tr>
+<td>操作日志</td>
+<td>x</td>
+<td>√</td>
+<td>x</td>
+<td>x</td>
+<td></td>
+</tr>
+<tr>
+<td>带宽管理</td>
+<td>√</td>
+<td>x</td>
+<td>√</td>
+<td>x</td>
+<td></td>
+</tr>
+<tr>
+<td>自研</td>
+<td>√</td>
+<td>x(数梦工场)</td>
+<td>√</td>
+<td>√</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="存储网关基本功能"><a href="#存储网关基本功能" class="headerlink" title="存储网关基本功能"></a>存储网关基本功能</h3><p>参考存储网关的定义和上一节中的各个厂商存储网关的功能对比，我们可以总结出存储网关的基本功能如下，可作为我们实现存储网关的参考。</p>
+<ol>
+<li>制作存储网关VM镜像</li>
+<li>支持部署在本地</li>
+<li>支持NFS文件协议</li>
+<li>缓存算法</li>
+<li>后端使用OSS存储</li>
+</ol>
+<h4 id="难点"><a href="#难点" class="headerlink" title="难点"></a>难点</h4><ul>
+<li><p>NFS文件协议<br>  支持完善的NFS文件协议，是个比较繁琐和困难的功能</p>
+</li>
+<li><p>缓存算法<br>  如何实现效率高、缓存效果好的缓存算法是上述功能的难点<br>  但实现第一版基础的缓存算法，还是有很多现成的算法可以参考的</p>
+</li>
+</ul>
+<blockquote>
+<p>考虑不完善，需要继续细化</p>
+</blockquote>
+<h3 id="存储网关附加功能"><a href="#存储网关附加功能" class="headerlink" title="存储网关附加功能"></a>存储网关附加功能</h3><p>在存储网关基本功能之上，可以考虑添加的附加功能有：</p>
+<ol>
+<li>部署在云端虚拟机上</li>
+<li>支持CIFS文件协议</li>
+<li>支持数据加密、数据压缩</li>
+<li>支持ISCSI</li>
+<li>带宽管理</li>
+<li>数据预取算法</li>
+</ol>
+<h4 id="难点-1"><a href="#难点-1" class="headerlink" title="难点"></a>难点</h4><ul>
+<li><p>CIFS文件协议<br>  支持完善的CIFS文件协议，是个比较繁琐和困难的功能</p>
+</li>
+<li><p>ISCSI卷映射<br>  ISCSI卷的映射管理，快照功能都需要很多开发量</p>
+</li>
+<li><p>数据预取算法<br>  实现高效、准确的数据预取算法对存储网关也是个难点，做好了也会是一个亮点</p>
+</li>
+</ul>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/08/15/data-encryption-algorithm/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2250,264 +2721,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/06/12/ceph-radosgw-multisite/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="ictfox">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/ictfox.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ictfox blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2017/06/12/ceph-radosgw-multisite/" itemprop="url">对象存储跨区灾备 - RGW MultiSite</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-06-12T21:31:37+08:00">
-                2017-06-12
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/ceph/" itemprop="url" rel="index">
-                    <span itemprop="name">ceph</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2017/06/12/ceph-radosgw-multisite/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2017/06/12/ceph-radosgw-multisite/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h2 id="需求"><a href="#需求" class="headerlink" title="需求"></a>需求</h2><p>实现对象存储的跨区灾备，提供应用的高可用。</p>
-<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>针对对象存储的跨区灾备，在Jewel版本之前，需要通过独立的radosgw-agent进程来实现，配置步骤参考：<a href="http://www.yangguanjun.com/2017/05/09/rgw-multi-region/" target="_blank" rel="noopener">对象存储跨机房容灾调研</a></p>
-<p>但在<code>Jewel</code>版本中，RGW直接通过<code>radosgw进程</code>实现对象存储的跨区灾备，不需要额外的<code>radosgw-agent</code>进程，同时一些概念也有所变化；例如替换<code>region</code>为<code>zonegroup</code>，提出新的<code>realm</code>，<code>period</code>概念等；</p>
-<h3 id="配置参考"><a href="#配置参考" class="headerlink" title="配置参考"></a>配置参考</h3><p><a href="http://docs.ceph.com/docs/jewel/radosgw/multisite/" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/radosgw/multisite/</a></p>
-<p><a href="https://access.redhat.com/documentation/en/red-hat-ceph-storage/2/paged/object-gateway-guide-for-red-hat-enterprise-linux/chapter-8-multi-site" target="_blank" rel="noopener">https://access.redhat.com/documentation/en/red-hat-ceph-storage/2/paged/object-gateway-guide-for-red-hat-enterprise-linux/chapter-8-multi-site</a></p>
-<p>ceph官网的配置<code>multisite</code>的文档不完善，还有一些错误；参考RedHat的文档比较好</p>
-<h2 id="环境"><a href="#环境" class="headerlink" title="环境"></a>环境</h2><p>Ceph版本：Jewel 10.2.3</p>
-<p>Ceph Cluster：两个Ceph Cluster集群（虚拟机搭建）</p>
-<h2 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h2><h3 id="前提"><a href="#前提" class="headerlink" title="前提"></a>前提</h3><p>两个Ceph Cluster集群，每个上面选择一台机器提供radosgw服务；</p>
-<table>
-<thead>
-<tr>
-<th>cluster</th>
-<th>节点</th>
-<th>radosgw节点</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Ceph集群1</td>
-<td>ceph21, ceph22, ceph23</td>
-<td>ceph21</td>
-</tr>
-<tr>
-<td>Ceph集群2</td>
-<td>ceph31, ceph32, ceph33</td>
-<td>ceph31</td>
-</tr>
-</tbody>
-</table>
-<h3 id="规划"><a href="#规划" class="headerlink" title="规划"></a>规划</h3><p>对<code>RGW MULTISITE</code>来说，在一个<code>realm</code>里，需要配置一个<code>master zonegroup</code>，一个或多个<code>secondary zonegroups</code>（貌似可以配置多个独立的<code>zonegroup</code>）；在一个<code>zonegroup</code>中需要配置一个<code>master zone</code>，一个或多个<code>secondary zones</code>；<br><img src="/images/ceph-radosgw-multisite1.jpg" alt="radosgw multisite"></p>
-<p>而在我们的应用中，我们只需要北京的两个sites做灾备，所以我们的配置如下：</p>
-<p>配置一个<code>realm</code>，包含一个<code>master zonegroup</code>，里面配置ceph集群1作为<code>master zone</code>，ceph集群2作为<code>secondary zone</code>；</p>
-<h3 id="步骤"><a href="#步骤" class="headerlink" title="步骤"></a>步骤</h3><h4 id="ceph21节点配置master-zone"><a href="#ceph21节点配置master-zone" class="headerlink" title="ceph21节点配置master zone"></a>ceph21节点配置master zone</h4><ol>
-<li><p>创建需要的pools</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">root@ceph21:~/mikeyang/rgw<span class="comment"># cat rgwPoolCreate.sh</span></span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">ceph osd pool create .rgw.root 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.control 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.data.root 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.gc 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.log 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.intent-log 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.usage 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.users.keys 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.users.email 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.users.swift 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.users.uid 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.buckets.index 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.buckets.data 32 32</span><br><span class="line">ceph osd pool create bj-zone02.rgw.meta 32 32</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>创建realm，zonegroup和master zone</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># create realm, zonegroup and zone</span></span><br><span class="line">radosgw-admin realm create --rgw-realm=cloudin --default</span><br><span class="line">radosgw-admin zonegroup create --rgw-zonegroup=bj --endpoints=http://&lt;self-ip&gt;:80 --rgw-realm=cloudin --master --default</span><br><span class="line">radosgw-admin zone create --rgw-zonegroup=bj --rgw-zone=bj-zone02 --endpoints=http://&lt;self-ip&gt;:80 --default --master</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>删除default的zonegrou，zone，更新period</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># remove default zonegroup and zone, which maybe not needed</span></span><br><span class="line">radosgw-admin zonegroup remove --rgw-zonegroup=default --rgw-zone=default</span><br><span class="line">radosgw-admin period update --commit</span><br><span class="line">radosgw-admin zone delete --rgw-zone=default</span><br><span class="line">radosgw-admin period update --commit</span><br><span class="line">radosgw-admin zonegroup delete --rgw-zonegroup=default</span><br><span class="line">radosgw-admin period update --commit</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>创建同步需要的user</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin user create --uid=zone.user --display-name=<span class="string">"Zone User"</span> --system</span><br><span class="line">radosgw-admin zone modify --rgw-zone=bj-zone02 --access-key=&#123;system-key&#125; --secret=&#123;secret&#125;</span><br><span class="line">radosgw-admin period update --commit</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>注释：–access-key={system-key} –secret={secret}，对应user create中的access-key, secret</p>
-</blockquote>
-</li>
-</ol>
-<ol>
-<li><p>修改ceph.conf，启动radosgw</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/ceph/ceph.conf</span><br><span class="line">[client.rgw.ceph21]</span><br><span class="line">   host = ceph21</span><br><span class="line">   rgw_frontends = <span class="string">"civetweb port=80"</span></span><br><span class="line">   rgw_zone=bj-zone02</span><br><span class="line"> </span><br><span class="line">service radosgw start id=rgw.ceph21</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<h4 id="ceph31节点配置secondary-zone"><a href="#ceph31节点配置secondary-zone" class="headerlink" title="ceph31节点配置secondary zone"></a>ceph31节点配置secondary zone</h4><ol>
-<li><p>创建需要的pools</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">root@ceph31:~/mikeyang/rgw<span class="comment"># cat rgwPoolCreate.sh</span></span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">ceph osd pool create .rgw.root 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.control 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.data.root 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.gc 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.log 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.intent-log 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.usage 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.users.keys 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.users.email 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.users.swift 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.users.uid 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.buckets.index 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.buckets.data 32 32</span><br><span class="line">ceph osd pool create bj-zone03.rgw.meta 32 32</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>获取master zone的realm，zonegroup，period信息</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin realm pull --url=http://&lt;master-zone-ip&gt;:80 --access-key=&#123;system-key&#125; --secret=&#123;secret&#125;</span><br><span class="line">radosgw-admin realm default --rgw-realm=cloudin</span><br><span class="line">radosgw-admin period pull --url=http://&lt;master-zone-ip&gt;:80 --access-key=&#123;system-key&#125; --secret=&#123;secret&#125;</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>注释：–access-key={system-key} –secret={secret}，这部分是master zone的同步user的access-key, secret</p>
-</blockquote>
-</li>
-<li><p>创建secondary zone</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin zone create --rgw-zonegroup=bj --rgw-zone=bj-zone03 --endpoints=http://&lt;self-ip&gt;:80 --access-key=&#123;system-key&#125; --secret=&#123;secret&#125;</span><br><span class="line">radosgw-admin zone delete --rgw-zone=default</span><br><span class="line">radosgw-admin period update --commit</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>注释：–access-key={system-key} –secret={secret}，这部分是master zone的同步user的access-key, secret</p>
-</blockquote>
-</li>
-<li><p>修改ceph.conf，启动radosgw</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/ceph/ceph.conf</span><br><span class="line">[client.rgw.ceph31]</span><br><span class="line">   host = ceph31</span><br><span class="line">   rgw_frontends = <span class="string">"civetweb port=80"</span></span><br><span class="line">   rgw_zone=bj-zone03</span><br><span class="line"> </span><br><span class="line">service radosgw start id=rgw.ceph31</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<h4 id="检查集群状态"><a href="#检查集群状态" class="headerlink" title="检查集群状态"></a>检查集群状态</h4><ol>
-<li><p>master zone节点检查</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">root@ceph21:~/mikeyang/rgw<span class="comment"># radosgw-admin sync status</span></span><br><span class="line">2016-10-26 11:18:45.124701 7fd18c502900  0 error <span class="keyword">in</span> read_id <span class="keyword">for</span> id  : (2) No such file or directory</span><br><span class="line">2016-10-26 11:18:45.125156 7fd18c502900  0 error <span class="keyword">in</span> read_id <span class="keyword">for</span> id  : (2) No such file or directory</span><br><span class="line">          realm 0b64b20e-2a90-4fc4-a1d6-57fc67457564 (cloudin)</span><br><span class="line">      zonegroup 1bfc8ccd-01ae-477e-a332-af4cb00d3f20 (bj)</span><br><span class="line">           zone 9f621425-cd68-4d2f-b3e7-e85814caef2c (bj-zone02)</span><br><span class="line">  metadata sync no sync (zone is master)</span><br><span class="line">      data sync <span class="built_in">source</span>: 249b96bd-8f86-4326-80e0-7fceca78dec1 (bj-zone03)</span><br><span class="line">                        syncing</span><br><span class="line">                        full sync: 0/128 shards</span><br><span class="line">                        incremental sync: 128/128 shards</span><br><span class="line">                        data is caught up with <span class="built_in">source</span></span><br><span class="line">root@ceph21:~/mikeyang/rgw<span class="comment">#</span></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>secondary zone节点检查</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">root@ceph31:~/mikeyang/rgw<span class="comment"># radosgw-admin sync status</span></span><br><span class="line">2016-10-26 11:19:41.715683 7fa016bef900  0 error <span class="keyword">in</span> read_id <span class="keyword">for</span> id  : (2) No such file or directory</span><br><span class="line">2016-10-26 11:19:41.716289 7fa016bef900  0 error <span class="keyword">in</span> read_id <span class="keyword">for</span> id  : (2) No such file or directory</span><br><span class="line">          realm 0b64b20e-2a90-4fc4-a1d6-57fc67457564 (cloudin)</span><br><span class="line">      zonegroup 1bfc8ccd-01ae-477e-a332-af4cb00d3f20 (bj)</span><br><span class="line">           zone 249b96bd-8f86-4326-80e0-7fceca78dec1 (bj-zone03)</span><br><span class="line">  metadata sync syncing</span><br><span class="line">                full sync: 0/64 shards</span><br><span class="line">                metadata is caught up with master</span><br><span class="line">                incremental sync: 64/64 shards</span><br><span class="line">      data sync <span class="built_in">source</span>: 9f621425-cd68-4d2f-b3e7-e85814caef2c (bj-zone02)</span><br><span class="line">                        syncing</span><br><span class="line">                        full sync: 0/128 shards</span><br><span class="line">                        incremental sync: 128/128 shards</span><br><span class="line">                        data is caught up with <span class="built_in">source</span></span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>注释：上述输出中有两条error log输出，这个是radosgw的一个bug，还没修复，对正确性没有影响。</p>
-</blockquote>
-</li>
-</ol>
-<h2 id="数据迁移"><a href="#数据迁移" class="headerlink" title="数据迁移"></a>数据迁移</h2><p>之前说过，<code>Jewel</code>版本的radosgw对应的pool和使用方式都跟<code>Hammer</code>有不少区别，所以在从<code>Hammer</code>升级到<code>Jewel</code>后，需要考虑之前的对象存储数据迁移；</p>
-<p>鉴于我们现在对象存储仅仅<code>RDS</code>在使用，数据量也不大，所以在中断对象存储服务的情况下，迁移是比较容易完成的，步骤如下：</p>
-<ol>
-<li><p>导出现有的user信息；</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">openstack@BJBGP02-02-01:~$ radosgw-admin metadata list user</span><br><span class="line">[</span><br><span class="line">    <span class="string">"cloudInS3User"</span></span><br><span class="line">]</span><br><span class="line">openstack@BJBGP02-02-01:~$ radosgw-admin user info --uid=cloudInS3User</span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"user_id"</span>: <span class="string">"cloudInS3User"</span>,</span><br><span class="line">    <span class="string">"display_name"</span>: <span class="string">"user for s3"</span>,</span><br><span class="line">    <span class="string">"email"</span>: <span class="string">""</span>,</span><br><span class="line">    <span class="string">"suspended"</span>: 0,</span><br><span class="line">    <span class="string">"max_buckets"</span>: 1000,</span><br><span class="line">    <span class="string">"auid"</span>: 0,</span><br><span class="line">    <span class="string">"subusers"</span>: [],</span><br><span class="line">    <span class="string">"keys"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"user"</span>: <span class="string">"cloudInS3User"</span>,</span><br><span class="line">            <span class="string">"access_key"</span>: <span class="string">"N8JYDX1HCAM55XDWGL10"</span>,</span><br><span class="line">            <span class="string">"secret_key"</span>: <span class="string">"uRpR6EbR9YkyjfvdQmuJq0VgEx1a0KONl0NCKlJ9"</span></span><br><span class="line">        &#125;</span><br><span class="line">    ],</span><br><span class="line">    <span class="string">"swift_keys"</span>: [],</span><br><span class="line">    <span class="string">"caps"</span>: [],</span><br><span class="line">    <span class="string">"op_mask"</span>: <span class="string">"read, write, delete"</span>,</span><br><span class="line">    <span class="string">"default_placement"</span>: <span class="string">""</span>,</span><br><span class="line">    <span class="string">"placement_tags"</span>: [],</span><br><span class="line">    <span class="string">"bucket_quota"</span>: &#123;</span><br><span class="line">        <span class="string">"enabled"</span>: <span class="literal">false</span>,</span><br><span class="line">        <span class="string">"max_size_kb"</span>: -1,</span><br><span class="line">        <span class="string">"max_objects"</span>: -1</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"user_quota"</span>: &#123;</span><br><span class="line">        <span class="string">"enabled"</span>: <span class="literal">false</span>,</span><br><span class="line">        <span class="string">"max_size_kb"</span>: -1,</span><br><span class="line">        <span class="string">"max_objects"</span>: -1</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"temp_url_keys"</span>: []</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p> 当前系统只有一个用于RDS备份的user：cloudInS3User</p>
-</li>
-<li><p>导出现有user下的bucket信息；</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">openstack@BJBGP02-02-01:~$ radosgw-admin metadata list bucket</span><br><span class="line">[</span><br><span class="line">    <span class="string">"database_backups"</span></span><br><span class="line">]</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>导出现有bucket下的对象；</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">	ictfox@YangGuanjun-MacBook-Pro:~$ s3cmd ls s3://database_backups</span><br><span class="line">	2016-09-01 08:22    276864   s3://database_backups/03f55add-fda5-404e-99b2-04b34b32ec56.xbstream.gz.enc</span><br><span class="line">	2016-09-05 03:14    279232   s3://database_backups/147a2c80-0f7d-4ecd-9c4a-e9a48b7cd703.xbstream.gz.enc</span><br><span class="line">...</span><br><span class="line">	2016-09-01 09:38    278320   s3://database_backups/dbfee332-5f4e-4596-bef6-63797a24d9e0.xbstream.gz.enc</span><br><span class="line">	2016-08-31 09:54    276144   s3://database_backups/f703131f-7dd7-43a6-9b20-7fe33a9fbe59.xbstream.gz.enc</span><br></pre></td></tr></table></figure>
-<p> 然后通过命令把bucket下的对象保存下来：<code>s3cmd get s3://database_backups/OBJECT LOCAL_FILE</code></p>
-</li>
-<li><p>radosgw升级后恢复数据</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># radosgw-admin user create --uid="cloudInS3User" --display-name="user for s3" --access-key=N8JYDX1HCAM55XDWGL10 --secret=uRpR6EbR9YkyjfvdQmuJq0VgEx1a0KONl0NCKlJ9</span></span><br></pre></td></tr></table></figure>
-<p> 通过测试的RDS实例创建一备份，会自动创建bucket: database_backups<br> 然后恢复第3步中备份下来的各个对象文件</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># s3cmd put FILE [FILE...] s3://database_backups/</span></span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2562,7 +2775,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-count">75</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -2584,7 +2797,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-count">50</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>

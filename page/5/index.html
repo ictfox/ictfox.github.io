@@ -296,6 +296,225 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/05/08/rgw-user-config-datapool/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/05/08/rgw-user-config-datapool/" itemprop="url">radosgw配置user使用指定data pool</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-05-08T15:31:37+08:00">
+                2017-05-08
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/05/08/rgw-user-config-datapool/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/05/08/rgw-user-config-datapool/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在使用radosgw提供s3服务的时候，有时候我们会需要指定user使用不同的data pool，或者不同的data index pool；</p>
+<p>在Jewel版本里，我们可以通过配置placement target来实现；</p>
+<p>首先介绍下Jewel版本里radosgw的几个概念：</p>
+<table>
+<thead>
+<tr>
+<th>缩略语</th>
+<th>全称</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Realm</td>
+<td>域，同一域内的账户在其下属的zone上是通用的。一个域下只能有一个主zonegroup，从的zonegroup可以是0或多个。</td>
+</tr>
+<tr>
+<td>Period</td>
+<td>表示域的有效期，在域的结构发生变化时，其Period会相应变化。</td>
+</tr>
+<tr>
+<td>Zonegroup</td>
+<td>Zone的集合，等价于之前的Region。一个Zonegroup下只能有一个主Zone。主Zone和从Zone可以部署在同一集群上，也可以部署在不同的集群上。</td>
+</tr>
+<tr>
+<td>Zone</td>
+<td>表示独立的一个对象存储区域。</td>
+</tr>
+</tbody>
+</table>
+<h2 id="代码解析"><a href="#代码解析" class="headerlink" title="代码解析"></a>代码解析</h2><h3 id="zone-placement"><a href="#zone-placement" class="headerlink" title="zone placement"></a>zone placement</h3><p>Radosgw里的user bucket数据存放哪里，是有user里的placement确定的，每个placement info可以指定三个pool，如下所示：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">RGWZonePlacementInfo</span> &#123;</span></span><br><span class="line">    <span class="built_in">string</span> index_pool;</span><br><span class="line">    <span class="built_in">string</span> data_pool;</span><br><span class="line">    <span class="built_in">string</span> data_extra_pool; <span class="comment">/* if not set we should use data_pool */</span></span><br><span class="line">    RGWBucketIndexType index_type;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>每个zone里可以用多个placement，定义如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">RGWZoneParams</span> :</span> RGWSystemMetaObj &#123;</span><br><span class="line">    rgw_bucket domain_root;</span><br><span class="line">    rgw_bucket metadata_heap;</span><br><span class="line">    rgw_bucket control_pool;        <span class="comment">// 每个zone里的下面一些pool是只能配置一个的</span></span><br><span class="line">    rgw_bucket gc_pool;</span><br><span class="line">    rgw_bucket log_pool;</span><br><span class="line">    rgw_bucket intent_log_pool;</span><br><span class="line">    rgw_bucket usage_log_pool;</span><br><span class="line">    rgw_bucket user_keys_pool;</span><br><span class="line">    rgw_bucket user_email_pool;</span><br><span class="line">    rgw_bucket user_swift_pool;</span><br><span class="line">    rgw_bucket user_uid_pool;</span><br><span class="line">    RGWAccessKey system_key;</span><br><span class="line"> </span><br><span class="line">    <span class="built_in">map</span>&lt;<span class="built_in">string</span>, RGWZonePlacementInfo&gt; placement_pools;    <span class="comment">// zone里支持配置多个placement</span></span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="zonegroup-placement"><a href="#zonegroup-placement" class="headerlink" title="zonegroup placement"></a>zonegroup placement</h3><p>zonegroup里的placement target的定义如下，每个zonegroup可以配置多个placement targets，每个placement targets有name，tags（对应user info里的配置）标识；</p>
+<p>这里的placement target name都对应着zone placement_pools里的string 关键字；</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">RGWZoneGroupPlacementTarget</span> &#123;</span></span><br><span class="line">    <span class="built_in">string</span> name;</span><br><span class="line">    <span class="built_in">set</span>&lt;<span class="built_in">string</span>&gt; tags; <span class="comment">// 可以有多个tags，对应RGWUserInfo里的placement_tags</span></span><br><span class="line">...</span><br><span class="line">&#125;;</span><br><span class="line">  </span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">RGWZoneGroup</span> :</span> <span class="keyword">public</span> RGWSystemMetaObj &#123;</span><br><span class="line">    <span class="built_in">string</span> api_name;</span><br><span class="line">    <span class="built_in">list</span>&lt;<span class="built_in">string</span>&gt; endpoints;</span><br><span class="line">    <span class="keyword">bool</span> is_master;</span><br><span class="line"> </span><br><span class="line">    <span class="built_in">string</span> master_zone;</span><br><span class="line">    <span class="built_in">map</span>&lt;<span class="built_in">string</span>, RGWZone&gt; zones;       <span class="comment">// 配置多个zones</span></span><br><span class="line"> </span><br><span class="line">    <span class="built_in">map</span>&lt;<span class="built_in">string</span>, RGWZoneGroupPlacementTarget&gt; placement_targets;       <span class="comment">// zonegroup支持配置多个placement targets</span></span><br><span class="line">    <span class="built_in">string</span> default_placement;</span><br><span class="line">...</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h3 id="user-info"><a href="#user-info" class="headerlink" title="user info"></a>user info</h3><p>在每个user里，可以配置default placement，也支持配置多个placement tags；</p>
+<p>user支持在创建bucket的时候指定placement；</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">RGWUserInfo</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="keyword">uint64_t</span> auid;</span><br><span class="line">    rgw_user user_id;</span><br><span class="line">...</span><br><span class="line">    <span class="built_in">string</span> default_placement;       <span class="comment">// 指定默认的placement</span></span><br><span class="line">    <span class="built_in">list</span>&lt;<span class="built_in">string</span>&gt; placement_tags;  <span class="comment">// tags里的值需配置为placement target里tags集合里的值</span></span><br><span class="line">...</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h2 id="操作步骤"><a href="#操作步骤" class="headerlink" title="操作步骤"></a>操作步骤</h2><p>下面通过增加一个test的placement target，让rgw user miketest使用pool default.rgw.buckets.data.tst 作为其bucket的data pool；</p>
+<h3 id="创建pool"><a href="#创建pool" class="headerlink" title="创建pool"></a>创建pool</h3><p>根据需要通过ceph osd pool 命令创建要使用的pool，例如：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph osd pool create default.rgw.buckets.data.tst 1024 1024</span></span><br><span class="line"><span class="comment"># ceph osd pool set &lt;poolname&gt; crush_ruleset 2    // 根据需要配置pool的crush rule</span></span><br></pre></td></tr></table></figure>
+<h3 id="添加zone的placement"><a href="#添加zone的placement" class="headerlink" title="添加zone的placement"></a>添加zone的placement</h3><p>可以先list下当前的zone的placement</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># radosgw-admin zone placement list  --rgw-zone=default</span></span><br><span class="line">[</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"key"</span>: <span class="string">"default-placement"</span>,</span><br><span class="line">        <span class="string">"val"</span>: &#123;</span><br><span class="line">            <span class="string">"index_pool"</span>: <span class="string">"default.rgw.buckets.index"</span>,</span><br><span class="line">            <span class="string">"data_pool"</span>: <span class="string">"default.rgw.buckets.data"</span>,</span><br><span class="line">            <span class="string">"data_extra_pool"</span>: <span class="string">"default.rgw.buckets.non-ec"</span>,</span><br><span class="line">            <span class="string">"index_type"</span>: 0</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+<p>zone添加placement的命令如下（指定zone placement的各个pool）：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># radosgw-admin zone placement add --rgw-zone=default --placement-id=test --index_pool=default.rgw.buckets.index --data_pool=default.rgw.buckets.data.tst --data_extra_pool=default.rgw.buckets.non-ec</span></span><br><span class="line">[</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"key"</span>: <span class="string">"default-placement"</span>,</span><br><span class="line">        <span class="string">"val"</span>: &#123;</span><br><span class="line">            <span class="string">"index_pool"</span>: <span class="string">"default.rgw.buckets.index"</span>,</span><br><span class="line">            <span class="string">"data_pool"</span>: <span class="string">"default.rgw.buckets.data"</span>,</span><br><span class="line">            <span class="string">"data_extra_pool"</span>: <span class="string">"default.rgw.buckets.non-ec"</span>,</span><br><span class="line">            <span class="string">"index_type"</span>: 0</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"key"</span>: <span class="string">"test"</span>,</span><br><span class="line">        <span class="string">"val"</span>: &#123;</span><br><span class="line">            <span class="string">"index_pool"</span>: <span class="string">"default.rgw.buckets.index"</span>,</span><br><span class="line">            <span class="string">"data_pool"</span>: <span class="string">"default.rgw.buckets.data.tst"</span>,    // 这里仅仅指定了data_pool为新的pool</span><br><span class="line">            <span class="string">"data_extra_pool"</span>: <span class="string">"default.rgw.buckets.non-ec"</span>,</span><br><span class="line">            <span class="string">"index_type"</span>: 0</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+<p>也可以通过如下命令来添加zone的placement：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># radosgw-admin zone get --rgw-zone=default &gt; zone.info</span></span><br><span class="line"><span class="comment"># vim zone.info     // 添加 key为test的placement</span></span><br><span class="line"><span class="comment"># radosgw-admin zone set --rgw-zone=default &lt; zone.info</span></span><br></pre></td></tr></table></figure>
+<h3 id="添加zonegroup的placement"><a href="#添加zonegroup的placement" class="headerlink" title="添加zonegroup的placement"></a>添加zonegroup的placement</h3><p>查看当前的zonegroup的placement</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># radosgw-admin zonegroup placement list</span></span><br><span class="line">[</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"key"</span>: <span class="string">"default-placement"</span>,</span><br><span class="line">        <span class="string">"val"</span>: &#123;</span><br><span class="line">            <span class="string">"name"</span>: <span class="string">"default-placement"</span>,</span><br><span class="line">            <span class="string">"tags"</span>: []</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+<p>zonegroup添加新的placement</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># radosgw-admin zonegroup placement add --rgw-zonegroup=default --placement-id=test</span></span><br><span class="line">[</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"key"</span>: <span class="string">"default-placement"</span>,</span><br><span class="line">        <span class="string">"val"</span>: &#123;</span><br><span class="line">            <span class="string">"name"</span>: <span class="string">"default-placement"</span>,</span><br><span class="line">            <span class="string">"tags"</span>: []</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"key"</span>: <span class="string">"test"</span>,</span><br><span class="line">        <span class="string">"val"</span>: &#123;</span><br><span class="line">            <span class="string">"name"</span>: <span class="string">"test"</span>,</span><br><span class="line">            <span class="string">"tags"</span>: []</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+<h3 id="更新user-info"><a href="#更新user-info" class="headerlink" title="更新user info"></a>更新user info</h3><p>查看user的信息</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># radosgw-admin user info --uid=miketest</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"user_id"</span>: <span class="string">"miketest"</span>,</span><br><span class="line">    <span class="string">"display_name"</span>: <span class="string">"miketest"</span>,</span><br><span class="line">    <span class="string">"email"</span>: <span class="string">""</span>,</span><br><span class="line">    <span class="string">"suspended"</span>: 0,</span><br><span class="line">    <span class="string">"max_buckets"</span>: 1000,</span><br><span class="line">    <span class="string">"auid"</span>: 0,</span><br><span class="line">    <span class="string">"subusers"</span>: [],</span><br><span class="line">    <span class="string">"keys"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"user"</span>: <span class="string">"miketest"</span>,</span><br><span class="line">            <span class="string">"access_key"</span>: <span class="string">"7J82YY2ODPQ22337N392"</span>,</span><br><span class="line">            <span class="string">"secret_key"</span>: <span class="string">"IgRmuo11OrxRlWa7TEicHSbbUFNYP2MDwZ8St2PS"</span></span><br><span class="line">        &#125;</span><br><span class="line">    ],</span><br><span class="line">    <span class="string">"swift_keys"</span>: [],</span><br><span class="line">    <span class="string">"caps"</span>: [],</span><br><span class="line">    <span class="string">"op_mask"</span>: <span class="string">"read, write, delete"</span>,</span><br><span class="line">    <span class="string">"default_placement"</span>: <span class="string">"default-placement"</span>,</span><br><span class="line">    <span class="string">"placement_tags"</span>: [</span><br><span class="line">        <span class="string">"default-placement"</span></span><br><span class="line">    ],</span><br><span class="line">    <span class="string">"bucket_quota"</span>: &#123;</span><br><span class="line">        <span class="string">"enabled"</span>: <span class="literal">false</span>,</span><br><span class="line">        <span class="string">"max_size_kb"</span>: -1,</span><br><span class="line">        <span class="string">"max_objects"</span>: -1</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"user_quota"</span>: &#123;</span><br><span class="line">        <span class="string">"enabled"</span>: <span class="literal">false</span>,</span><br><span class="line">        <span class="string">"max_size_kb"</span>: -1,</span><br><span class="line">        <span class="string">"max_objects"</span>: -1</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"temp_url_keys"</span>: []</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>导出user info，修改后导入新的信息，添加新的placement_tags：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># radosgw-admin metadata get user:miketest &gt; miketest.userinfo</span></span><br><span class="line"><span class="comment"># vim miketest.userinfo</span></span><br><span class="line"><span class="comment"># radosgw-admin metadata put user:miketest &lt; miketest.userinfo</span></span><br><span class="line"><span class="comment"># radosgw-admin user info --uid=miketest</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"user_id"</span>: <span class="string">"miketest"</span>,</span><br><span class="line">    <span class="string">"display_name"</span>: <span class="string">"miketest"</span>,</span><br><span class="line">    <span class="string">"email"</span>: <span class="string">""</span>,</span><br><span class="line">    <span class="string">"suspended"</span>: 0,</span><br><span class="line">    <span class="string">"max_buckets"</span>: 1000,</span><br><span class="line">    <span class="string">"auid"</span>: 0,</span><br><span class="line">    <span class="string">"subusers"</span>: [],</span><br><span class="line">    <span class="string">"keys"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"user"</span>: <span class="string">"miketest"</span>,</span><br><span class="line">            <span class="string">"access_key"</span>: <span class="string">"7J82YY2ODPQ22337N392"</span>,</span><br><span class="line">            <span class="string">"secret_key"</span>: <span class="string">"IgRmuo11OrxRlWa7TEicHSbbUFNYP2MDwZ8St2PS"</span></span><br><span class="line">        &#125;</span><br><span class="line">    ],</span><br><span class="line">    <span class="string">"swift_keys"</span>: [],</span><br><span class="line">    <span class="string">"caps"</span>: [],</span><br><span class="line">    <span class="string">"op_mask"</span>: <span class="string">"read, write, delete"</span>,</span><br><span class="line">    <span class="string">"default_placement"</span>: <span class="string">"default-placement"</span>,   // 这里也可以配置default为 <span class="built_in">test</span> placement</span><br><span class="line">    <span class="string">"placement_tags"</span>: [</span><br><span class="line">        <span class="string">"default-placement"</span>,</span><br><span class="line">        <span class="string">"test"</span>          // 添加了名为<span class="built_in">test</span>的placement</span><br><span class="line">    ],</span><br><span class="line">    <span class="string">"bucket_quota"</span>: &#123;</span><br><span class="line">        <span class="string">"enabled"</span>: <span class="literal">false</span>,</span><br><span class="line">        <span class="string">"max_size_kb"</span>: -1,</span><br><span class="line">        <span class="string">"max_objects"</span>: -1</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"user_quota"</span>: &#123;</span><br><span class="line">        <span class="string">"enabled"</span>: <span class="literal">false</span>,</span><br><span class="line">        <span class="string">"max_size_kb"</span>: -1,</span><br><span class="line">        <span class="string">"max_objects"</span>: -1</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"temp_url_keys"</span>: []</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="更新zonegroup-map"><a href="#更新zonegroup-map" class="headerlink" title="更新zonegroup map"></a>更新zonegroup map</h3><p>更新完zonegroup的placement后，虽说也可以查看到新的placement，但这些并没有更新到zonegroup map里；</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># radosgw-admin zonegroup placement list</span></span><br><span class="line">[</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"key"</span>: <span class="string">"default-placement"</span>,</span><br><span class="line">        <span class="string">"val"</span>: &#123;</span><br><span class="line">            <span class="string">"name"</span>: <span class="string">"default-placement"</span>,</span><br><span class="line">            <span class="string">"tags"</span>: []</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"key"</span>: <span class="string">"test"</span>,</span><br><span class="line">        <span class="string">"val"</span>: &#123;</span><br><span class="line">            <span class="string">"name"</span>: <span class="string">"test"</span>,</span><br><span class="line">            <span class="string">"tags"</span>: []</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">]</span><br><span class="line">  </span><br><span class="line"><span class="comment"># radosgw-admin zonegroup-map get</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"zonegroups"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"key"</span>: <span class="string">"342414eb-ee98-40b9-b9d5-971ad14d2dd0"</span>,</span><br><span class="line">            <span class="string">"val"</span>: &#123;</span><br><span class="line">                <span class="string">"id"</span>: <span class="string">"342414eb-ee98-40b9-b9d5-971ad14d2dd0"</span>,</span><br><span class="line">                <span class="string">"name"</span>: <span class="string">"default"</span>,</span><br><span class="line">                <span class="string">"api_name"</span>: <span class="string">""</span>,</span><br><span class="line">                <span class="string">"is_master"</span>: <span class="string">"true"</span>,</span><br><span class="line">                <span class="string">"endpoints"</span>: [],</span><br><span class="line">                <span class="string">"hostnames"</span>: [],</span><br><span class="line">                <span class="string">"hostnames_s3website"</span>: [],</span><br><span class="line">                <span class="string">"master_zone"</span>: <span class="string">"f31f020f-aaa2-4570-b6f7-19258064e5b5"</span>,</span><br><span class="line">                <span class="string">"zones"</span>: [</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"id"</span>: <span class="string">"f31f020f-aaa2-4570-b6f7-19258064e5b5"</span>,</span><br><span class="line">                        <span class="string">"name"</span>: <span class="string">"default"</span>,</span><br><span class="line">                        <span class="string">"endpoints"</span>: [],</span><br><span class="line">                        <span class="string">"log_meta"</span>: <span class="string">"false"</span>,</span><br><span class="line">                        <span class="string">"log_data"</span>: <span class="string">"false"</span>,</span><br><span class="line">                        <span class="string">"bucket_index_max_shards"</span>: 0,</span><br><span class="line">                        <span class="string">"read_only"</span>: <span class="string">"false"</span></span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                <span class="string">"placement_targets"</span>: [  // 看到这里并没有新加的<span class="built_in">test</span> placement</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"name"</span>: <span class="string">"default-placement"</span>,</span><br><span class="line">                        <span class="string">"tags"</span>: []</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                <span class="string">"default_placement"</span>: <span class="string">"default-placement"</span>,</span><br><span class="line">                <span class="string">"realm_id"</span>: <span class="string">"7eeb01eb-3774-4abe-ba93-c205cc3c83af"</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    ],</span><br><span class="line">    <span class="string">"master_zonegroup"</span>: <span class="string">"342414eb-ee98-40b9-b9d5-971ad14d2dd0"</span>,</span><br><span class="line">    <span class="string">"bucket_quota"</span>: &#123;</span><br><span class="line">        <span class="string">"enabled"</span>: <span class="literal">false</span>,</span><br><span class="line">        <span class="string">"max_size_kb"</span>: -1,</span><br><span class="line">        <span class="string">"max_objects"</span>: -1</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"user_quota"</span>: &#123;</span><br><span class="line">        <span class="string">"enabled"</span>: <span class="literal">false</span>,</span><br><span class="line">        <span class="string">"max_size_kb"</span>: -1,</span><br><span class="line">        <span class="string">"max_objects"</span>: -1</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>执行zonegroup map更新：<code>radosgw-admin period update --commit</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># radosgw-admin period update --commit</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"id"</span>: <span class="string">"bd50c829-f7eb-4aa9-ad0a-efa814dfc3cc"</span>,</span><br><span class="line">    <span class="string">"epoch"</span>: 2,</span><br><span class="line">    <span class="string">"predecessor_uuid"</span>: <span class="string">"da2e2b0d-a17a-46fb-8369-6cb373ffd08d"</span>,</span><br><span class="line">    <span class="string">"sync_status"</span>: [</span><br><span class="line">...</span><br><span class="line">    ],</span><br><span class="line">    <span class="string">"period_map"</span>: &#123;</span><br><span class="line">        <span class="string">"id"</span>: <span class="string">"bd50c829-f7eb-4aa9-ad0a-efa814dfc3cc"</span>,</span><br><span class="line">        <span class="string">"zonegroups"</span>: [</span><br><span class="line">            &#123;</span><br><span class="line">                <span class="string">"id"</span>: <span class="string">"342414eb-ee98-40b9-b9d5-971ad14d2dd0"</span>,</span><br><span class="line">                <span class="string">"name"</span>: <span class="string">"default"</span>,</span><br><span class="line">                <span class="string">"api_name"</span>: <span class="string">""</span>,</span><br><span class="line">                <span class="string">"is_master"</span>: <span class="string">"true"</span>,</span><br><span class="line">                <span class="string">"endpoints"</span>: [],</span><br><span class="line">                <span class="string">"hostnames"</span>: [],</span><br><span class="line">                <span class="string">"hostnames_s3website"</span>: [],</span><br><span class="line">                <span class="string">"master_zone"</span>: <span class="string">"f31f020f-aaa2-4570-b6f7-19258064e5b5"</span>,</span><br><span class="line">                <span class="string">"zones"</span>: [</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"id"</span>: <span class="string">"f31f020f-aaa2-4570-b6f7-19258064e5b5"</span>,</span><br><span class="line">                        <span class="string">"name"</span>: <span class="string">"default"</span>,</span><br><span class="line">                        <span class="string">"endpoints"</span>: [],</span><br><span class="line">                        <span class="string">"log_meta"</span>: <span class="string">"true"</span>,</span><br><span class="line">                        <span class="string">"log_data"</span>: <span class="string">"false"</span>,</span><br><span class="line">                        <span class="string">"bucket_index_max_shards"</span>: 0,</span><br><span class="line">                        <span class="string">"read_only"</span>: <span class="string">"false"</span></span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                <span class="string">"placement_targets"</span>: [</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"name"</span>: <span class="string">"default-placement"</span>,</span><br><span class="line">                        <span class="string">"tags"</span>: []</span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"name"</span>: <span class="string">"test"</span>, // 更新后有 <span class="built_in">test</span> placement</span><br><span class="line">                        <span class="string">"tags"</span>: []</span><br><span class="line">                    &#125;</span><br><span class="line">                ],</span><br><span class="line">                <span class="string">"default_placement"</span>: <span class="string">"default-placement"</span>,</span><br><span class="line">                <span class="string">"realm_id"</span>: <span class="string">"7eeb01eb-3774-4abe-ba93-c205cc3c83af"</span></span><br><span class="line">            &#125;</span><br><span class="line">        ],</span><br><span class="line">        <span class="string">"short_zone_ids"</span>: [</span><br><span class="line">            &#123;</span><br><span class="line">                <span class="string">"key"</span>: <span class="string">"f31f020f-aaa2-4570-b6f7-19258064e5b5"</span>,</span><br><span class="line">                <span class="string">"val"</span>: 568702538</span><br><span class="line">            &#125;</span><br><span class="line">        ]</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"master_zonegroup"</span>: <span class="string">"342414eb-ee98-40b9-b9d5-971ad14d2dd0"</span>,</span><br><span class="line">    <span class="string">"master_zone"</span>: <span class="string">"f31f020f-aaa2-4570-b6f7-19258064e5b5"</span>,</span><br><span class="line">    <span class="string">"period_config"</span>: &#123;</span><br><span class="line">        <span class="string">"bucket_quota"</span>: &#123;</span><br><span class="line">            <span class="string">"enabled"</span>: <span class="literal">false</span>,</span><br><span class="line">            <span class="string">"max_size_kb"</span>: -1,</span><br><span class="line">            <span class="string">"max_objects"</span>: -1</span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="string">"user_quota"</span>: &#123;</span><br><span class="line">            <span class="string">"enabled"</span>: <span class="literal">false</span>,</span><br><span class="line">            <span class="string">"max_size_kb"</span>: -1,</span><br><span class="line">            <span class="string">"max_objects"</span>: -1</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"realm_id"</span>: <span class="string">"7eeb01eb-3774-4abe-ba93-c205cc3c83af"</span>,</span><br><span class="line">    <span class="string">"realm_name"</span>: <span class="string">"default"</span>,</span><br><span class="line">    <span class="string">"realm_epoch"</span>: 2</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="重启radosgw服务"><a href="#重启radosgw服务" class="headerlink" title="重启radosgw服务"></a>重启radosgw服务</h3><p>重启radosgw服务，Centos里的命令为：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># systemctl restart ceph-radosgw.target</span></span><br></pre></td></tr></table></figure>
+<h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><p>通过s3cmd就可以测试，命令如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">✗ s3cmd mb s3://foxtst --bucket-location=:<span class="built_in">test</span></span><br><span class="line">Bucket <span class="string">'s3://foxtst/'</span> created</span><br><span class="line">✗ s3cmd put pg_by_osd.sh s3://foxtst</span><br></pre></td></tr></table></figure>
+<p>在ceph集群里，可以查看到上传的文件<code>pg_by_osd.sh</code>在指定的pool里：<code>default.rgw.buckets.data.tst</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rados ls -p default.rgw.buckets.data.tst</span></span><br><span class="line">f31f020f-aaa2-4570-b6f7-19258064e5b5.1224751.1_pg_by_osd.sh</span><br></pre></td></tr></table></figure>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://docs.ceph.com/docs/jewel/radosgw/multisite/" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/radosgw/multisite/</a><br><a href="http://www.jianshu.com/p/31a6f8df9a8f" target="_blank" rel="noopener">http://www.jianshu.com/p/31a6f8df9a8f</a><br><a href="http://ceph.org.cn/2017/03/24/ceph-rgwj%E4%BB%A5%E4%B8%8A%E7%89%88%E6%9C%AC%E7%9A%84%E7%94%A8%E6%88%B7placement%E8%AE%BE%E7%BD%AE-by_%E7%A7%A6%E7%89%A7%E7%BE%8A/" target="_blank" rel="noopener">http://ceph.org.cn/2017/03/24/ceph-rgwj%E4%BB%A5%E4%B8%8A%E7%89%88%E6%9C%AC%E7%9A%84%E7%94%A8%E6%88%B7placement%E8%AE%BE%E7%BD%AE-by_%E7%A7%A6%E7%89%A7%E7%BE%8A/</a></p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/05/02/Ceph-OSD-op_shardedwq/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2909,202 +3128,6 @@ s3cmd --help
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2016/08/30/rgw-user-statistics/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="ictfox">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/ictfox.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ictfox blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2016/08/30/rgw-user-statistics/" itemprop="url">Radosgw如何统计用户使用信息?</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-08-30T17:31:21+08:00">
-                2016-08-30
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/ceph/" itemprop="url" rel="index">
-                    <span itemprop="name">ceph</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2016/08/30/rgw-user-statistics/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2016/08/30/rgw-user-statistics/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h2 id="需求"><a href="#需求" class="headerlink" title="需求"></a>需求</h2><p>在我们的需求中，要统计radosgw中每个用户的使用信息，然后计算用户的花费</p>
-<p>包括三部分：</p>
-<ul>
-<li>存储空间费用</li>
-<li>流量费用</li>
-<li>请求费用</li>
-</ul>
-<p>存储空间统计：可以通过radosgw-admin命令获取<br>流量统计/请求次数统计：可以通过radosgw支持usage info的统计和获取，对应的也是radosgw-admin命令</p>
-<h2 id="Bucket-stats"><a href="#Bucket-stats" class="headerlink" title="Bucket stats"></a>Bucket stats</h2><h3 id="radosgw-admin-bucket-stats"><a href="#radosgw-admin-bucket-stats" class="headerlink" title="radosgw-admin bucket stats"></a>radosgw-admin bucket stats</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">命令：radosgw-admin bucket stats --uid=[userid]</span><br><span class="line"></span><br><span class="line">$ radosgw-admin bucket stats --uid=S3User</span><br><span class="line">[</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"bucket"</span>: <span class="string">"database_backups"</span>,</span><br><span class="line">        <span class="string">"pool"</span>: <span class="string">".rgw.buckets"</span>,</span><br><span class="line">        <span class="string">"index_pool"</span>: <span class="string">".rgw.buckets.index"</span>,</span><br><span class="line">        <span class="string">"id"</span>: <span class="string">"default.553597.94"</span>,</span><br><span class="line">        <span class="string">"marker"</span>: <span class="string">"default.553597.94"</span>,</span><br><span class="line">        <span class="string">"owner"</span>: <span class="string">"S3User"</span>,</span><br><span class="line">        <span class="string">"ver"</span>: <span class="string">"0#959"</span>,</span><br><span class="line">        <span class="string">"master_ver"</span>: <span class="string">"0#0"</span>,</span><br><span class="line">        <span class="string">"mtime"</span>: <span class="string">"2016-06-14 16:22:20.000000"</span>,</span><br><span class="line">        <span class="string">"max_marker"</span>: <span class="string">"0#"</span>,</span><br><span class="line">        <span class="string">"usage"</span>: &#123;</span><br><span class="line">            <span class="string">"rgw.main"</span>: &#123;</span><br><span class="line">                <span class="string">"size_kb"</span>: 4792,</span><br><span class="line">                <span class="string">"size_kb_actual"</span>: 4828,</span><br><span class="line">                <span class="string">"num_objects"</span>: 18</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="string">"bucket_quota"</span>: &#123;</span><br><span class="line">            <span class="string">"enabled"</span>: <span class="literal">false</span>,</span><br><span class="line">            <span class="string">"max_size_kb"</span>: -1,</span><br><span class="line">            <span class="string">"max_objects"</span>: -1</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
-<p>上面输出信息中，有bucket的objects个数和占用空间。</p>
-<h3 id="bucket-stats对应的admin-ops"><a href="#bucket-stats对应的admin-ops" class="headerlink" title="bucket stats对应的admin ops"></a>bucket stats对应的admin ops</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">GET /&#123;admin&#125;/bucket?format=json HTTP/1.1</span><br><span class="line">Host &#123;fqdn&#125;</span><br></pre></td></tr></table></figure>
-<p><a href="http://docs.ceph.com/docs/jewel/radosgw/adminops/#get-bucket-info" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/radosgw/adminops/#get-bucket-info</a></p>
-<h2 id="支持RGW-usage"><a href="#支持RGW-usage" class="headerlink" title="支持RGW usage"></a>支持RGW usage</h2><h3 id="enable-rgw-usage"><a href="#enable-rgw-usage" class="headerlink" title="enable rgw usage"></a>enable rgw usage</h3><p>默认radosgw的usage是关闭的，需要修改ceph.conf文件打开，配置如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[client.rgw.BJ-001-001]</span><br><span class="line">    host = BJ-001-001</span><br><span class="line">    keyring = /etc/ceph/ceph.client.radosgw.keyring</span><br><span class="line">    <span class="built_in">log</span> file = /var/<span class="built_in">log</span>/ceph/client.radosgw.gateway.log</span><br><span class="line">    rgw socket path = /var/run/ceph/ceph.client.rgw.BJ-001-001.sock</span><br><span class="line">    rgw <span class="built_in">enable</span> usage <span class="built_in">log</span> = <span class="literal">true</span></span><br><span class="line">    rgw_frontends = civetweb port=80</span><br></pre></td></tr></table></figure>
-<h3 id="创建对应pool-usage"><a href="#创建对应pool-usage" class="headerlink" title="创建对应pool .usage"></a>创建对应pool .usage</h3><p>创建usage需要的pools</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ceph osd pool create .usage 64          <span class="comment">## usage_log_pool</span></span><br></pre></td></tr></table></figure>
-<h3 id="重启rgw服务"><a href="#重启rgw服务" class="headerlink" title="重启rgw服务"></a>重启rgw服务</h3><p>重启radosgw服务：<code>/etc/init.d/radosgw restart</code></p>
-<h3 id="检查rgw的usage配置"><a href="#检查rgw的usage配置" class="headerlink" title="检查rgw的usage配置"></a>检查rgw的usage配置</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ ceph daemon /var/run/ceph/ceph-client/ceph-client.rgw.BJ-001-001.76550.asok config show | grep usage</span><br><span class="line">    <span class="string">"rgw_usage_max_shards"</span>: <span class="string">"32"</span>,</span><br><span class="line">    <span class="string">"rgw_usage_max_user_shards"</span>: <span class="string">"1"</span>,</span><br><span class="line">    <span class="string">"rgw_enable_usage_log"</span>: <span class="string">"true"</span>,</span><br><span class="line">    <span class="string">"rgw_usage_log_flush_threshold"</span>: <span class="string">"1024"</span>,</span><br><span class="line">    <span class="string">"rgw_usage_log_tick_interval"</span>: <span class="string">"30"</span>,</span><br></pre></td></tr></table></figure>
-<p>上面的配置信息中有关于usage log更新的配置，所以默认刚开启配置后查看usage信息还是空的，等上一段时间再查看就有输出了。</p>
-<h2 id="查看RGW-usage信息"><a href="#查看RGW-usage信息" class="headerlink" title="查看RGW usage信息"></a>查看RGW usage信息</h2><h3 id="命令格式"><a href="#命令格式" class="headerlink" title="命令格式"></a>命令格式</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin -h</span><br><span class="line">...</span><br><span class="line">  usage show                 show usage (by user, date range)</span><br><span class="line">  usage trim                 trim usage (by user, date range)</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
-<h3 id="radosgw-admin-usage-show命令"><a href="#radosgw-admin-usage-show命令" class="headerlink" title="radosgw-admin usage show命令"></a>radosgw-admin usage show命令</h3><p>可以查看指定user在某一时间段的统计信息。</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">用法：radosgw-admin usage show [--uid=&#123;uid&#125;] [--start-date=&#123;date&#125;] [--end-date=&#123;date&#125;] [--categories=&lt;list&gt;] [--show-log-entries=&lt;flag&gt;] [--show-log-sum=&lt;flag&gt;]</span><br><span class="line">示例：radosgw-admin usage show --uid=demo --start-date=<span class="string">"2016-09-01 08:00:00"</span> --end-date=<span class="string">"2016-09-02 08:00:00"</span> --categories=<span class="string">"put_obj,put_acls"</span></span><br></pre></td></tr></table></figure>
-<p>线上环境实际输出： </p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br></pre></td><td class="code"><pre><span class="line">$ radosgw-admin usage show --uid=S3User</span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"entries"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"owner"</span>: <span class="string">"S3User"</span>,</span><br><span class="line">            <span class="string">"buckets"</span>: [</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"bucket"</span>: <span class="string">""</span>,</span><br><span class="line">                    <span class="string">"time"</span>: <span class="string">"2016-10-09 05:00:00.000000Z"</span>,</span><br><span class="line">                    <span class="string">"epoch"</span>: 1475989200,</span><br><span class="line">                    <span class="string">"categories"</span>: [</span><br><span class="line">                        &#123;</span><br><span class="line">                            <span class="string">"category"</span>: <span class="string">"list_buckets"</span>,</span><br><span class="line">                            <span class="string">"bytes_sent"</span>: 698,</span><br><span class="line">                            <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                            <span class="string">"ops"</span>: 2,</span><br><span class="line">                            <span class="string">"successful_ops"</span>: 2</span><br><span class="line">                        &#125;</span><br><span class="line">                    ]</span><br><span class="line">                &#125;</span><br><span class="line">,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"bucket"</span>: <span class="string">"database_backups"</span>,</span><br><span class="line">                    <span class="string">"time"</span>: <span class="string">"2016-10-09 05:00:00.000000Z"</span>,</span><br><span class="line">                    <span class="string">"epoch"</span>: 1475989200,</span><br><span class="line">                    <span class="string">"categories"</span>: [</span><br><span class="line">                        &#123;</span><br><span class="line">                            <span class="string">"category"</span>: <span class="string">"get_acls"</span>,</span><br><span class="line">                            <span class="string">"bytes_sent"</span>: 474,</span><br><span class="line">                            <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                            <span class="string">"ops"</span>: 1,</span><br><span class="line">                            <span class="string">"successful_ops"</span>: 1</span><br><span class="line">                        &#125;,</span><br><span class="line">                        &#123;</span><br><span class="line">                            <span class="string">"category"</span>: <span class="string">"get_cors"</span>,</span><br><span class="line">                            <span class="string">"bytes_sent"</span>: 75,</span><br><span class="line">                            <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                            <span class="string">"ops"</span>: 1,</span><br><span class="line">                            <span class="string">"successful_ops"</span>: 0</span><br><span class="line">                        &#125;,</span><br><span class="line">                        &#123;</span><br><span class="line">                            <span class="string">"category"</span>: <span class="string">"get_obj"</span>,</span><br><span class="line">                            <span class="string">"bytes_sent"</span>: 555936,</span><br><span class="line">                            <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                            <span class="string">"ops"</span>: 3,</span><br><span class="line">                            <span class="string">"successful_ops"</span>: 3</span><br><span class="line">                        &#125;,</span><br><span class="line">                        &#123;</span><br><span class="line">                            <span class="string">"category"</span>: <span class="string">"list_bucket"</span>,</span><br><span class="line">                            <span class="string">"bytes_sent"</span>: 37633,</span><br><span class="line">                            <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                            <span class="string">"ops"</span>: 6,</span><br><span class="line">                            <span class="string">"successful_ops"</span>: 6</span><br><span class="line">                        &#125;,</span><br><span class="line">                        &#123;</span><br><span class="line">                            <span class="string">"category"</span>: <span class="string">"put_obj"</span>,</span><br><span class="line">                            <span class="string">"bytes_sent"</span>: 0,</span><br><span class="line">                            <span class="string">"bytes_received"</span>: 558144,</span><br><span class="line">                            <span class="string">"ops"</span>: 2,</span><br><span class="line">                            <span class="string">"successful_ops"</span>: 2</span><br><span class="line">                        &#125;</span><br><span class="line">                    ]</span><br><span class="line">                &#125;</span><br><span class="line">            ]</span><br><span class="line">        &#125;</span><br><span class="line">    ],</span><br><span class="line">    <span class="string">"summary"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"user"</span>: <span class="string">"S3User"</span>,</span><br><span class="line">            <span class="string">"categories"</span>: [</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"category"</span>: <span class="string">"get_acls"</span>,</span><br><span class="line">                    <span class="string">"bytes_sent"</span>: 474,</span><br><span class="line">                    <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                    <span class="string">"ops"</span>: 1,</span><br><span class="line">                    <span class="string">"successful_ops"</span>: 1</span><br><span class="line">                &#125;,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"category"</span>: <span class="string">"get_cors"</span>,</span><br><span class="line">                    <span class="string">"bytes_sent"</span>: 75,</span><br><span class="line">                    <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                    <span class="string">"ops"</span>: 1,</span><br><span class="line">                    <span class="string">"successful_ops"</span>: 0</span><br><span class="line">                &#125;,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"category"</span>: <span class="string">"get_obj"</span>,</span><br><span class="line">                    <span class="string">"bytes_sent"</span>: 555936,</span><br><span class="line">                    <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                    <span class="string">"ops"</span>: 3,</span><br><span class="line">                    <span class="string">"successful_ops"</span>: 3</span><br><span class="line">                &#125;,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"category"</span>: <span class="string">"list_bucket"</span>,</span><br><span class="line">                    <span class="string">"bytes_sent"</span>: 37633,</span><br><span class="line">                    <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                    <span class="string">"ops"</span>: 6,</span><br><span class="line">                    <span class="string">"successful_ops"</span>: 6</span><br><span class="line">                &#125;,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"category"</span>: <span class="string">"list_buckets"</span>,</span><br><span class="line">                    <span class="string">"bytes_sent"</span>: 698,</span><br><span class="line">                    <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                    <span class="string">"ops"</span>: 2,</span><br><span class="line">                    <span class="string">"successful_ops"</span>: 2</span><br><span class="line">                &#125;,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"category"</span>: <span class="string">"put_obj"</span>,</span><br><span class="line">                    <span class="string">"bytes_sent"</span>: 0,</span><br><span class="line">                    <span class="string">"bytes_received"</span>: 558144,</span><br><span class="line">                    <span class="string">"ops"</span>: 2,</span><br><span class="line">                    <span class="string">"successful_ops"</span>: 2</span><br><span class="line">                &#125;</span><br><span class="line">            ],</span><br><span class="line">            <span class="string">"total"</span>: &#123;</span><br><span class="line">                <span class="string">"bytes_sent"</span>: 594816,</span><br><span class="line">                <span class="string">"bytes_received"</span>: 558144,</span><br><span class="line">                <span class="string">"ops"</span>: 15,</span><br><span class="line">                <span class="string">"successful_ops"</span>: 14</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>上面输出中，summery里的total信息就足够我们来计费使用了。</p>
-<h3 id="usage-show对应的admin-ops"><a href="#usage-show对应的admin-ops" class="headerlink" title="usage show对应的admin ops"></a>usage show对应的admin ops</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">GET /&#123;admin&#125;/usage?format=json HTTP/1.1</span><br><span class="line">Host: &#123;fqdn&#125;</span><br></pre></td></tr></table></figure>
-<p><a href="http://docs.ceph.com/docs/jewel/radosgw/adminops/#get-usage" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/radosgw/adminops/#get-usage</a></p>
-<h3 id="radosgw-admin-usage-trim命令"><a href="#radosgw-admin-usage-trim命令" class="headerlink" title="radosgw-admin usage trim命令"></a>radosgw-admin usage trim命令</h3><p>修剪rgw的usage log，这是因为在长时间使用下，以往的usage log会占用ceph存储空间。在确定不需要的时间段后，通过该命令删除这部分记录。</p>
-<p>用法示例：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin usage trim --start-date=2010-01-01 --end-date=2010-12-31</span><br><span class="line">radosgw-admin usage trim --uid=johndoe</span><br><span class="line">radosgw-admin usage trim --uid=johndoe --end-date=2013-12-31</span><br></pre></td></tr></table></figure>
-<h3 id="usage-trim对应的admin-ops"><a href="#usage-trim对应的admin-ops" class="headerlink" title="usage trim对应的admin ops"></a>usage trim对应的admin ops</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">DELETE /&#123;admin&#125;/usage?format=json HTTP/1.1</span><br><span class="line">Host: &#123;fqdn&#125;</span><br></pre></td></tr></table></figure>
-<p><a href="http://docs.ceph.com/docs/jewel/radosgw/adminops/#trim-usage" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/radosgw/adminops/#trim-usage</a></p>
-<h2 id="RGW-log信息"><a href="#RGW-log信息" class="headerlink" title="RGW log信息"></a>RGW log信息</h2><p>radosgw log功能可以记录每个ops的操作记录，方面查看历史操作和统计信息，使用方法如下。</p>
-<h3 id="enable-rgw-log"><a href="#enable-rgw-log" class="headerlink" title="enable rgw log"></a>enable rgw log</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[client.rgw.BJ-001-001]</span><br><span class="line">...</span><br><span class="line">    rgw <span class="built_in">enable</span> ops <span class="built_in">log</span> = <span class="literal">true</span></span><br></pre></td></tr></table></figure>
-<p>或者命令：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">ceph daemon /var/run/ceph/ceph-client/ceph-client.rgw.BJ-001-001.7455.asok config <span class="built_in">set</span> rgw_enable_ops_log <span class="literal">true</span></span><br><span class="line">``` </span><br><span class="line"></span><br><span class="line"><span class="comment">### 创建log对应的pools</span></span><br><span class="line"></span><br><span class="line">创建rgw <span class="built_in">log</span>需要的pools</span><br><span class="line"></span><br><span class="line">```sh</span><br><span class="line">ceph osd pool create .<span class="built_in">log</span> 64            <span class="comment">## log_pool</span></span><br><span class="line">ceph osd pool create .intent-log 64     <span class="comment">## intent_log_pool</span></span><br></pre></td></tr></table></figure>
-<h3 id="rgw-log命令"><a href="#rgw-log命令" class="headerlink" title="rgw log命令"></a>rgw log命令</h3><p>可用通过radosgw-admin log命令操作</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">$ radosgw-admin <span class="built_in">log</span> list</span><br><span class="line">[</span><br><span class="line">    <span class="string">"2016-10-11-14-default.553597.94-database_backups"</span></span><br><span class="line">]</span><br><span class="line"></span><br><span class="line">$ radosgw-admin <span class="built_in">log</span> show --bucket=database_backups --date=2016-10-11-14 --bucket-id=default.553597.94</span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"bucket_id"</span>: <span class="string">"default.553597.94"</span>,</span><br><span class="line">    <span class="string">"bucket_owner"</span>: <span class="string">"S3User"</span>,</span><br><span class="line">    <span class="string">"bucket"</span>: <span class="string">"database_backups"</span>,</span><br><span class="line">    <span class="string">"log_entries"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"bucket"</span>: <span class="string">"database_backups"</span>,</span><br><span class="line">            <span class="string">"time"</span>: <span class="string">"2016-10-11 06:02:20.595010Z"</span>,</span><br><span class="line">            <span class="string">"time_local"</span>: <span class="string">"2016-10-11 14:02:20.595010"</span>,</span><br><span class="line">            <span class="string">"remote_addr"</span>: <span class="string">""</span>,</span><br><span class="line">            <span class="string">"object_owner"</span>: <span class="string">"S3User"</span>,</span><br><span class="line">            <span class="string">"user"</span>: <span class="string">"S3User"</span>,</span><br><span class="line">            <span class="string">"operation"</span>: <span class="string">"GET"</span>,</span><br><span class="line">            <span class="string">"uri"</span>: <span class="string">"\/database_backups\/a2edb41b-3515-4075-9b37-43dd7daf79dc.xbstream.gz.enc"</span>,</span><br><span class="line">            <span class="string">"http_status"</span>: <span class="string">"200"</span>,</span><br><span class="line">            <span class="string">"error_code"</span>: <span class="string">""</span>,</span><br><span class="line">            <span class="string">"bytes_sent"</span>: 279072,</span><br><span class="line">            <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">            <span class="string">"object_size"</span>: 279072,</span><br><span class="line">            <span class="string">"total_time"</span>: 0,</span><br><span class="line">            <span class="string">"user_agent"</span>: <span class="string">""</span>,</span><br><span class="line">            <span class="string">"referrer"</span>: <span class="string">""</span></span><br><span class="line">        &#125;</span><br><span class="line">    ],</span><br><span class="line">    <span class="string">"log_sum"</span>: &#123;</span><br><span class="line">        <span class="string">"bytes_sent"</span>: 279072,</span><br><span class="line">        <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">        <span class="string">"total_time"</span>: 0,</span><br><span class="line">        <span class="string">"total_entries"</span>: 1</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line">$ radosgw-admin <span class="built_in">log</span> rm --object=2016-10-11-14-default.553597.94-database_backups</span><br></pre></td></tr></table></figure>
-<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>测试发现，无论是部署了几个rgw，因为usage信息是存储在rados系统的.usage pool里的，不区分不同rgw过来的请求，所以通过radosgw-admin usage命令看到的是所有rgw操作的统计信息，这样我们没法区分内网和外网的rgw流量和ops个数。</p>
-<p>参考青云，青云支持内网/外网流量和ops统计分开计费。<br><a href="https://docs.qingcloud.com/guide/qingstor.html#id15" target="_blank" rel="noopener">https://docs.qingcloud.com/guide/qingstor.html#id15</a></p>
-<p>若内网的rgw流量不计费，则可以通过配置rgw的参数实现，可配置的rgw参数为：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">rgw_enable_usage_log：<span class="literal">true</span>/<span class="literal">false</span>           <span class="comment">## 是否enable usage统计</span></span><br><span class="line">rgw_enable_ops_log：<span class="literal">true</span>/<span class="literal">false</span>             <span class="comment">## 是否enable ops log统计</span></span><br><span class="line">rgw_ops_log_rados：<span class="literal">true</span>/<span class="literal">false</span>              <span class="comment">## 是否记录ops log到rados里，对用pool为：.log</span></span><br><span class="line">rgw_ops_log_socket_path：&lt;string&gt;          <span class="comment">## 配置ops log的socket path，ops log保存在内存，可以通过socket接口访问</span></span><br></pre></td></tr></table></figure>
-<p>每个rgw都可以配置独立的上述参数，所以针对内网的rgw，我们可以配置<code>rgw_enable_usage_log = false</code>，这样通过内网访问的操作都不会记在usage里。</p>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="http://docs.ceph.com/docs/jewel/man/8/radosgw/#usage-logging" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/man/8/radosgw/#usage-logging</a><br><a href="http://docs.ceph.com/docs/jewel/man/8/radosgw-admin/" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/man/8/radosgw-admin/</a><br><a href="http://docs.ceph.com/docs/jewel/radosgw/admin/#usage" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/radosgw/admin/#usage</a><br><a href="http://docs.ceph.com/docs/jewel/radosgw/adminops/" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/radosgw/adminops/</a><br><a href="http://lyang.top/2016/01/04/Ceph-usage-%E7%9A%84%E6%9F%A5%E8%AF%A2/" target="_blank" rel="noopener">http://lyang.top/2016/01/04/Ceph-usage-%E7%9A%84%E6%9F%A5%E8%AF%A2/</a></p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -3159,7 +3182,7 @@ s3cmd --help
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-count">75</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -3181,7 +3204,7 @@ s3cmd --help
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-count">50</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>

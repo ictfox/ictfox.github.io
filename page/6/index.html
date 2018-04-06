@@ -296,6 +296,202 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2016/08/30/rgw-user-statistics/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2016/08/30/rgw-user-statistics/" itemprop="url">Radosgw如何统计用户使用信息?</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-08-30T17:31:21+08:00">
+                2016-08-30
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2016/08/30/rgw-user-statistics/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2016/08/30/rgw-user-statistics/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="需求"><a href="#需求" class="headerlink" title="需求"></a>需求</h2><p>在我们的需求中，要统计radosgw中每个用户的使用信息，然后计算用户的花费</p>
+<p>包括三部分：</p>
+<ul>
+<li>存储空间费用</li>
+<li>流量费用</li>
+<li>请求费用</li>
+</ul>
+<p>存储空间统计：可以通过radosgw-admin命令获取<br>流量统计/请求次数统计：可以通过radosgw支持usage info的统计和获取，对应的也是radosgw-admin命令</p>
+<h2 id="Bucket-stats"><a href="#Bucket-stats" class="headerlink" title="Bucket stats"></a>Bucket stats</h2><h3 id="radosgw-admin-bucket-stats"><a href="#radosgw-admin-bucket-stats" class="headerlink" title="radosgw-admin bucket stats"></a>radosgw-admin bucket stats</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">命令：radosgw-admin bucket stats --uid=[userid]</span><br><span class="line"></span><br><span class="line">$ radosgw-admin bucket stats --uid=S3User</span><br><span class="line">[</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"bucket"</span>: <span class="string">"database_backups"</span>,</span><br><span class="line">        <span class="string">"pool"</span>: <span class="string">".rgw.buckets"</span>,</span><br><span class="line">        <span class="string">"index_pool"</span>: <span class="string">".rgw.buckets.index"</span>,</span><br><span class="line">        <span class="string">"id"</span>: <span class="string">"default.553597.94"</span>,</span><br><span class="line">        <span class="string">"marker"</span>: <span class="string">"default.553597.94"</span>,</span><br><span class="line">        <span class="string">"owner"</span>: <span class="string">"S3User"</span>,</span><br><span class="line">        <span class="string">"ver"</span>: <span class="string">"0#959"</span>,</span><br><span class="line">        <span class="string">"master_ver"</span>: <span class="string">"0#0"</span>,</span><br><span class="line">        <span class="string">"mtime"</span>: <span class="string">"2016-06-14 16:22:20.000000"</span>,</span><br><span class="line">        <span class="string">"max_marker"</span>: <span class="string">"0#"</span>,</span><br><span class="line">        <span class="string">"usage"</span>: &#123;</span><br><span class="line">            <span class="string">"rgw.main"</span>: &#123;</span><br><span class="line">                <span class="string">"size_kb"</span>: 4792,</span><br><span class="line">                <span class="string">"size_kb_actual"</span>: 4828,</span><br><span class="line">                <span class="string">"num_objects"</span>: 18</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="string">"bucket_quota"</span>: &#123;</span><br><span class="line">            <span class="string">"enabled"</span>: <span class="literal">false</span>,</span><br><span class="line">            <span class="string">"max_size_kb"</span>: -1,</span><br><span class="line">            <span class="string">"max_objects"</span>: -1</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+<p>上面输出信息中，有bucket的objects个数和占用空间。</p>
+<h3 id="bucket-stats对应的admin-ops"><a href="#bucket-stats对应的admin-ops" class="headerlink" title="bucket stats对应的admin ops"></a>bucket stats对应的admin ops</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">GET /&#123;admin&#125;/bucket?format=json HTTP/1.1</span><br><span class="line">Host &#123;fqdn&#125;</span><br></pre></td></tr></table></figure>
+<p><a href="http://docs.ceph.com/docs/jewel/radosgw/adminops/#get-bucket-info" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/radosgw/adminops/#get-bucket-info</a></p>
+<h2 id="支持RGW-usage"><a href="#支持RGW-usage" class="headerlink" title="支持RGW usage"></a>支持RGW usage</h2><h3 id="enable-rgw-usage"><a href="#enable-rgw-usage" class="headerlink" title="enable rgw usage"></a>enable rgw usage</h3><p>默认radosgw的usage是关闭的，需要修改ceph.conf文件打开，配置如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[client.rgw.BJ-001-001]</span><br><span class="line">    host = BJ-001-001</span><br><span class="line">    keyring = /etc/ceph/ceph.client.radosgw.keyring</span><br><span class="line">    <span class="built_in">log</span> file = /var/<span class="built_in">log</span>/ceph/client.radosgw.gateway.log</span><br><span class="line">    rgw socket path = /var/run/ceph/ceph.client.rgw.BJ-001-001.sock</span><br><span class="line">    rgw <span class="built_in">enable</span> usage <span class="built_in">log</span> = <span class="literal">true</span></span><br><span class="line">    rgw_frontends = civetweb port=80</span><br></pre></td></tr></table></figure>
+<h3 id="创建对应pool-usage"><a href="#创建对应pool-usage" class="headerlink" title="创建对应pool .usage"></a>创建对应pool .usage</h3><p>创建usage需要的pools</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ceph osd pool create .usage 64          <span class="comment">## usage_log_pool</span></span><br></pre></td></tr></table></figure>
+<h3 id="重启rgw服务"><a href="#重启rgw服务" class="headerlink" title="重启rgw服务"></a>重启rgw服务</h3><p>重启radosgw服务：<code>/etc/init.d/radosgw restart</code></p>
+<h3 id="检查rgw的usage配置"><a href="#检查rgw的usage配置" class="headerlink" title="检查rgw的usage配置"></a>检查rgw的usage配置</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ ceph daemon /var/run/ceph/ceph-client/ceph-client.rgw.BJ-001-001.76550.asok config show | grep usage</span><br><span class="line">    <span class="string">"rgw_usage_max_shards"</span>: <span class="string">"32"</span>,</span><br><span class="line">    <span class="string">"rgw_usage_max_user_shards"</span>: <span class="string">"1"</span>,</span><br><span class="line">    <span class="string">"rgw_enable_usage_log"</span>: <span class="string">"true"</span>,</span><br><span class="line">    <span class="string">"rgw_usage_log_flush_threshold"</span>: <span class="string">"1024"</span>,</span><br><span class="line">    <span class="string">"rgw_usage_log_tick_interval"</span>: <span class="string">"30"</span>,</span><br></pre></td></tr></table></figure>
+<p>上面的配置信息中有关于usage log更新的配置，所以默认刚开启配置后查看usage信息还是空的，等上一段时间再查看就有输出了。</p>
+<h2 id="查看RGW-usage信息"><a href="#查看RGW-usage信息" class="headerlink" title="查看RGW usage信息"></a>查看RGW usage信息</h2><h3 id="命令格式"><a href="#命令格式" class="headerlink" title="命令格式"></a>命令格式</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin -h</span><br><span class="line">...</span><br><span class="line">  usage show                 show usage (by user, date range)</span><br><span class="line">  usage trim                 trim usage (by user, date range)</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h3 id="radosgw-admin-usage-show命令"><a href="#radosgw-admin-usage-show命令" class="headerlink" title="radosgw-admin usage show命令"></a>radosgw-admin usage show命令</h3><p>可以查看指定user在某一时间段的统计信息。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">用法：radosgw-admin usage show [--uid=&#123;uid&#125;] [--start-date=&#123;date&#125;] [--end-date=&#123;date&#125;] [--categories=&lt;list&gt;] [--show-log-entries=&lt;flag&gt;] [--show-log-sum=&lt;flag&gt;]</span><br><span class="line">示例：radosgw-admin usage show --uid=demo --start-date=<span class="string">"2016-09-01 08:00:00"</span> --end-date=<span class="string">"2016-09-02 08:00:00"</span> --categories=<span class="string">"put_obj,put_acls"</span></span><br></pre></td></tr></table></figure>
+<p>线上环境实际输出： </p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br></pre></td><td class="code"><pre><span class="line">$ radosgw-admin usage show --uid=S3User</span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"entries"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"owner"</span>: <span class="string">"S3User"</span>,</span><br><span class="line">            <span class="string">"buckets"</span>: [</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"bucket"</span>: <span class="string">""</span>,</span><br><span class="line">                    <span class="string">"time"</span>: <span class="string">"2016-10-09 05:00:00.000000Z"</span>,</span><br><span class="line">                    <span class="string">"epoch"</span>: 1475989200,</span><br><span class="line">                    <span class="string">"categories"</span>: [</span><br><span class="line">                        &#123;</span><br><span class="line">                            <span class="string">"category"</span>: <span class="string">"list_buckets"</span>,</span><br><span class="line">                            <span class="string">"bytes_sent"</span>: 698,</span><br><span class="line">                            <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                            <span class="string">"ops"</span>: 2,</span><br><span class="line">                            <span class="string">"successful_ops"</span>: 2</span><br><span class="line">                        &#125;</span><br><span class="line">                    ]</span><br><span class="line">                &#125;</span><br><span class="line">,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"bucket"</span>: <span class="string">"database_backups"</span>,</span><br><span class="line">                    <span class="string">"time"</span>: <span class="string">"2016-10-09 05:00:00.000000Z"</span>,</span><br><span class="line">                    <span class="string">"epoch"</span>: 1475989200,</span><br><span class="line">                    <span class="string">"categories"</span>: [</span><br><span class="line">                        &#123;</span><br><span class="line">                            <span class="string">"category"</span>: <span class="string">"get_acls"</span>,</span><br><span class="line">                            <span class="string">"bytes_sent"</span>: 474,</span><br><span class="line">                            <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                            <span class="string">"ops"</span>: 1,</span><br><span class="line">                            <span class="string">"successful_ops"</span>: 1</span><br><span class="line">                        &#125;,</span><br><span class="line">                        &#123;</span><br><span class="line">                            <span class="string">"category"</span>: <span class="string">"get_cors"</span>,</span><br><span class="line">                            <span class="string">"bytes_sent"</span>: 75,</span><br><span class="line">                            <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                            <span class="string">"ops"</span>: 1,</span><br><span class="line">                            <span class="string">"successful_ops"</span>: 0</span><br><span class="line">                        &#125;,</span><br><span class="line">                        &#123;</span><br><span class="line">                            <span class="string">"category"</span>: <span class="string">"get_obj"</span>,</span><br><span class="line">                            <span class="string">"bytes_sent"</span>: 555936,</span><br><span class="line">                            <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                            <span class="string">"ops"</span>: 3,</span><br><span class="line">                            <span class="string">"successful_ops"</span>: 3</span><br><span class="line">                        &#125;,</span><br><span class="line">                        &#123;</span><br><span class="line">                            <span class="string">"category"</span>: <span class="string">"list_bucket"</span>,</span><br><span class="line">                            <span class="string">"bytes_sent"</span>: 37633,</span><br><span class="line">                            <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                            <span class="string">"ops"</span>: 6,</span><br><span class="line">                            <span class="string">"successful_ops"</span>: 6</span><br><span class="line">                        &#125;,</span><br><span class="line">                        &#123;</span><br><span class="line">                            <span class="string">"category"</span>: <span class="string">"put_obj"</span>,</span><br><span class="line">                            <span class="string">"bytes_sent"</span>: 0,</span><br><span class="line">                            <span class="string">"bytes_received"</span>: 558144,</span><br><span class="line">                            <span class="string">"ops"</span>: 2,</span><br><span class="line">                            <span class="string">"successful_ops"</span>: 2</span><br><span class="line">                        &#125;</span><br><span class="line">                    ]</span><br><span class="line">                &#125;</span><br><span class="line">            ]</span><br><span class="line">        &#125;</span><br><span class="line">    ],</span><br><span class="line">    <span class="string">"summary"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"user"</span>: <span class="string">"S3User"</span>,</span><br><span class="line">            <span class="string">"categories"</span>: [</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"category"</span>: <span class="string">"get_acls"</span>,</span><br><span class="line">                    <span class="string">"bytes_sent"</span>: 474,</span><br><span class="line">                    <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                    <span class="string">"ops"</span>: 1,</span><br><span class="line">                    <span class="string">"successful_ops"</span>: 1</span><br><span class="line">                &#125;,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"category"</span>: <span class="string">"get_cors"</span>,</span><br><span class="line">                    <span class="string">"bytes_sent"</span>: 75,</span><br><span class="line">                    <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                    <span class="string">"ops"</span>: 1,</span><br><span class="line">                    <span class="string">"successful_ops"</span>: 0</span><br><span class="line">                &#125;,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"category"</span>: <span class="string">"get_obj"</span>,</span><br><span class="line">                    <span class="string">"bytes_sent"</span>: 555936,</span><br><span class="line">                    <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                    <span class="string">"ops"</span>: 3,</span><br><span class="line">                    <span class="string">"successful_ops"</span>: 3</span><br><span class="line">                &#125;,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"category"</span>: <span class="string">"list_bucket"</span>,</span><br><span class="line">                    <span class="string">"bytes_sent"</span>: 37633,</span><br><span class="line">                    <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                    <span class="string">"ops"</span>: 6,</span><br><span class="line">                    <span class="string">"successful_ops"</span>: 6</span><br><span class="line">                &#125;,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"category"</span>: <span class="string">"list_buckets"</span>,</span><br><span class="line">                    <span class="string">"bytes_sent"</span>: 698,</span><br><span class="line">                    <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">                    <span class="string">"ops"</span>: 2,</span><br><span class="line">                    <span class="string">"successful_ops"</span>: 2</span><br><span class="line">                &#125;,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"category"</span>: <span class="string">"put_obj"</span>,</span><br><span class="line">                    <span class="string">"bytes_sent"</span>: 0,</span><br><span class="line">                    <span class="string">"bytes_received"</span>: 558144,</span><br><span class="line">                    <span class="string">"ops"</span>: 2,</span><br><span class="line">                    <span class="string">"successful_ops"</span>: 2</span><br><span class="line">                &#125;</span><br><span class="line">            ],</span><br><span class="line">            <span class="string">"total"</span>: &#123;</span><br><span class="line">                <span class="string">"bytes_sent"</span>: 594816,</span><br><span class="line">                <span class="string">"bytes_received"</span>: 558144,</span><br><span class="line">                <span class="string">"ops"</span>: 15,</span><br><span class="line">                <span class="string">"successful_ops"</span>: 14</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上面输出中，summery里的total信息就足够我们来计费使用了。</p>
+<h3 id="usage-show对应的admin-ops"><a href="#usage-show对应的admin-ops" class="headerlink" title="usage show对应的admin ops"></a>usage show对应的admin ops</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">GET /&#123;admin&#125;/usage?format=json HTTP/1.1</span><br><span class="line">Host: &#123;fqdn&#125;</span><br></pre></td></tr></table></figure>
+<p><a href="http://docs.ceph.com/docs/jewel/radosgw/adminops/#get-usage" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/radosgw/adminops/#get-usage</a></p>
+<h3 id="radosgw-admin-usage-trim命令"><a href="#radosgw-admin-usage-trim命令" class="headerlink" title="radosgw-admin usage trim命令"></a>radosgw-admin usage trim命令</h3><p>修剪rgw的usage log，这是因为在长时间使用下，以往的usage log会占用ceph存储空间。在确定不需要的时间段后，通过该命令删除这部分记录。</p>
+<p>用法示例：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">radosgw-admin usage trim --start-date=2010-01-01 --end-date=2010-12-31</span><br><span class="line">radosgw-admin usage trim --uid=johndoe</span><br><span class="line">radosgw-admin usage trim --uid=johndoe --end-date=2013-12-31</span><br></pre></td></tr></table></figure>
+<h3 id="usage-trim对应的admin-ops"><a href="#usage-trim对应的admin-ops" class="headerlink" title="usage trim对应的admin ops"></a>usage trim对应的admin ops</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">DELETE /&#123;admin&#125;/usage?format=json HTTP/1.1</span><br><span class="line">Host: &#123;fqdn&#125;</span><br></pre></td></tr></table></figure>
+<p><a href="http://docs.ceph.com/docs/jewel/radosgw/adminops/#trim-usage" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/radosgw/adminops/#trim-usage</a></p>
+<h2 id="RGW-log信息"><a href="#RGW-log信息" class="headerlink" title="RGW log信息"></a>RGW log信息</h2><p>radosgw log功能可以记录每个ops的操作记录，方面查看历史操作和统计信息，使用方法如下。</p>
+<h3 id="enable-rgw-log"><a href="#enable-rgw-log" class="headerlink" title="enable rgw log"></a>enable rgw log</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[client.rgw.BJ-001-001]</span><br><span class="line">...</span><br><span class="line">    rgw <span class="built_in">enable</span> ops <span class="built_in">log</span> = <span class="literal">true</span></span><br></pre></td></tr></table></figure>
+<p>或者命令：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">ceph daemon /var/run/ceph/ceph-client/ceph-client.rgw.BJ-001-001.7455.asok config <span class="built_in">set</span> rgw_enable_ops_log <span class="literal">true</span></span><br><span class="line">``` </span><br><span class="line"></span><br><span class="line"><span class="comment">### 创建log对应的pools</span></span><br><span class="line"></span><br><span class="line">创建rgw <span class="built_in">log</span>需要的pools</span><br><span class="line"></span><br><span class="line">```sh</span><br><span class="line">ceph osd pool create .<span class="built_in">log</span> 64            <span class="comment">## log_pool</span></span><br><span class="line">ceph osd pool create .intent-log 64     <span class="comment">## intent_log_pool</span></span><br></pre></td></tr></table></figure>
+<h3 id="rgw-log命令"><a href="#rgw-log命令" class="headerlink" title="rgw log命令"></a>rgw log命令</h3><p>可用通过radosgw-admin log命令操作</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">$ radosgw-admin <span class="built_in">log</span> list</span><br><span class="line">[</span><br><span class="line">    <span class="string">"2016-10-11-14-default.553597.94-database_backups"</span></span><br><span class="line">]</span><br><span class="line"></span><br><span class="line">$ radosgw-admin <span class="built_in">log</span> show --bucket=database_backups --date=2016-10-11-14 --bucket-id=default.553597.94</span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"bucket_id"</span>: <span class="string">"default.553597.94"</span>,</span><br><span class="line">    <span class="string">"bucket_owner"</span>: <span class="string">"S3User"</span>,</span><br><span class="line">    <span class="string">"bucket"</span>: <span class="string">"database_backups"</span>,</span><br><span class="line">    <span class="string">"log_entries"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"bucket"</span>: <span class="string">"database_backups"</span>,</span><br><span class="line">            <span class="string">"time"</span>: <span class="string">"2016-10-11 06:02:20.595010Z"</span>,</span><br><span class="line">            <span class="string">"time_local"</span>: <span class="string">"2016-10-11 14:02:20.595010"</span>,</span><br><span class="line">            <span class="string">"remote_addr"</span>: <span class="string">""</span>,</span><br><span class="line">            <span class="string">"object_owner"</span>: <span class="string">"S3User"</span>,</span><br><span class="line">            <span class="string">"user"</span>: <span class="string">"S3User"</span>,</span><br><span class="line">            <span class="string">"operation"</span>: <span class="string">"GET"</span>,</span><br><span class="line">            <span class="string">"uri"</span>: <span class="string">"\/database_backups\/a2edb41b-3515-4075-9b37-43dd7daf79dc.xbstream.gz.enc"</span>,</span><br><span class="line">            <span class="string">"http_status"</span>: <span class="string">"200"</span>,</span><br><span class="line">            <span class="string">"error_code"</span>: <span class="string">""</span>,</span><br><span class="line">            <span class="string">"bytes_sent"</span>: 279072,</span><br><span class="line">            <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">            <span class="string">"object_size"</span>: 279072,</span><br><span class="line">            <span class="string">"total_time"</span>: 0,</span><br><span class="line">            <span class="string">"user_agent"</span>: <span class="string">""</span>,</span><br><span class="line">            <span class="string">"referrer"</span>: <span class="string">""</span></span><br><span class="line">        &#125;</span><br><span class="line">    ],</span><br><span class="line">    <span class="string">"log_sum"</span>: &#123;</span><br><span class="line">        <span class="string">"bytes_sent"</span>: 279072,</span><br><span class="line">        <span class="string">"bytes_received"</span>: 0,</span><br><span class="line">        <span class="string">"total_time"</span>: 0,</span><br><span class="line">        <span class="string">"total_entries"</span>: 1</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line">$ radosgw-admin <span class="built_in">log</span> rm --object=2016-10-11-14-default.553597.94-database_backups</span><br></pre></td></tr></table></figure>
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>测试发现，无论是部署了几个rgw，因为usage信息是存储在rados系统的.usage pool里的，不区分不同rgw过来的请求，所以通过radosgw-admin usage命令看到的是所有rgw操作的统计信息，这样我们没法区分内网和外网的rgw流量和ops个数。</p>
+<p>参考青云，青云支持内网/外网流量和ops统计分开计费。<br><a href="https://docs.qingcloud.com/guide/qingstor.html#id15" target="_blank" rel="noopener">https://docs.qingcloud.com/guide/qingstor.html#id15</a></p>
+<p>若内网的rgw流量不计费，则可以通过配置rgw的参数实现，可配置的rgw参数为：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">rgw_enable_usage_log：<span class="literal">true</span>/<span class="literal">false</span>           <span class="comment">## 是否enable usage统计</span></span><br><span class="line">rgw_enable_ops_log：<span class="literal">true</span>/<span class="literal">false</span>             <span class="comment">## 是否enable ops log统计</span></span><br><span class="line">rgw_ops_log_rados：<span class="literal">true</span>/<span class="literal">false</span>              <span class="comment">## 是否记录ops log到rados里，对用pool为：.log</span></span><br><span class="line">rgw_ops_log_socket_path：&lt;string&gt;          <span class="comment">## 配置ops log的socket path，ops log保存在内存，可以通过socket接口访问</span></span><br></pre></td></tr></table></figure>
+<p>每个rgw都可以配置独立的上述参数，所以针对内网的rgw，我们可以配置<code>rgw_enable_usage_log = false</code>，这样通过内网访问的操作都不会记在usage里。</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="http://docs.ceph.com/docs/jewel/man/8/radosgw/#usage-logging" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/man/8/radosgw/#usage-logging</a><br><a href="http://docs.ceph.com/docs/jewel/man/8/radosgw-admin/" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/man/8/radosgw-admin/</a><br><a href="http://docs.ceph.com/docs/jewel/radosgw/admin/#usage" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/radosgw/admin/#usage</a><br><a href="http://docs.ceph.com/docs/jewel/radosgw/adminops/" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/radosgw/adminops/</a><br><a href="http://lyang.top/2016/01/04/Ceph-usage-%E7%9A%84%E6%9F%A5%E8%AF%A2/" target="_blank" rel="noopener">http://lyang.top/2016/01/04/Ceph-usage-%E7%9A%84%E6%9F%A5%E8%AF%A2/</a></p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2016/08/29/rgw-admin-ops-api/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2200,199 +2396,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2016/03/28/trove-deploy/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="ictfox">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/ictfox.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ictfox blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2016/03/28/trove-deploy/" itemprop="url">Openstack DBBS Trove部署</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-03-28T10:31:17+08:00">
-                2016-03-28
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/openstack/" itemprop="url" rel="index">
-                    <span itemprop="name">openstack</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2016/03/28/trove-deploy/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2016/03/28/trove-deploy/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>本文是基于Trove Kilo版本部署的</p>
-<h2 id="配置环境变量"><a href="#配置环境变量" class="headerlink" title="配置环境变量"></a>配置环境变量</h2><p>source /opt/osdeploy/admin_openrc.sh</p>
-<h2 id="下载源码"><a href="#下载源码" class="headerlink" title="下载源码"></a>下载源码</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/openstack/trove.git /opt/openstack/trove</span><br><span class="line">git <span class="built_in">clone</span> https://github.com/openstack/python-troveclient.git /opt/openstack/python-troveclient</span><br></pre></td></tr></table></figure>
-<h2 id="安装-troveclient"><a href="#安装-troveclient" class="headerlink" title="安装 troveclient"></a>安装 troveclient</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /opt/openstack/python-troveclient</span><br><span class="line">git checkout stable/kilo</span><br><span class="line">python setup.py egg_info</span><br><span class="line">pip install -r python_troveclient.egg-info/requires.txt</span><br><span class="line">python setup.py develop</span><br></pre></td></tr></table></figure>
-<h2 id="安装-trove-kilo版本"><a href="#安装-trove-kilo版本" class="headerlink" title="安装 trove kilo版本"></a>安装 trove kilo版本</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /opt/openstack/trove</span><br><span class="line">git checkout stable/kilo</span><br><span class="line">python setup.py egg_info</span><br><span class="line">pip install -r trove.egg-info/requires.txt</span><br><span class="line">python setup.py develop</span><br></pre></td></tr></table></figure>
-<p><strong>问题</strong></p>
-<p>IOError: [Errno 2] No such file or directory: ‘/opt/openstack/.venv/build/oslo.serialization/oslo.serialization-2.2.0.dist-info/METADATA’</p>
-<p><strong>解决</strong></p>
-<p>把build下面的所有东西都删除就行了。rm -rf /opt/openstack/.venv/build/*</p>
-<h2 id="创建用户"><a href="#创建用户" class="headerlink" title="创建用户"></a>创建用户</h2><p>创建trove用户，trove用户添加admin角色，创建trove服务，给 trove 服务添加 api 访问地址</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">openstack user create --password 22116ccf32a trove</span><br><span class="line">openstack role add --project service --user trove admin</span><br><span class="line">openstack service create --name trove --description <span class="string">"OpenStack Trove"</span> database</span><br><span class="line">openstack endpoint create --publicurl <span class="string">'http://10.10.1.1:8779/v1.0/$(tenant_id)s'</span> --internalurl <span class="string">'http://10.10.1.1:8779/v1.0/$(tenant_id)s'</span> --adminurl <span class="string">'http://10.10.1.1:8779/v1.0/$(tenant_id)s'</span> --region RegionOne database</span><br></pre></td></tr></table></figure>
-<h2 id="创建trove相关目录，并修改权限"><a href="#创建trove相关目录，并修改权限" class="headerlink" title="创建trove相关目录，并修改权限"></a>创建trove相关目录，并修改权限</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mkdir /opt/etc/trove; chown openstack:openstack /opt/etc/trove</span><br><span class="line">mkdir /var/<span class="built_in">log</span>/cloud/openstack/trove; chown openstack:openstack /var/<span class="built_in">log</span>/cloud/openstack/trove</span><br><span class="line">mkdir /var/lib/trove; chown openstack:openstack /var/lib/trove</span><br></pre></td></tr></table></figure>
-<h2 id="使用mysql作为trove后端db"><a href="#使用mysql作为trove后端db" class="headerlink" title="使用mysql作为trove后端db"></a>使用mysql作为trove后端db</h2><p>在mysql的机器上执行：（查看/opt/etc/nova/nova.conf找到mysql服务所在机器）</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mysql -uroot -p</span><br><span class="line">&gt; create database trove default character <span class="built_in">set</span> utf8;</span><br><span class="line">&gt; grant all on trove.* to <span class="string">'trove'</span>@<span class="string">'%'</span> identified by <span class="string">'trove'</span>;</span><br></pre></td></tr></table></figure>
-<p>注：需要输入mysql的密码</p>
-<h2 id="拷贝trove相关配置到-opt-etc-trove目录"><a href="#拷贝trove相关配置到-opt-etc-trove目录" class="headerlink" title="拷贝trove相关配置到/opt/etc/trove目录"></a>拷贝trove相关配置到/opt/etc/trove目录</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">cp /opt/openstack/trove/etc/trove/api-paste.ini /opt/etc/trove/api-paste.ini</span><br><span class="line">cp /opt/openstack/trove/etc/trove/trove.conf.sample /opt/etc/trove/trove.conf</span><br><span class="line">cp /opt/openstack/trove/etc/trove/trove-taskmanager.conf.sample /opt/etc/trove/trove-taskmanager.conf</span><br><span class="line">cp /opt/openstack/trove/etc/trove/trove-conductor.conf.sample /opt/etc/trove/trove-conductor.conf</span><br><span class="line">cp -r /opt/openstack/trove/etc/trove/cloudinit/ /opt/etc/trove/</span><br></pre></td></tr></table></figure>
-<h2 id="修改-opt-etc-trove目录里的conf文件"><a href="#修改-opt-etc-trove目录里的conf文件" class="headerlink" title="修改/opt/etc/trove目录里的conf文件"></a>修改/opt/etc/trove目录里的conf文件</h2><ol>
-<li><p>trove.conf</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">rabbit_hosts = 127.0.0.1:5672</span><br><span class="line">rabbit_userid=openstack</span><br><span class="line">rabbit_password=iafdhewak2</span><br><span class="line"></span><br><span class="line">trove_auth_url = http://127.0.0.1:5000/v2.0</span><br><span class="line">nova_compute_url = http://127.0.0.1:8774/v2</span><br><span class="line">cinder_url = http://127.0.0.1:8776/v2</span><br><span class="line">neutron_url = http://127.0.0.1:9696/</span><br><span class="line"></span><br><span class="line">log_dir = /var/<span class="built_in">log</span>/openstack/trove</span><br><span class="line">log_file = trove-api.log</span><br><span class="line"></span><br><span class="line">connection = mysql://trove:trove@127.0.0.1/trove</span><br><span class="line"></span><br><span class="line">[keystone_authtoken]</span><br><span class="line">auth_uri = http://127.0.0.1:5000</span><br><span class="line">auth_url = http://127.0.0.1:35357</span><br><span class="line">auth_plugin = password</span><br><span class="line">project_domain_id = default</span><br><span class="line">user_domain_id = default</span><br><span class="line">project_name = service</span><br><span class="line">username = trove</span><br><span class="line">password = 221***6d42d8ca</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>trove-taskmanager.conf</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">rabbit_host=127.0.0.1</span><br><span class="line">rabbit_userid=openstack</span><br><span class="line">rabbit_password=iafdhewak2</span><br><span class="line"></span><br><span class="line">trove_auth_url = http://127.0.0.1:5000/v2.0</span><br><span class="line">nova_compute_url = http://127.0.0.1:8774/v2</span><br><span class="line">cinder_url = http://127.0.0.1:8776/v2</span><br><span class="line">swift_url = http://127.0.0.1:8080/v1/AUTH_</span><br><span class="line">neutron_url = http://127.0.0.1:9696/</span><br><span class="line"></span><br><span class="line">log_dir = /var/<span class="built_in">log</span>/openstack/trove</span><br><span class="line">log_file = trove-taskmanager.log</span><br><span class="line"></span><br><span class="line"><span class="comment"># ================= Guestagent related ========================</span></span><br><span class="line">guest_config = /opt/etc/trove/trove-guestagent.conf</span><br><span class="line">injected_config_location = /etc/trove/conf.d</span><br><span class="line">cloudinit_location = /opt/etc/trove/cloudinit</span><br><span class="line"></span><br><span class="line">connection = mysql://trove:trove@127.0.0.1/trove</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>trove-conductor.conf</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">trove_auth_url = http://127.0.0.1:5000/v2.0</span><br><span class="line">rabbit_host = 127.0.0.1</span><br><span class="line">rabbit_userid = openstack</span><br><span class="line">rabbit_password = iafdhewak2</span><br><span class="line">connection = mysql://trove:trove@127.0.0.1/trove</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>trove-guestagent.conf</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">rabbit_hosts = 192.168.1.3:5672</span><br><span class="line">rabbit_userid = openstack</span><br><span class="line">rabbit_password = iafdhewak2</span><br><span class="line">swift_url = http://192.168.1.3:8080/v1/AUTH_</span><br><span class="line">os_region_name = RegionOne</span><br><span class="line">swift_service_type = object-store</span><br><span class="line">datastore_registry_ext = mysql:trove.guestagent.datastore.mysql.manager.Manager, percona:trove.guestagent.datastore.mysql.manager.Manager</span><br><span class="line">ignore_users = os_admin</span><br><span class="line">ignore_dbs = lost+found, mysql, information_schema, performance_schema</span><br><span class="line">root_grant = ALL</span><br><span class="line">root_grant_option = True</span><br><span class="line"></span><br><span class="line">storage_strategy = SwiftStorage</span><br><span class="line">storage_namespace = trove.guestagent.strategies.storage.swift</span><br><span class="line">backup_swift_container = database_backups</span><br><span class="line"></span><br><span class="line">[keystone_authtoken]</span><br><span class="line">auth_uri = http://192.168.1.3:5000</span><br><span class="line">auth_url = http://192.168.1.3:35357</span><br><span class="line">auth_plugin = password</span><br><span class="line">project_name = service</span><br><span class="line">project_domain_id = default</span><br><span class="line">user_domain_id = default</span><br><span class="line">username = trove</span><br><span class="line">password = 221***6d42d8ca</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<h2 id="添加包含mysql的ubuntu镜像到glance里"><a href="#添加包含mysql的ubuntu镜像到glance里" class="headerlink" title="添加包含mysql的ubuntu镜像到glance里"></a>添加包含mysql的ubuntu镜像到glance里</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">glance --debug image-create --name <span class="string">"mysql-ubuntu"</span>  --file ~/mysql.qcow2 --disk-format qcow2 --container-format bare --is-public True --progress</span><br><span class="line"></span><br><span class="line">(.venv)openstack@cloud01:~$ glance image-list</span><br><span class="line">+--------------------------------------+---------------------+-------------+------------------+-----------+--------+</span><br><span class="line">| ID                                   | Name                | Disk Format | Container Format | Size      | Status |</span><br><span class="line">+--------------------------------------+---------------------+-------------+------------------+-----------+--------+</span><br><span class="line">| 0ad5a403-09fa-4be3-81f8-74caac155be0 | mysql-ubuntu        | qcow2       | bare             | 533397504 | active |</span><br><span class="line">+--------------------------------------+---------------------+-------------+------------------+-----------+--------+</span><br></pre></td></tr></table></figure>
-<h2 id="初始化trove-database"><a href="#初始化trove-database" class="headerlink" title="初始化trove database"></a>初始化trove database</h2><p>因为mysql外键的问题，可能需要执行括号内的额外步骤：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[mysql -uroot -ppwd -e<span class="string">"use trove;SET GLOBAL foreign_key_checks=0;"</span>]</span><br><span class="line">trove-manage --config-file=/opt/etc/trove/trove.conf db_sync</span><br><span class="line">[mysql -uroot -ppwd -e<span class="string">"use trove;SET GLOBAL foreign_key_checks=1;"</span>]</span><br></pre></td></tr></table></figure>
-<h2 id="初始化Trove-Datastores"><a href="#初始化Trove-Datastores" class="headerlink" title="初始化Trove Datastores"></a>初始化Trove Datastores</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> DATASTORE_TYPE=<span class="string">"mysql"</span></span><br><span class="line"><span class="built_in">export</span> DATASTORE_VERSION=<span class="string">"5.6"</span></span><br><span class="line"><span class="built_in">export</span> PACKAGES=<span class="string">"mysql-server-5.6"</span></span><br><span class="line"><span class="built_in">export</span> IMAGEID=<span class="string">"0ad5a403-09fa-4be3-81f8-74caac155be0"</span></span><br><span class="line">trove-manage --config-file /opt/etc/trove/trove.conf datastore_update <span class="variable">$&#123;DATASTORE_TYPE&#125;</span> <span class="string">""</span></span><br><span class="line">trove-manage --config-file /opt/etc/trove/trove.conf datastore_version_update <span class="variable">$&#123;DATASTORE_TYPE&#125;</span> <span class="variable">$&#123;DATASTORE_VERSION&#125;</span> <span class="variable">$&#123;DATASTORE_TYPE&#125;</span> <span class="variable">$&#123;IMAGEID&#125;</span> <span class="variable">$&#123;PACKAGES&#125;</span> 1</span><br><span class="line">trove-manage --config-file /opt/etc/trove/trove.conf datastore_update <span class="variable">$&#123;DATASTORE_TYPE&#125;</span> <span class="variable">$&#123;DATASTORE_VERSION&#125;</span></span><br><span class="line">trove datastore-version-show <span class="variable">$&#123;DATASTORE_VERSION&#125;</span> --datastore <span class="variable">$&#123;DATASTORE_TYPE&#125;</span></span><br></pre></td></tr></table></figure>
-<h2 id="重启trove-service"><a href="#重启trove-service" class="headerlink" title="重启trove service"></a>重启trove service</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">service trove-api restart; service trove-taskmanager restart; service trove-conductor restart;</span><br></pre></td></tr></table></figure>
-<h2 id="配置datastore的默认值"><a href="#配置datastore的默认值" class="headerlink" title="配置datastore的默认值"></a>配置datastore的默认值</h2><p>修改trove.conf，在[default]字段添加：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">default_datastore = mysql</span><br></pre></td></tr></table></figure>
-<p>查看datastore mysql的default version值：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">$ trove datastore-show mysql</span><br><span class="line">...</span><br><span class="line">| default_version | 9b8987aa-282b-46b9-af19-900aadfa8d9b |</span><br><span class="line">...</span><br><span class="line">$ trove datastore-version-list mysql</span><br><span class="line">+--------------------------------------+------+</span><br><span class="line">| ID                                   | Name |</span><br><span class="line">+--------------------------------------+------+</span><br><span class="line">| 1832c3bd-3233-45ef-b6fe-c00fc6b4750e | 5.7  |</span><br><span class="line">| 9b8987aa-282b-46b9-af19-900aadfa8d9b | 5.6  |</span><br><span class="line">+--------------------------------------+------+</span><br></pre></td></tr></table></figure>
-<h2 id="配置mysql-5-6版本的config-parameters"><a href="#配置mysql-5-6版本的config-parameters" class="headerlink" title="配置mysql, 5.6版本的config parameters"></a>配置mysql, 5.6版本的config parameters</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">trove-manage --config-file /opt/etc/trove/trove.conf db_load_datastore_config_parameters mysql 5.6 /opt/openstack/trove/trove/templates/mysql/validation-rules.json</span><br><span class="line"></span><br><span class="line">$ openstack endpoint show trove</span><br><span class="line">+--------------+------------------------------------------+</span><br><span class="line">| Field        | Value                                    |</span><br><span class="line">+--------------+------------------------------------------+</span><br><span class="line">| adminurl     | http://127.0.0.1:8779/v1.0/$(tenant_id)s |</span><br><span class="line">| enabled      | True                                     |</span><br><span class="line">| id           | 677e119b1309446590e174f1f2fb2d80         |</span><br><span class="line">| internalurl  | http://127.0.0.1:8779/v1.0/$(tenant_id)s |</span><br><span class="line">| publicurl    | http://127.0.0.1:8779/v1.0/$(tenant_id)s |</span><br><span class="line">| region       | RegionOne                                |</span><br><span class="line">| service_id   | 4f456705ce124c62918f29b4b70b5ed1         |</span><br><span class="line">| service_name | trove                                    |</span><br><span class="line">| service_type | database                                 |</span><br><span class="line">+--------------+------------------------------------------+</span><br><span class="line">(.venv)openstack@cloud01:~$ trove datastore-list</span><br><span class="line">+--------------------------------------+-------+</span><br><span class="line">| ID                                   | Name  |</span><br><span class="line">+--------------------------------------+-------+</span><br><span class="line">| 2f2c8eee-cac5-4a52-9f89-9c39a140f611 | mysql |</span><br><span class="line">+--------------------------------------+-------+</span><br><span class="line">(.venv)openstack@cloud01:~$ trove create myFirstDB 1 --size 2 --databases trovedb --users ictfox:ictfox --datastore_version 5.6 --datastore mysql</span><br><span class="line">+-------------------+--------------------------------------+</span><br><span class="line">| Property          | Value                                |</span><br><span class="line">+-------------------+--------------------------------------+</span><br><span class="line">| created           | 2016-01-22T11:41:48                  |</span><br><span class="line">| datastore         | mysql                                |</span><br><span class="line">| datastore_version | 5.6                                  |</span><br><span class="line">| flavor            | 2                                    |</span><br><span class="line">| id                | 31dbea3e-1117-407e-82f0-cdf7ecd3ac3b |</span><br><span class="line">| name              | myFirstDB                            |</span><br><span class="line">| status            | BUILD                                |</span><br><span class="line">| updated           | 2016-01-22T11:41:48                  |</span><br><span class="line">| volume            | 2                                    |</span><br><span class="line">+-------------------+--------------------------------------+</span><br></pre></td></tr></table></figure>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="http://docs.openstack.org/kilo/config-reference/content/ch_configuring-trove.html" target="_blank" rel="noopener">http://docs.openstack.org/kilo/config-reference/content/ch_configuring-trove.html</a><br><a href="http://docs.openstack.org/developer/trove/dev/manual_install.html" target="_blank" rel="noopener">http://docs.openstack.org/developer/trove/dev/manual_install.html</a><br><a href="https://github.com/openstack/trove/blob/master/doc/source/dev/manual_install.rst" target="_blank" rel="noopener">https://github.com/openstack/trove/blob/master/doc/source/dev/manual_install.rst</a><br><a href="https://www.youtube.com/watch?v=zk42zzc_38o" target="_blank" rel="noopener">https://www.youtube.com/watch?v=zk42zzc_38o</a><br><a href="http://blog.csdn.net/myproudcodelife/article/details/39839891" target="_blank" rel="noopener">http://blog.csdn.net/myproudcodelife/article/details/39839891</a></p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2447,7 +2450,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-count">75</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -2469,7 +2472,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-count">50</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>

@@ -296,6 +296,326 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2018/04/06/ceph-deploy-latest-luminous/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2018/04/06/ceph-deploy-latest-luminous/" itemprop="url">ceph-deploy 2.0.0 部署 Ceph Luminous 12.2.4</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-04-06T23:11:17+08:00">
+                2018-04-06
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/04/06/ceph-deploy-latest-luminous/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/04/06/ceph-deploy-latest-luminous/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="需求"><a href="#需求" class="headerlink" title="需求"></a>需求</h2><p>Ceph Luminous已经发布到12.2.4版本，经历了前几个版本的磨炼，Luminous版本也越来越稳定，它的Bluestore属性和CephFS提供的多主MDS一直是我们关注的重点。</p>
+<p>参考ceph和ceph-deploy官方文档，本文介绍下使用ceph-deploy部署最新版Ceph Luminous 12.2.4，以及部署中遇到的问题。</p>
+<h2 id="软件版本"><a href="#软件版本" class="headerlink" title="软件版本"></a>软件版本</h2><h3 id="ceph-deploy版本"><a href="#ceph-deploy版本" class="headerlink" title="ceph-deploy版本"></a>ceph-deploy版本</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy --version</span></span><br><span class="line">2.0.0</span><br></pre></td></tr></table></figure>
+<p>ceph-deploy 2.0.0的changelog：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">2.0.0</span><br><span class="line">16-Jan-2018</span><br><span class="line"></span><br><span class="line">- Backward incompatible API changes <span class="keyword">for</span> OSD creation - will use ceph-volume and no longer consume ceph-disk.</span><br><span class="line">- Remove python-distribute dependency</span><br><span class="line">- Use /etc/os-release as a fallback when linux_distribution() doesn’t work</span><br><span class="line">- Drop dmcrypt support (unsupported by ceph-volume <span class="keyword">for</span> now)</span><br><span class="line">- Allow debug modes <span class="keyword">for</span> ceph-volume</span><br></pre></td></tr></table></figure>
+<p>参考：<a href="http://docs.ceph.com/ceph-deploy/docs/changelog.html#id1" target="_blank" rel="noopener">http://docs.ceph.com/ceph-deploy/docs/changelog.html#id1</a></p>
+<h3 id="系统版本"><a href="#系统版本" class="headerlink" title="系统版本"></a>系统版本</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># lsb_release -a</span></span><br><span class="line">LSB Version:	:core-4.1-amd64:core-4.1-noarch</span><br><span class="line">Distributor ID:	CentOS</span><br><span class="line">Description:	CentOS Linux release 7.3.1611 (Core)</span><br><span class="line">Release:	7.3.1611</span><br><span class="line">Codename:	Core</span><br></pre></td></tr></table></figure>
+<h3 id="Ceph版本"><a href="#Ceph版本" class="headerlink" title="Ceph版本"></a>Ceph版本</h3><p>yum源配置，选择最新的Luminous版本：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat /etc/yum.repos.d/ceph.repo</span></span><br><span class="line">[ceph]</span><br><span class="line">name=Ceph packages <span class="keyword">for</span> <span class="variable">$basearch</span></span><br><span class="line">baseurl=http://mirrors.163.com/ceph/rpm-luminous/el7/<span class="variable">$basearch</span></span><br><span class="line">enabled=1</span><br><span class="line">priority=2</span><br><span class="line">gpgcheck=1</span><br><span class="line">gpgkey=https://download.ceph.com/keys/release.asc</span><br><span class="line"></span><br><span class="line">[ceph-noarch]</span><br><span class="line">name=Ceph noarch packages</span><br><span class="line">baseurl=http://mirrors.163.com/ceph/rpm-luminous/el7/noarch</span><br><span class="line">enabled=1</span><br><span class="line">priority=2</span><br><span class="line">gpgcheck=1</span><br><span class="line">gpgkey=https://download.ceph.com/keys/release.asc</span><br><span class="line"></span><br><span class="line">[ceph-source]</span><br><span class="line">name=Ceph <span class="built_in">source</span> packages</span><br><span class="line">baseurl=http://mirrors.163.com/ceph/rpm-luminous/el7/SRPMS</span><br><span class="line">enabled=0</span><br><span class="line">priority=2</span><br><span class="line">gpgcheck=1</span><br><span class="line">gpgkey=https://download.ceph.com/keys/release.asc</span><br></pre></td></tr></table></figure>
+<p>ceph安装</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yum install -y ceph ceph-radosgw</span></span><br><span class="line">or</span><br><span class="line"><span class="comment"># ceph-deploy install [hosts]</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># ceph -v</span></span><br><span class="line">ceph version 12.2.4 (52085d5249a80c5f5121a76d6288429f35e4e77b) luminous (stable)</span><br></pre></td></tr></table></figure>
+<h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><p>使用ceph-deploy开始部署前，有如下几点要提前做好</p>
+<ol>
+<li><p>部署节点安装 ceph-deploy</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yum install -y ceph-deploy</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>部署节点与ceph nodes之间ssh无密码访问</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ssh-keygen</span></span><br><span class="line"><span class="comment"># cat ~/.ssh/id_rsa.pub &gt;&gt; ~/.ssh/authorized_keys</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>ceph nodes的hostname配置</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># vim /etc/hostname</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>部署节点/etc/hosts配置 ceph nodes的hostname与ip的对应</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># vim /etc/hosts</span></span><br><span class="line">100.60.0.20 ceph0</span><br><span class="line">100.60.0.21 ceph1</span><br><span class="line">100.60.0.22 ceph2</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>ceph nodes配置ntp server</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yum install -y ntp ntpdate ntp-doc</span></span><br><span class="line"><span class="comment"># systemctl start ntpd</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>ceph nodes安装ssh server</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yum install -y openssh-server</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>ceph nodes关闭或配置防火墙</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># systemctl stop firewalld</span></span><br><span class="line"><span class="comment"># systemctl disable firewalld</span></span><br></pre></td></tr></table></figure>
+<p>​</p>
+</li>
+</ol>
+<h2 id="Ceph-Monitor部署"><a href="#Ceph-Monitor部署" class="headerlink" title="Ceph Monitor部署"></a>Ceph Monitor部署</h2><p>开始部署Ceph Cluster，创建三个monitors：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy new ceph0 ceph1 ceph2</span></span><br><span class="line"><span class="comment"># ceph-deploy mon create ceph0 ceph1 ceph2</span></span><br></pre></td></tr></table></figure>
+<p>创建ceph keys：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy gatherkeys ceph0 ceph1 ceph2</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>一定要开启ceph 认证，不然该命令执行失败</p>
+<p>与<code>ceph-deploy mon create</code>命令执行完要有一定时间间隔，等到monitor集群正常了才能执行</p>
+</blockquote>
+<p>分发ceph配置和admin key到ceph集群节点：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy admin ceph0 ceph1 ceph2</span></span><br></pre></td></tr></table></figure>
+<p>检查当前ceph集群状态：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph -s</span></span><br><span class="line">  cluster:</span><br><span class="line">    id:     5b2192ff-299c-4024-9f10-93af008e66d3</span><br><span class="line">    health: HEALTH_OK</span><br><span class="line"></span><br><span class="line">  services:</span><br><span class="line">    mon: 3 daemons, quorum ceph0,ceph2,ceph1</span><br><span class="line">    mgr: no daemons active</span><br><span class="line">    osd: 0 osds: 0 up, 0 <span class="keyword">in</span></span><br><span class="line"></span><br><span class="line">  data:</span><br><span class="line">    pools:   0 pools, 0 pgs</span><br><span class="line">    objects: 0 objects, 0 bytes</span><br><span class="line">    usage:   0 kB used, 0 kB / 0 kB avail</span><br><span class="line">    pgs:</span><br></pre></td></tr></table></figure>
+<p>参考：<a href="http://docs.ceph.com/ceph-deploy/docs/index.html#creating-a-new-configuration" target="_blank" rel="noopener">http://docs.ceph.com/ceph-deploy/docs/index.html#creating-a-new-configuration</a></p>
+<h2 id="Ceph-manager部署"><a href="#Ceph-manager部署" class="headerlink" title="Ceph manager部署"></a>Ceph manager部署</h2><p>部署<code>ceph-mgr</code>组件：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy mgr create ceph0 ceph1 ceph2</span></span><br><span class="line"><span class="comment"># ceph -s</span></span><br><span class="line">  cluster:</span><br><span class="line">    id:     5b2192ff-299c-4024-9f10-93af008e66d3</span><br><span class="line">    health: HEALTH_OK</span><br><span class="line"></span><br><span class="line">  services:</span><br><span class="line">    mon: 3 daemons, quorum ceph0,ceph2,ceph1</span><br><span class="line">    mgr: ceph0(active), standbys: ceph2, ceph1</span><br><span class="line">    osd: 0 osds: 0 up, 0 <span class="keyword">in</span></span><br><span class="line"></span><br><span class="line">  data:</span><br><span class="line">    pools:   0 pools, 0 pgs</span><br><span class="line">    objects: 0 objects, 0 bytes</span><br><span class="line">    usage:   0 kB used, 0 kB / 0 kB avail</span><br><span class="line">    pgs:</span><br></pre></td></tr></table></figure>
+<p>参考：<a href="http://docs.ceph.com/docs/master/mgr/" target="_blank" rel="noopener">http://docs.ceph.com/docs/master/mgr/</a></p>
+<blockquote>
+<p>Ceph Luminous主推的用于Ceph集群管理的组件，默认在所有部署ceph-mon的节点都启动一个ceph-mgr</p>
+</blockquote>
+<h2 id="Ceph-OSD部署"><a href="#Ceph-OSD部署" class="headerlink" title="Ceph OSD部署"></a>Ceph OSD部署</h2><p>使用<code>ceph-deploy</code>工具来部署ceph osd：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy osd create -h</span></span><br><span class="line">usage: ceph-deploy osd create [-h] [--data DATA] [--journal JOURNAL]</span><br><span class="line">                              [--zap-disk] [--fs-type FS_TYPE] [--dmcrypt]</span><br><span class="line">                              [--dmcrypt-key-dir KEYDIR] [--filestore]</span><br><span class="line">                              [--bluestore] [--block-db BLOCK_DB]</span><br><span class="line">                              [--block-wal BLOCK_WAL] [--debug]</span><br><span class="line">                              [HOST]</span><br><span class="line"></span><br><span class="line">positional arguments:</span><br><span class="line">  HOST                  Remote host to connect</span><br><span class="line"></span><br><span class="line">optional arguments:</span><br><span class="line">  -h, --<span class="built_in">help</span>            show this <span class="built_in">help</span> message and <span class="built_in">exit</span></span><br><span class="line">  --data DATA           The OSD data logical volume (vg/lv) or absolute path</span><br><span class="line">                        to device</span><br><span class="line">  --journal JOURNAL     Logical Volume (vg/lv) or path to GPT partition</span><br><span class="line">  --zap-disk            DEPRECATED - cannot zap when creating an OSD</span><br><span class="line">  --fs-type FS_TYPE     filesystem to use to format DEVICE (xfs, btrfs)</span><br><span class="line">  --dmcrypt             use dm-crypt on DEVICE</span><br><span class="line">  --dmcrypt-key-dir KEYDIR</span><br><span class="line">                        directory <span class="built_in">where</span> dm-crypt keys are stored</span><br><span class="line">  --filestore           filestore objectstore</span><br><span class="line">  --bluestore           bluestore objectstore</span><br><span class="line">  --block-db BLOCK_DB   bluestore block.db path</span><br><span class="line">  --block-wal BLOCK_WAL</span><br><span class="line">                        bluestore block.wal path</span><br><span class="line">  --debug               Enable debug mode on remote ceph-volume calls</span><br></pre></td></tr></table></figure>
+<p>注：从Ceph Luminous 12.2.2开始， <code>ceph-disk</code> 就被弃用了，开始使用新的工具<code>ceph-volume</code>。</p>
+<p>参考：<a href="http://docs.ceph.com/docs/master/ceph-volume/" target="_blank" rel="noopener">http://docs.ceph.com/docs/master/ceph-volume/</a></p>
+<p>创建一个bluestore的osd，有以下几种设备选择：</p>
+<ul>
+<li>A block device, a block.wal, and a block.db device</li>
+<li>A block device and a block.wal device</li>
+<li>A block device and a block.db device</li>
+<li>A single block device</li>
+</ul>
+<p>参考：<a href="http://docs.ceph.com/docs/master/ceph-volume/lvm/prepare/#bluestore" target="_blank" rel="noopener">http://docs.ceph.com/docs/master/ceph-volume/lvm/prepare/#bluestore</a></p>
+<p>block device也有如下三种选项：</p>
+<ul>
+<li>整块磁盘</li>
+<li>磁盘分区</li>
+<li>逻辑卷（a logical volume of LVM）</li>
+</ul>
+<blockquote>
+<p>配置使用整块磁盘时，ceph-volume会自动创建一个logical volume使用</p>
+</blockquote>
+<h3 id="单独块设备创建OSD"><a href="#单独块设备创建OSD" class="headerlink" title="单独块设备创建OSD"></a>单独块设备创建OSD</h3><h4 id="整块磁盘"><a href="#整块磁盘" class="headerlink" title="整块磁盘"></a>整块磁盘</h4><p>命令格式：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy osd create [host] --data [/path/to/device]</span></span><br></pre></td></tr></table></figure>
+<p>首先销毁磁盘的分区信息：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">[root@ceph0 ceph-deploy]<span class="comment"># ceph-deploy disk zap ceph0 /dev/sdb</span></span><br><span class="line">...</span><br><span class="line">[ceph_deploy][ERROR ] Traceback (most recent call last):</span><br><span class="line">[ceph_deploy][ERROR ]   File <span class="string">"/usr/lib/python2.7/site-packages/ceph_deploy/util/decorators.py"</span>, line 69, <span class="keyword">in</span> newfunc</span><br><span class="line">[ceph_deploy][ERROR ]     <span class="built_in">return</span> f(*a, **kw)</span><br><span class="line">[ceph_deploy][ERROR ]   File <span class="string">"/usr/lib/python2.7/site-packages/ceph_deploy/cli.py"</span>, line 164, <span class="keyword">in</span> _main</span><br><span class="line">[ceph_deploy][ERROR ]     <span class="built_in">return</span> args.func(args)</span><br><span class="line">[ceph_deploy][ERROR ]   File <span class="string">"/usr/lib/python2.7/site-packages/ceph_deploy/osd.py"</span>, line 438, <span class="keyword">in</span> disk</span><br><span class="line">[ceph_deploy][ERROR ]     disk_zap(args)</span><br><span class="line">[ceph_deploy][ERROR ]   File <span class="string">"/usr/lib/python2.7/site-packages/ceph_deploy/osd.py"</span>, line 336, <span class="keyword">in</span> disk_zap</span><br><span class="line">[ceph_deploy][ERROR ]     <span class="keyword">if</span> args.debug:</span><br><span class="line">[ceph_deploy][ERROR ] AttributeError: <span class="string">'Namespace'</span> object has no attribute <span class="string">'debug'</span></span><br><span class="line">[ceph_deploy][ERROR ]</span><br></pre></td></tr></table></figure>
+<p>修改osd.py如下：</p>
+<figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[root@ceph0 ceph-deploy]<span class="comment"># vim /usr/lib/python2.7/site-packages/ceph_deploy/osd.py</span></span><br><span class="line">        <span class="comment">#if args.debug:</span></span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">False</span>:</span><br></pre></td></tr></table></figure>
+<p>再尝试<code>disk zap</code>成功：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">[root@ceph0 ceph-deploy]<span class="comment"># ceph-deploy disk zap ceph0 /dev/sdb</span></span><br><span class="line">...</span><br><span class="line">[ceph0][INFO  ] Running <span class="built_in">command</span>: /usr/sbin/ceph-volume lvm zap /dev/sdb</span><br><span class="line">[ceph0][DEBUG ] --&gt; Zapping: /dev/sdb</span><br><span class="line">[ceph0][DEBUG ] Running <span class="built_in">command</span>: cryptsetup status /dev/mapper/</span><br><span class="line">[ceph0][DEBUG ]  stdout: /dev/mapper/ is inactive.</span><br><span class="line">[ceph0][DEBUG ] Running <span class="built_in">command</span>: wipefs --all /dev/sdb</span><br><span class="line">[ceph0][DEBUG ] Running <span class="built_in">command</span>: dd <span class="keyword">if</span>=/dev/zero of=/dev/sdb bs=1M count=10</span><br><span class="line">[ceph0][DEBUG ]  stderr: 10+0 records <span class="keyword">in</span></span><br><span class="line">[ceph0][DEBUG ] 10+0 records out</span><br><span class="line">[ceph0][DEBUG ] 10485760 bytes (10 MB) copied</span><br><span class="line">[ceph0][DEBUG ]  stderr: , 0.0110867 s, 946 MB/s</span><br><span class="line">[ceph0][DEBUG ] --&gt; Zapping successful <span class="keyword">for</span>: /dev/sdb</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>从输出看，ceph-deploy调用ceph-volume lvm zap，最后是执行dd命令往disk前10M写入全0数据</p>
+</blockquote>
+<p>创建OSD：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy osd create ceph0 --data /dev/sdb</span></span><br><span class="line">...</span><br><span class="line">[ceph0][INFO  ] Running <span class="built_in">command</span>: /usr/sbin/ceph-volume --cluster ceph lvm create --bluestore --data /dev/sdb</span><br><span class="line">...</span><br><span class="line">[ceph_deploy.osd][DEBUG ] Host ceph0 is now ready <span class="keyword">for</span> osd use.</span><br></pre></td></tr></table></figure>
+<p>检查OSD：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># df -h</span></span><br><span class="line">Filesystem           Size  Used Avail Use% Mounted on</span><br><span class="line">...</span><br><span class="line">tmpfs                 16G   48K   16G   1% /var/lib/ceph/osd/ceph-0</span><br><span class="line"></span><br><span class="line"><span class="comment"># ll /var/lib/ceph/osd/ceph-0/</span></span><br><span class="line">total 48</span><br><span class="line">-rw-r--r-- 1 ceph ceph 393 Apr  2 18:11 activate.monmap</span><br><span class="line">lrwxrwxrwx 1 ceph ceph  93 Apr  2 18:11 block -&gt; /dev/ceph-5b2192ff-299c-4024-9f10-93af008e66d3/osd-block-fe7cd3b1-8513-4be5-b9a8-88fd47dca679</span><br><span class="line">-rw-r--r-- 1 ceph ceph   2 Apr  2 18:11 bluefs</span><br><span class="line">-rw-r--r-- 1 ceph ceph  37 Apr  2 18:11 ceph_fsid</span><br><span class="line">-rw-r--r-- 1 ceph ceph  37 Apr  2 18:11 fsid</span><br><span class="line">-rw------- 1 ceph ceph  55 Apr  2 18:11 keyring</span><br><span class="line">-rw-r--r-- 1 ceph ceph   8 Apr  2 18:11 kv_backend</span><br><span class="line">-rw-r--r-- 1 ceph ceph  21 Apr  2 18:11 magic</span><br><span class="line">-rw-r--r-- 1 ceph ceph   4 Apr  2 18:11 mkfs_done</span><br><span class="line">-rw-r--r-- 1 ceph ceph  41 Apr  2 18:11 osd_key</span><br><span class="line">-rw-r--r-- 1 ceph ceph   6 Apr  2 18:11 ready</span><br><span class="line">-rw-r--r-- 1 ceph ceph  10 Apr  2 18:11 <span class="built_in">type</span></span><br><span class="line">-rw-r--r-- 1 ceph ceph   2 Apr  2 18:11 whoami</span><br></pre></td></tr></table></figure>
+<p>查看OSD block对应设备：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># lsblk /dev/sdb</span></span><br><span class="line">NAME                                                                                                  MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT</span><br><span class="line">sdb                                                                                                     8:16   0  3.7T  0 disk</span><br><span class="line">└─ceph--5b2192ff--299c--4024--9f10--93af008e66d3-osd--block--fe7cd3b1--8513--4be5--b9a8--88fd47dca679 253:3    0  3.7T  0 lvm</span><br><span class="line"></span><br><span class="line"><span class="comment"># pvs /dev/sdb</span></span><br><span class="line">  PV         VG                                        Fmt  Attr PSize PFree</span><br><span class="line">  /dev/sdb   ceph-5b2192ff-299c-4024-9f10-93af008e66d3 lvm2 a--  3.64t    0</span><br><span class="line"></span><br><span class="line"><span class="comment"># lvs ceph-5b2192ff-299c-4024-9f10-93af008e66d3</span></span><br><span class="line">  LV                                             VG                                        Attr       LSize Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert</span><br><span class="line">  osd-block-fe7cd3b1-8513-4be5-b9a8-88fd47dca679 ceph-5b2192ff-299c-4024-9f10-93af008e66d3 -wi-ao---- 3.64t</span><br></pre></td></tr></table></figure>
+<p><strong>结论：</strong></p>
+<ul>
+<li>Ceph OSD的mount路径对应的是tmpfs，Linux基于内存的文件系统，而并没有单独的块设备与之对应</li>
+<li>整块磁盘创建一个PV，然后创建VG和一个LV给OSD的<code>block</code>使用</li>
+</ul>
+<p>没有单独的块设备与tmpfs对应，那上面的数据存在哪里了？ </p>
+<p><strong>答：</strong>存在OSD的metadata里了！</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">文件：osd/OSD.cc</span><br><span class="line"><span class="keyword">int</span> OSD::write_meta(CephContext *cct, ObjectStore *store, uuid_d&amp; cluster_fsid, uuid_d&amp; osd_fsid, <span class="keyword">int</span> whoami)</span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="built_in">snprintf</span>(val, <span class="keyword">sizeof</span>(val), <span class="string">"%s"</span>, CEPH_OSD_ONDISK_MAGIC);</span><br><span class="line">    r = store-&gt;write_meta(<span class="string">"magic"</span>, val);</span><br><span class="line">    <span class="keyword">if</span> (r &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">return</span> r;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">snprintf</span>(val, <span class="keyword">sizeof</span>(val), <span class="string">"%d"</span>, whoami);</span><br><span class="line">    r = store-&gt;write_meta(<span class="string">"whoami"</span>, val);</span><br><span class="line">    <span class="keyword">if</span> (r &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">return</span> r;</span><br><span class="line"></span><br><span class="line">    cluster_fsid.print(val);</span><br><span class="line">    r = store-&gt;write_meta(<span class="string">"ceph_fsid"</span>, val);</span><br><span class="line">    <span class="keyword">if</span> (r &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">return</span> r;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">string</span> key = cct-&gt;_conf-&gt;get_val&lt;<span class="built_in">string</span>&gt;(<span class="string">"key"</span>);</span><br><span class="line">    <span class="keyword">if</span> (key.size()) &#123;</span><br><span class="line">        r = store-&gt;write_meta(<span class="string">"osd_key"</span>, key);</span><br><span class="line">        <span class="keyword">if</span> (r &lt; <span class="number">0</span>)</span><br><span class="line">            <span class="keyword">return</span> r;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    ...</span><br><span class="line">    r = store-&gt;write_meta(<span class="string">"ready"</span>, <span class="string">"ready"</span>);</span><br><span class="line">    ...    </span><br><span class="line">&#125;</span><br><span class="line">    </span><br><span class="line">文件：os/bluestore/BlueStore.cc</span><br><span class="line"><span class="keyword">int</span> BlueStore::write_meta(<span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span>&amp; key, <span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span>&amp; value)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">bluestore_bdev_label_t</span> label;</span><br><span class="line">    <span class="built_in">string</span> p = path + <span class="string">"/block"</span>;</span><br><span class="line">    <span class="keyword">int</span> r = _read_bdev_label(cct, p, &amp;label);</span><br><span class="line">    <span class="keyword">if</span> (r &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> ObjectStore::write_meta(key, value);</span><br><span class="line">    &#125;</span><br><span class="line">    label.meta[key] = value;</span><br><span class="line">    r = _write_bdev_label(cct, p, label);</span><br><span class="line">    assert(r == <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">return</span> ObjectStore::write_meta(key, value);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="磁盘分区"><a href="#磁盘分区" class="headerlink" title="磁盘分区"></a>磁盘分区</h4><p>命令格式：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy osd create [host] --data [/path/to/device-partition]</span></span><br></pre></td></tr></table></figure>
+<p>首先创建磁盘分区：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># fdisk -l /dev/sdc</span></span><br><span class="line">...</span><br><span class="line">Disk /dev/sdc: 4000.8 GB, 4000787030016 bytes, 7814037168 sectors</span><br><span class="line">Units = sectors of 1 * 512 = 512 bytes</span><br><span class="line">Sector size (logical/physical): 512 bytes / 512 bytes</span><br><span class="line">I/O size (minimum/optimal): 512 bytes / 512 bytes</span><br><span class="line">Disk label <span class="built_in">type</span>: gpt</span><br><span class="line">Disk identifier: 84B34A2B-5F0D-4C4F-ADCD-1974B8FD5851</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">#         Start          End    Size  Type            Name</span></span><br><span class="line"> 1         2048   7814037134    3.7T  Linux filesyste</span><br><span class="line"></span><br><span class="line"><span class="comment"># lsblk /dev/sdc</span></span><br><span class="line">NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT</span><br><span class="line">sdc      8:32   0  3.7T  0 disk</span><br><span class="line">└─sdc1   8:33   0  3.7T  0 part</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>请使用gpt分区格式，其他的会报错</p>
+</blockquote>
+<p>创建OSD：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy osd create ceph0 --data /dev/sdc1</span></span><br><span class="line">...</span><br><span class="line">[ceph0][INFO  ] Running <span class="built_in">command</span>: /usr/sbin/ceph-volume --cluster ceph lvm create --bluestore --data /dev/sdc1</span><br><span class="line">...</span><br><span class="line">[ceph0][DEBUG ] --&gt; ceph-volume lvm activate successful <span class="keyword">for</span> osd ID: 1</span><br><span class="line">[ceph0][DEBUG ] --&gt; ceph-volume lvm activate successful <span class="keyword">for</span> osd ID: None</span><br><span class="line">[ceph0][DEBUG ] --&gt; ceph-volume lvm create successful <span class="keyword">for</span>: /dev/sdc1</span><br><span class="line">[ceph0][INFO  ] checking OSD status...</span><br><span class="line">[ceph0][DEBUG ] find the location of an executable</span><br><span class="line">[ceph0][INFO  ] Running <span class="built_in">command</span>: /bin/ceph --cluster=ceph osd <span class="built_in">stat</span> --format=json</span><br><span class="line">[ceph_deploy.osd][DEBUG ] Host ceph0 is now ready <span class="keyword">for</span> osd use.</span><br></pre></td></tr></table></figure>
+<p>检查OSD：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ll /var/lib/ceph/osd/ceph-1/</span></span><br><span class="line">total 48</span><br><span class="line">-rw-r--r-- 1 ceph ceph 393 Apr  2 18:48 activate.monmap</span><br><span class="line">lrwxrwxrwx 1 ceph ceph  93 Apr  2 18:48 block -&gt; /dev/ceph-589101eb-51c3-42b9-adad-915bfccfc4f2/osd-block-8553492d-cb56-4b69-ab9f-d0cfcf0d0970</span><br><span class="line">-rw-r--r-- 1 ceph ceph   2 Apr  2 18:48 bluefs</span><br><span class="line">-rw-r--r-- 1 ceph ceph  37 Apr  2 18:48 ceph_fsid</span><br><span class="line">-rw-r--r-- 1 ceph ceph  37 Apr  2 18:48 fsid</span><br><span class="line">-rw------- 1 ceph ceph  55 Apr  2 18:48 keyring</span><br><span class="line">-rw-r--r-- 1 ceph ceph   8 Apr  2 18:48 kv_backend</span><br><span class="line">-rw-r--r-- 1 ceph ceph  21 Apr  2 18:48 magic</span><br><span class="line">-rw-r--r-- 1 ceph ceph   4 Apr  2 18:48 mkfs_done</span><br><span class="line">-rw-r--r-- 1 ceph ceph  41 Apr  2 18:48 osd_key</span><br><span class="line">-rw-r--r-- 1 ceph ceph   6 Apr  2 18:48 ready</span><br><span class="line">-rw-r--r-- 1 ceph ceph  10 Apr  2 18:48 <span class="built_in">type</span></span><br><span class="line">-rw-r--r-- 1 ceph ceph   2 Apr  2 18:48 whoam</span><br><span class="line"></span><br><span class="line"><span class="comment"># pvs /dev/sdc1</span></span><br><span class="line">  PV         VG                                        Fmt  Attr PSize PFree</span><br><span class="line">  /dev/sdc1  ceph-589101eb-51c3-42b9-adad-915bfccfc4f2 lvm2 a--  3.64t    0</span><br><span class="line"></span><br><span class="line"><span class="comment"># lvs ceph-589101eb-51c3-42b9-adad-915bfccfc4f2</span></span><br><span class="line">  LV                                             VG                                        Attr       LSize Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert</span><br><span class="line">  osd-block-8553492d-cb56-4b69-ab9f-d0cfcf0d0970 ceph-589101eb-51c3-42b9-adad-915bfccfc4f2 -wi-ao---- 3.64t</span><br></pre></td></tr></table></figure>
+<p><strong>结论：</strong></p>
+<ul>
+<li>与使用整块磁盘基本一样，不同的只是用磁盘分区创建一个PV</li>
+</ul>
+<h4 id="逻辑卷"><a href="#逻辑卷" class="headerlink" title="逻辑卷"></a>逻辑卷</h4><p>命令格式：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy osd create [host] --data [vg/lv]</span></span><br></pre></td></tr></table></figure>
+<p>首先创建一个逻辑卷：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># pvcreate /dev/sdd</span></span><br><span class="line">  Physical volume <span class="string">"/dev/sdd"</span> successfully created.</span><br><span class="line"></span><br><span class="line"><span class="comment"># vgcreate sddvg /dev/sdd</span></span><br><span class="line">  Volume group <span class="string">"sddvg"</span> successfully created</span><br><span class="line"></span><br><span class="line"><span class="comment"># lvcreate -n sddlv -l 100%FREE sddvg</span></span><br><span class="line">  Logical volume <span class="string">"sddlv"</span> created.</span><br></pre></td></tr></table></figure>
+<p>创建OSD：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy osd create ceph0 --data sddvg/sddlv</span></span><br><span class="line">...</span><br><span class="line">[ceph0][INFO  ] Running <span class="built_in">command</span>: /usr/sbin/ceph-volume --cluster ceph lvm create --bluestore --data sddvg/sddlv</span><br><span class="line">...</span><br><span class="line">[ceph0][DEBUG ] --&gt; ceph-volume lvm activate successful <span class="keyword">for</span> osd ID: 2</span><br><span class="line">[ceph0][DEBUG ] --&gt; ceph-volume lvm activate successful <span class="keyword">for</span> osd ID: None</span><br><span class="line">[ceph0][DEBUG ] --&gt; ceph-volume lvm create successful <span class="keyword">for</span>: sddvg/sddlv</span><br><span class="line">[ceph0][INFO  ] checking OSD status...</span><br><span class="line">[ceph0][DEBUG ] find the location of an executable</span><br><span class="line">[ceph0][INFO  ] Running <span class="built_in">command</span>: /bin/ceph --cluster=ceph osd <span class="built_in">stat</span> --format=json</span><br><span class="line">[ceph_deploy.osd][DEBUG ] Host ceph0 is now ready <span class="keyword">for</span> osd use.</span><br></pre></td></tr></table></figure></p>
+<blockquote>
+<p>若指定<code>--data /dev/sddvg/sddlv</code>，命令会报错，会被认为是block device</p>
+</blockquote>
+<p>检查OSD：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ll /var/lib/ceph/osd/ceph-2/</span></span><br><span class="line">total 48</span><br><span class="line">-rw-r--r-- 1 ceph ceph 393 Apr  2 18:55 activate.monmap</span><br><span class="line">lrwxrwxrwx 1 ceph ceph  16 Apr  2 18:55 block -&gt; /dev/sddvg/sddlv</span><br><span class="line">-rw-r--r-- 1 ceph ceph   2 Apr  2 18:55 bluefs</span><br><span class="line">-rw-r--r-- 1 ceph ceph  37 Apr  2 18:55 ceph_fsid</span><br><span class="line">-rw-r--r-- 1 ceph ceph  37 Apr  2 18:55 fsid</span><br><span class="line">-rw------- 1 ceph ceph  55 Apr  2 18:55 keyring</span><br><span class="line">-rw-r--r-- 1 ceph ceph   8 Apr  2 18:55 kv_backend</span><br><span class="line">-rw-r--r-- 1 ceph ceph  21 Apr  2 18:55 magic</span><br><span class="line">-rw-r--r-- 1 ceph ceph   4 Apr  2 18:55 mkfs_done</span><br><span class="line">-rw-r--r-- 1 ceph ceph  41 Apr  2 18:55 osd_key</span><br><span class="line">-rw-r--r-- 1 ceph ceph   6 Apr  2 18:55 ready</span><br><span class="line">-rw-r--r-- 1 ceph ceph  10 Apr  2 18:55 <span class="built_in">type</span></span><br><span class="line">-rw-r--r-- 1 ceph ceph   2 Apr  2 18:55 whoami</span><br></pre></td></tr></table></figure>
+<p><strong>结论：</strong></p>
+<ul>
+<li>与前两个一致，区别只是自己收到创建了PV，VG，LV</li>
+</ul>
+<h3 id="指定block-wal和block-db设备创建OSD"><a href="#指定block-wal和block-db设备创建OSD" class="headerlink" title="指定block.wal和block.db设备创建OSD"></a>指定block.wal和block.db设备创建OSD</h3><p>当指定<code>block.wal</code>或<code>block.db</code>时，对应的设备可以为两种：</p>
+<ol>
+<li>物理磁盘，但必须是一个磁盘分区</li>
+<li>逻辑卷（a logical volume of LVM）</li>
+</ol>
+<p>这里只区分指定的<code>block.wal</code>或<code>block.db</code>设备，data设备选择整块磁盘。</p>
+<p><strong>bluestore的<code>block.db</code>和<code>block.wal</code>大小</strong></p>
+<p>默认值如下，db size = 0，wal size = 100663296，都比较小。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-conf --show-config | grep bluestore_block</span></span><br><span class="line">bluestore_block_create = <span class="literal">true</span></span><br><span class="line">bluestore_block_db_create = <span class="literal">false</span></span><br><span class="line">bluestore_block_db_path =</span><br><span class="line">bluestore_block_db_size = 0</span><br><span class="line">bluestore_block_path =</span><br><span class="line">bluestore_block_preallocate_file = <span class="literal">false</span></span><br><span class="line">bluestore_block_size = 10737418240</span><br><span class="line">bluestore_block_wal_create = <span class="literal">false</span></span><br><span class="line">bluestore_block_wal_path =</span><br><span class="line">bluestore_block_wal_size = 100663296</span><br></pre></td></tr></table></figure>
+<p>参考：<a href="https://marc.info/?l=ceph-devel&amp;m=149978799900866&amp;w=2" target="_blank" rel="noopener">https://marc.info/?l=ceph-devel&amp;m=149978799900866&amp;w=2</a></p>
+<p>对<code>block.db</code>和<code>block.wal</code>的大小要求也都比较小，后续测试我们选择<code>block.db</code>和<code>block.wal</code>为10G。</p>
+<h4 id="磁盘分区-1"><a href="#磁盘分区-1" class="headerlink" title="磁盘分区"></a>磁盘分区</h4><p>命令格式：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy osd create [host] --data [/path/to/device] --block-db [/path/to/device-partition] --block-wal [/path/to/device-partition]</span></span><br></pre></td></tr></table></figure>
+<p>首先创建两个磁盘分区给block.wal和block.db使用：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># parted -s /dev/sdf print</span></span><br><span class="line">Model: ATA INTEL SSDSC2BB48 (scsi)</span><br><span class="line">Disk /dev/sdf: 480GB</span><br><span class="line">Sector size (logical/physical): 512B/4096B</span><br><span class="line">Partition Table: gpt</span><br><span class="line">Disk Flags:</span><br><span class="line"></span><br><span class="line">Number  Start   End     Size    File system  Name  Flags</span><br><span class="line"> 1      1049kB  10.7GB  10.7GB</span><br><span class="line"> 2      10.7GB  21.5GB  10.7GB</span><br></pre></td></tr></table></figure>
+<p>创建OSD：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy disk zap ceph0 /dev/sde</span></span><br><span class="line"><span class="comment"># ceph-deploy osd create ceph0 --data /dev/sde --block-db /dev/sdf1 --block-wal /dev/sdf2</span></span><br><span class="line">...</span><br><span class="line">[ceph0][INFO  ] Running <span class="built_in">command</span>: /usr/sbin/ceph-volume --cluster ceph lvm create --bluestore --data /dev/sde --block.wal /dev/sdf2 --block.db /dev/sdf1</span><br><span class="line">...</span><br><span class="line">[ceph0][DEBUG ] --&gt; ceph-volume lvm activate successful <span class="keyword">for</span> osd ID: 3</span><br><span class="line">[ceph0][DEBUG ] --&gt; ceph-volume lvm activate successful <span class="keyword">for</span> osd ID: None</span><br><span class="line">[ceph0][DEBUG ] --&gt; ceph-volume lvm create successful <span class="keyword">for</span>: /dev/sde</span><br><span class="line">[ceph0][INFO  ] checking OSD status...</span><br><span class="line">[ceph0][DEBUG ] find the location of an executable</span><br><span class="line">[ceph0][INFO  ] Running <span class="built_in">command</span>: /bin/ceph --cluster=ceph osd <span class="built_in">stat</span> --format=json</span><br><span class="line">[ceph_deploy.osd][DEBUG ] Host ceph0 is now ready <span class="keyword">for</span> osd use.</span><br></pre></td></tr></table></figure>
+<p>检查OSD：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># df -h</span></span><br><span class="line">Filesystem           Size  Used Avail Use% Mounted on</span><br><span class="line">...</span><br><span class="line">tmpfs                 16G   56K   16G   1% /var/lib/ceph/osd/ceph-3</span><br><span class="line"></span><br><span class="line"><span class="comment"># ll /var/lib/ceph/osd/ceph-3</span></span><br><span class="line">total 56</span><br><span class="line">-rw-r--r-- 1 ceph ceph 393 Apr  3 09:20 activate.monmap</span><br><span class="line">lrwxrwxrwx 1 ceph ceph  93 Apr  3 09:20 block -&gt; /dev/ceph-7777d5e4-9b81-4c17-916d-7a1e48f6268e/osd-block-3ed97688-03b4-4ca6-a497-bbd30e865852</span><br><span class="line">lrwxrwxrwx 1 root root   9 Apr  3 09:20 block.db -&gt; /dev/sdf1</span><br><span class="line">lrwxrwxrwx 1 root root   9 Apr  3 09:20 block.wal -&gt; /dev/sdf2</span><br><span class="line">-rw-r--r-- 1 ceph ceph   2 Apr  3 09:20 bluefs</span><br><span class="line">-rw-r--r-- 1 ceph ceph  37 Apr  3 09:20 ceph_fsid</span><br><span class="line">-rw-r--r-- 1 ceph ceph  37 Apr  3 09:20 fsid</span><br><span class="line">-rw------- 1 ceph ceph  55 Apr  3 09:20 keyring</span><br><span class="line">-rw-r--r-- 1 ceph ceph   8 Apr  3 09:20 kv_backend</span><br><span class="line">-rw-r--r-- 1 ceph ceph  21 Apr  3 09:20 magic</span><br><span class="line">-rw-r--r-- 1 ceph ceph   4 Apr  3 09:20 mkfs_done</span><br><span class="line">-rw-r--r-- 1 ceph ceph  41 Apr  3 09:20 osd_key</span><br><span class="line">-rw-r--r-- 1 ceph ceph  10 Apr  3 09:20 path_block.db</span><br><span class="line">-rw-r--r-- 1 ceph ceph  10 Apr  3 09:20 path_block.wal</span><br><span class="line">-rw-r--r-- 1 ceph ceph   6 Apr  3 09:20 ready</span><br><span class="line">-rw-r--r-- 1 ceph ceph  10 Apr  3 09:20 <span class="built_in">type</span></span><br><span class="line">-rw-r--r-- 1 ceph ceph   2 Apr  3 09:20 whoami</span><br></pre></td></tr></table></figure>
+<p><strong>结论：</strong></p>
+<ul>
+<li>与使用单块盘基本一样，不同的只是指定了<code>block.db -&gt; /dev/sdf1</code>和<code>block.wal -&gt; /dev/sdf2</code></li>
+</ul>
+<h4 id="逻辑卷-1"><a href="#逻辑卷-1" class="headerlink" title="逻辑卷"></a>逻辑卷</h4><p>命令格式：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy osd create [host] --data [/path/to/device] --block-db [vg/lv]  --block-wal [vg/lv]</span></span><br></pre></td></tr></table></figure>
+<p>首先创建两个逻辑卷给block.wal和block.db使用：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># pvcreate /dev/sdm</span></span><br><span class="line"><span class="comment"># vgcreate ssdvg /dev/sdm</span></span><br><span class="line"><span class="comment"># lvcreate -n db-lv-0 -L 4G ssdvg</span></span><br><span class="line"><span class="comment"># lvcreate -n wal-lv-0 -L 8G ssdvg</span></span><br></pre></td></tr></table></figure>
+<p>创建OSD：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy disk zap ceph0 /dev/sdg</span></span><br><span class="line"><span class="comment"># ceph-deploy osd create ceph0 --data /dev/sdg --block-db ssdvg/db-lv-0 --block-wal ssdvg/wal-lv-0</span></span><br><span class="line">...</span><br><span class="line">[ceph0][INFO  ] Running <span class="built_in">command</span>: /usr/sbin/ceph-volume --cluster ceph lvm create --bluestore --data /dev/sdg --block.wal ssdvg/wal-lv-0 --block.db ssdvg/db-lv-0</span><br><span class="line">...</span><br><span class="line">[ceph0][DEBUG ] --&gt; ceph-volume lvm activate successful <span class="keyword">for</span> osd ID: 4</span><br><span class="line">[ceph0][DEBUG ] --&gt; ceph-volume lvm activate successful <span class="keyword">for</span> osd ID: None</span><br><span class="line">[ceph0][DEBUG ] --&gt; ceph-volume lvm create successful <span class="keyword">for</span>: /dev/sdg</span><br><span class="line">[ceph0][INFO  ] checking OSD status...</span><br><span class="line">[ceph0][DEBUG ] find the location of an executable</span><br><span class="line">[ceph0][INFO  ] Running <span class="built_in">command</span>: /bin/ceph --cluster=ceph osd <span class="built_in">stat</span> --format=json</span><br><span class="line">[ceph_deploy.osd][DEBUG ] Host ceph0 is now ready <span class="keyword">for</span> osd use.</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>若指定<code>--block-db /dev/ssdvg/db-lv-0 --block-wal /dev/ssdvg/wal-lv-0</code>，命令会报错</p>
+</blockquote>
+<p>检查OSD：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># df -h</span></span><br><span class="line">Filesystem           Size  Used Avail Use% Mounted on</span><br><span class="line">...</span><br><span class="line">tmpfs                 16G   56K   16G   1% /var/lib/ceph/osd/ceph-4</span><br><span class="line"></span><br><span class="line"><span class="comment"># ll /var/lib/ceph/osd/ceph-4</span></span><br><span class="line">total 56</span><br><span class="line">-rw-r--r-- 1 ceph ceph 393 Apr  3 09:30 activate.monmap</span><br><span class="line">lrwxrwxrwx 1 ceph ceph  93 Apr  3 09:30 block -&gt; /dev/ceph-017b646a-0332-4677-967b-95033a3a33ab/osd-block-24228535-1fb3-4bcd-bb87-f6d5f49ed24d</span><br><span class="line">lrwxrwxrwx 1 root root  18 Apr  3 09:30 block.db -&gt; /dev/ssdvg/db-lv-0</span><br><span class="line">lrwxrwxrwx 1 root root  19 Apr  3 09:30 block.wal -&gt; /dev/ssdvg/wal-lv-0</span><br><span class="line">-rw-r--r-- 1 ceph ceph   2 Apr  3 09:30 bluefs</span><br><span class="line">-rw-r--r-- 1 ceph ceph  37 Apr  3 09:30 ceph_fsid</span><br><span class="line">-rw-r--r-- 1 ceph ceph  37 Apr  3 09:30 fsid</span><br><span class="line">-rw------- 1 ceph ceph  55 Apr  3 09:30 keyring</span><br><span class="line">-rw-r--r-- 1 ceph ceph   8 Apr  3 09:30 kv_backend</span><br><span class="line">-rw-r--r-- 1 ceph ceph  21 Apr  3 09:30 magic</span><br><span class="line">-rw-r--r-- 1 ceph ceph   4 Apr  3 09:30 mkfs_done</span><br><span class="line">-rw-r--r-- 1 ceph ceph  41 Apr  3 09:30 osd_key</span><br><span class="line">-rw-r--r-- 1 ceph ceph  19 Apr  3 09:30 path_block.db</span><br><span class="line">-rw-r--r-- 1 ceph ceph  20 Apr  3 09:30 path_block.wal</span><br><span class="line">-rw-r--r-- 1 ceph ceph   6 Apr  3 09:30 ready</span><br><span class="line">-rw-r--r-- 1 ceph ceph  10 Apr  3 09:30 <span class="built_in">type</span></span><br><span class="line">-rw-r--r-- 1 ceph ceph   2 Apr  3 09:30 whoami</span><br></pre></td></tr></table></figure>
+<p><strong>结论：</strong></p>
+<ul>
+<li>与使用单块盘基本一样，不同的只是指定了<code>block.db -&gt; /dev/ssdvg/db-lv-0</code>和<code>block.wal -&gt; /dev/ssdvg/wal-lv-0</code></li>
+</ul>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2018/03/26/lvm-sata-ssd-bcache/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2219,195 +2539,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/11/16/linx-symbolic-hard-link/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="ictfox">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/ictfox.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ictfox blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2017/11/16/linx-symbolic-hard-link/" itemprop="url">Linux 软链接和硬链接</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-11-16T11:40:17+08:00">
-                2017-11-16
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/linux/" itemprop="url" rel="index">
-                    <span itemprop="name">linux</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2017/11/16/linx-symbolic-hard-link/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2017/11/16/linx-symbolic-hard-link/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>Linux系统中为了解决文件共享问题，引入了软链接和硬链接的概念，软链接又称符号链接，即<code>soft link</code>或<code>symbolic link</code>，硬链接即为<code>hard link</code>。<br>同时它们还带来了隐藏文件路径、增加权限安全及节省存储等好处。</p>
-<p>若一个文件指向另一个文件，该文件的内容仅仅是另一个文件的<code>path</code>，则其为软链接。<br>若一个<code>inode号</code>对应多个文件名，则称这些文件为硬链接。换言之，硬链接就是同一个文件使用了多个别名。<br>软链接可由命令<code>ln</code>创建，硬链接可由命令<code>link或ln</code>创建。</p>
-<h3 id="硬链接"><a href="#硬链接" class="headerlink" title="硬链接"></a>硬链接</h3><p>由于硬链接的文件是有着相同<code>inode号</code>，仅文件名不同，因此硬链接存在以下几点特性：</p>
-<ul>
-<li>文件有相同的<code>inode 和 data blocks</code></li>
-<li>只能对文件创建硬链接，不能对目录创建硬链接</li>
-<li>只能对已存在的文件创建硬链接</li>
-<li>不能跨文件系统创建硬链接</li>
-<li>删除一个硬链接文件并不影响其他有相同<code>inode号</code>的文件</li>
-</ul>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">$ ll</span><br><span class="line">total 4</span><br><span class="line">-rw-r--r-- 1 root root 928 Nov 11 08:37 tstfile</span><br><span class="line">$ ln tstfile hlink</span><br><span class="line">$ ll</span><br><span class="line">total 8</span><br><span class="line">-rw-r--r-- 2 root root 928 Nov 11 08:37 hlink</span><br><span class="line">-rw-r--r-- 2 root root 928 Nov 11 08:37 tstfile</span><br><span class="line"></span><br><span class="line">$ <span class="built_in">stat</span> tstfile</span><br><span class="line">  File: ‘tstfile’</span><br><span class="line">  Size: 928       	Blocks: 8          IO Block: 4096   regular file</span><br><span class="line">Device: 803h/2051d	Inode: 4851726     Links: 2</span><br><span class="line">Access: (0644/-rw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)</span><br><span class="line">Access: 2017-11-11 08:37:07.554081068 +0800</span><br><span class="line">Modify: 2017-11-11 08:37:07.554081068 +0800</span><br><span class="line">Change: 2017-11-11 08:37:42.216988088 +0800</span><br><span class="line"> Birth: -</span><br><span class="line"></span><br><span class="line">$ <span class="built_in">stat</span> hlink</span><br><span class="line">  File: ‘hlink’</span><br><span class="line">  Size: 928       	Blocks: 8          IO Block: 4096   regular file</span><br><span class="line">Device: 803h/2051d	Inode: 4851726     Links: 2</span><br><span class="line">Access: (0644/-rw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)</span><br><span class="line">Access: 2017-11-11 08:37:07.554081068 +0800</span><br><span class="line">Modify: 2017-11-11 08:37:07.554081068 +0800</span><br><span class="line">Change: 2017-11-11 08:37:42.216988088 +0800</span><br><span class="line"> Birth: -</span><br></pre></td></tr></table></figure>
-<p>因为硬链接文件具有相同的地位，并没有谁指向谁之说，所以想要查找一个<code>inode号</code>对应的所有硬链接文件并不容易，通常需要遍历目录下所有的文件，系统里可通过<code>find</code>命令查找一个文件相关的所有硬链接文件。</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">$ mkdir dir</span><br><span class="line">$ ln tstfile dir/hlink</span><br><span class="line"></span><br><span class="line">$ find ./ -samefile tstfile</span><br><span class="line">./dir/hlink</span><br><span class="line">./hlink</span><br><span class="line">./tstfile</span><br><span class="line"></span><br><span class="line">$ ls -i tstfile</span><br><span class="line">4851726 tstfile</span><br><span class="line">$ find ./ -inum 4851726</span><br><span class="line">./dir/hlink</span><br><span class="line">./hlink</span><br><span class="line">./tstfile</span><br></pre></td></tr></table></figure>
-<p>可以通过命令<code>strace find ./ -samefile tstfile</code>查看具体执行的系统调用，发现该命令会在输入的目录下查询所有的文件，输出与参数文件<code>inode num</code>一致的文件，所以在目录里文件非常多时，该命令会非常耗时的。</p>
-<h3 id="软连接"><a href="#软连接" class="headerlink" title="软连接"></a>软连接</h3><p>软链接与硬链接不同，若一个文件的数据块中存放的内容是另一文件的路径名时，则该文件就是软链接。<br>软链接就是一个普通文件，只是数据块内容有点特殊。<br>软链接有着自己的<code>inode</code>号以及数据块，因此软链接的创建与使用没有类似硬链接的诸多限制。</p>
-<p><strong>软链接的特性如下：</strong></p>
-<ul>
-<li>软链接有自己的文件属性及权限等</li>
-<li>可对不存在的文件或目录创建软链接</li>
-<li>软链接可跨文件系统创建</li>
-<li>软链接即可对文件创建，也可对目录创建</li>
-<li>创建软链接后，链接计数<code>i_nlink</code>不会增加</li>
-<li>删除软链接并不影响被指向的文件</li>
-<li>若被指向的原文件被删除，则相关软连接被称为死链接(dangling link)，若被指向路径文件被重新创建，即恢复为正常的软链接</li>
-</ul>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">$ ln -s tstfile slink</span><br><span class="line">$ ll</span><br><span class="line">total 4</span><br><span class="line">lrwxrwxrwx 1 root root   7 Nov 11 08:39 slink -&gt; tstfile</span><br><span class="line">-rw-r--r-- 1 root root 928 Nov 11 08:37 tstfile</span><br><span class="line"></span><br><span class="line">$ <span class="built_in">stat</span> tstfile</span><br><span class="line">  File: ‘tstfile’</span><br><span class="line">  Size: 928       	Blocks: 8          IO Block: 4096   regular file</span><br><span class="line">Device: 803h/2051d	Inode: 4851726     Links: 1</span><br><span class="line">Access: (0644/-rw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)</span><br><span class="line">Access: 2017-11-11 08:37:07.554081068 +0800</span><br><span class="line">Modify: 2017-11-11 08:37:07.554081068 +0800</span><br><span class="line">Change: 2017-11-11 08:39:04.749766771 +0800</span><br><span class="line"> Birth: -</span><br><span class="line"> </span><br><span class="line">$ <span class="built_in">stat</span> slink</span><br><span class="line">  File: ‘slink’ -&gt; ‘tstfile’</span><br><span class="line">  Size: 7         	Blocks: 0          IO Block: 4096   symbolic link</span><br><span class="line">Device: 803h/2051d	Inode: 4851778     Links: 1</span><br><span class="line">Access: (0777/lrwxrwxrwx)  Uid: (    0/    root)   Gid: (    0/    root)</span><br><span class="line">Access: 2017-11-11 08:39:24.730713312 +0800</span><br><span class="line">Modify: 2017-11-11 08:39:22.901718205 +0800</span><br><span class="line">Change: 2017-11-11 08:39:22.901718205 +0800</span><br><span class="line"> Birth: -</span><br><span class="line"></span><br><span class="line">$ readlink slink</span><br><span class="line">tstfile</span><br></pre></td></tr></table></figure>
-<h3 id="测试程序"><a href="#测试程序" class="headerlink" title="测试程序"></a>测试程序</h3><p>Linux里由命令<code>stat</code>来获取一个文件的状态，文件状态保持在数据结构<code>struct stat</code>里，定义如下：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">stat</span> &#123;</span></span><br><span class="line">   <span class="keyword">dev_t</span>     st_dev;     <span class="comment">/* ID of device containing file */</span></span><br><span class="line">   <span class="keyword">ino_t</span>     st_ino;     <span class="comment">/* inode number */</span></span><br><span class="line">   <span class="keyword">mode_t</span>    st_mode;    <span class="comment">/* protection */</span></span><br><span class="line">   <span class="keyword">nlink_t</span>   st_nlink;   <span class="comment">/* number of hard links */</span></span><br><span class="line">   <span class="keyword">uid_t</span>     st_uid;     <span class="comment">/* user ID of owner */</span></span><br><span class="line">   <span class="keyword">gid_t</span>     st_gid;     <span class="comment">/* group ID of owner */</span></span><br><span class="line">   <span class="keyword">dev_t</span>     st_rdev;    <span class="comment">/* device ID (if special file) */</span></span><br><span class="line">   <span class="keyword">off_t</span>     st_size;    <span class="comment">/* total size, in bytes */</span></span><br><span class="line">   <span class="keyword">blksize_t</span> st_blksize; <span class="comment">/* blocksize for file system I/O */</span></span><br><span class="line">   <span class="keyword">blkcnt_t</span>  st_blocks;  <span class="comment">/* number of 512B blocks allocated */</span></span><br><span class="line">   <span class="keyword">time_t</span>    st_atime;   <span class="comment">/* time of last access */</span></span><br><span class="line">   <span class="keyword">time_t</span>    st_mtime;   <span class="comment">/* time of last modification */</span></span><br><span class="line">   <span class="keyword">time_t</span>    st_ctime;   <span class="comment">/* time of last status change */</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-<p>其中<code>st_mode</code>变量用来表示文件类型的，特征位的定义如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">S_IFMT     0170000   bit mask <span class="keyword">for</span> the file <span class="built_in">type</span> bit fields</span><br><span class="line">S_IFSOCK   0140000   socket</span><br><span class="line">S_IFLNK    0120000   symbolic link</span><br><span class="line">S_IFREG    0100000   regular file</span><br><span class="line">S_IFBLK    0060000   block device</span><br><span class="line">S_IFDIR    0040000   directory</span><br><span class="line">S_IFCHR    0020000   character device</span><br><span class="line">S_IFIFO    0010000   FIFO</span><br><span class="line">S_ISUID    0004000   <span class="built_in">set</span>-user-ID bit</span><br><span class="line">S_ISGID    0002000   <span class="built_in">set</span>-group-ID bit (see below)</span><br><span class="line">S_ISVTX    0001000   sticky bit (see below)</span><br><span class="line">S_IRWXU    00700     mask <span class="keyword">for</span> file owner permissions</span><br><span class="line">S_IRUSR    00400     owner has <span class="built_in">read</span> permission</span><br><span class="line">S_IWUSR    00200     owner has write permission</span><br><span class="line">S_IXUSR    00100     owner has execute permission</span><br><span class="line">S_IRWXG    00070     mask <span class="keyword">for</span> group permissions</span><br><span class="line">S_IRGRP    00040     group has <span class="built_in">read</span> permission</span><br><span class="line">S_IWGRP    00020     group has write permission</span><br><span class="line">S_IXGRP    00010     group has execute permission</span><br><span class="line">S_IRWXO    00007     mask <span class="keyword">for</span> permissions <span class="keyword">for</span> others (not <span class="keyword">in</span> group)</span><br><span class="line">S_IROTH    00004     others have <span class="built_in">read</span> permission</span><br><span class="line">S_IWOTH    00002     others have write permission</span><br><span class="line">S_IXOTH    00001     others have execute permission</span><br></pre></td></tr></table></figure>
-<p>POSIX标准里定义了如下的宏来检查文件类型：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">S_ISREG(m)  is it a regular file?</span><br><span class="line">S_ISDIR(m)  directory?</span><br><span class="line">S_ISCHR(m)  character device?</span><br><span class="line">S_ISBLK(m)  block device?</span><br><span class="line">S_ISFIFO(m) FIFO (named pipe)?</span><br><span class="line">S_ISLNK(m)  symbolic link?  (Not <span class="keyword">in</span> POSIX.1-1996.)</span><br><span class="line">S_ISSOCK(m) socket?  (Not <span class="keyword">in</span> POSIX.1-1996.)</span><br></pre></td></tr></table></figure>
-<p>结合上面的描述，我们可以写如下测试代码：</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">$ cat file_stat.cc</span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/stat.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="built_in">std</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span>* argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">stat</span> <span class="title">fstat</span>;</span></span><br><span class="line">    <span class="built_in">string</span> file_path = argv[<span class="number">1</span>];</span><br><span class="line"></span><br><span class="line">    <span class="meta"># use lstat instead of stat as lstat handle symbolic link itself</span></span><br><span class="line">    <span class="meta"># when input path is a symbolic, not the file it refers to.</span></span><br><span class="line">    <span class="keyword">int</span> ret = lstat(file_path.c_str(), &amp;fstat);</span><br><span class="line">    <span class="built_in">cout</span> &lt;&lt; <span class="string">"file path: "</span> &lt;&lt; file_path &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">cout</span> &lt;&lt; <span class="string">"file size: "</span> &lt;&lt; fstat.st_size &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">cout</span> &lt;&lt; <span class="string">"file ino: "</span> &lt;&lt; fstat.st_ino &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">cout</span> &lt;&lt; <span class="string">"file mode: "</span> &lt;&lt; fstat.st_mode &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">cout</span> &lt;&lt; <span class="string">"file nlink: "</span> &lt;&lt; fstat.st_nlink &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (S_ISREG(fstat.st_mode)) &#123;</span><br><span class="line">        <span class="built_in">cout</span> &lt;&lt; <span class="string">"regular file: "</span> &lt;&lt; file_path &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (S_ISLNK(fstat.st_mode)) &#123;</span><br><span class="line">        <span class="built_in">cout</span> &lt;&lt; <span class="string">"link file: "</span> &lt;&lt; file_path &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">        <span class="keyword">char</span> buf[<span class="number">256</span>];</span><br><span class="line">        ret = readlink(file_path.c_str(), buf, <span class="number">255</span>);</span><br><span class="line">        buf[ret] = <span class="string">'\0'</span>;</span><br><span class="line">        <span class="built_in">cout</span> &lt;&lt; <span class="string">"readlink return "</span> &lt;&lt; ret &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">        <span class="built_in">cout</span> &lt;&lt; <span class="string">"link file real path: "</span> &lt;&lt; buf &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//g++ -std=c++11 -ofile_stat file_stat.cc</span></span><br></pre></td></tr></table></figure>
-<p>命令行输出</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">$ ./file_stat hlink</span><br><span class="line">file path: hlink</span><br><span class="line">file size: 928</span><br><span class="line">file ino: 4851726</span><br><span class="line">file mode: 33188</span><br><span class="line">file nlink: 3</span><br><span class="line">regular file: hlink</span><br><span class="line"></span><br><span class="line">$ ./file_stat slink</span><br><span class="line">file path: slink</span><br><span class="line">file size: 7</span><br><span class="line">file ino: 4851778</span><br><span class="line">file mode: 41471</span><br><span class="line">file nlink: 1</span><br><span class="line">link file: slink</span><br><span class="line">readlink <span class="built_in">return</span> 7</span><br><span class="line">link file real path: tstfile</span><br></pre></td></tr></table></figure>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://www.ibm.com/developerworks/cn/linux/l-cn-hardandsymb-links/index.html" target="_blank" rel="noopener">https://www.ibm.com/developerworks/cn/linux/l-cn-hardandsymb-links/index.html</a><br><a href="http://www.giannistsakiris.com/2011/04/15/counting-and-listing-hard-links-on-linux/" target="_blank" rel="noopener">http://www.giannistsakiris.com/2011/04/15/counting-and-listing-hard-links-on-linux/</a></p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2462,7 +2593,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">74</span>
+                  <span class="site-state-item-count">75</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -2484,7 +2615,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-count">50</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>
