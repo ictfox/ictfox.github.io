@@ -83,7 +83,7 @@
 <meta name="keywords" content="ceph,cephfs">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Cephfs测试中IO hang问题分析">
-<meta property="og:url" content="http://www.ictfox.cn/2017/07/18/cephfs-io-hang-analysis/index.html">
+<meta property="og:url" content="http://www.yangguanjun.com/2017/07/18/cephfs-io-hang-analysis/index.html">
 <meta property="og:site_name" content="ictfox blog">
 <meta property="og:description" content="问题为了测试cephfs的可用性，我们对cephfs进行了几组stripe的测试，在跑自动化测试时，发现fio总是会跑一部分后hang住，而此时ceph -s输出显示read值太大，但实际环境中查看并没这么大的流量。 ceph输出123456789101112# ceph -w    cluster 16f59233-16da-4864-8c5a-1fec71d119ad     health H">
 <meta property="og:locale" content="en">
@@ -120,7 +120,7 @@
 
 
 
-  <link rel="canonical" href="http://www.ictfox.cn/2017/07/18/cephfs-io-hang-analysis/"/>
+  <link rel="canonical" href="http://www.yangguanjun.com/2017/07/18/cephfs-io-hang-analysis/"/>
 
 
 
@@ -305,7 +305,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/07/18/cephfs-io-hang-analysis/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/07/18/cephfs-io-hang-analysis/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -445,7 +445,7 @@
 </ul>
 <p>通过<code>strace</code>命令查看dd读数据时确实hang在read函数：</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># strace dd if=foxfile of=/dev/null bs=64M count=1</span></span><br><span class="line">...</span><br><span class="line">open(<span class="string">"foxfile"</span>, O_RDONLY) = 3</span><br><span class="line">dup2(3, 0) = 0</span><br><span class="line">close(3) = 0</span><br><span class="line">lseek(0, 0, SEEK_CUR) = 0</span><br><span class="line">open(<span class="string">"/dev/null"</span>, O_WRONLY|O_CREAT|O_TRUNC, 0666) = 3</span><br><span class="line">dup2(3, 1) = 1</span><br><span class="line">close(3) = 0</span><br><span class="line">mmap(NULL, 67121152, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f01712d8000</span><br><span class="line"><span class="built_in">read</span>(0,</span><br></pre></td></tr></table></figure>
-<h2 id="收集client-log"><a href="#收集client-log" class="headerlink" title="收集client log"></a>收集client log</h2><p>参考文章 <a href="http://www.yangguanjun.com/2017/06/08/cephfs-client-debug/" target="_blank" rel="noopener">cephfs kernel client debug</a></p>
+<h2 id="收集client-log"><a href="#收集client-log" class="headerlink" title="收集client log"></a>收集client log</h2><p>参考文章 <a href="http://www.yangguanjun.com/2017/06/08/cephfs-client-debug/">cephfs kernel client debug</a></p>
 <h2 id="收集osd-log"><a href="#收集osd-log" class="headerlink" title="收集osd log"></a>收集osd log</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph daemon /var/run/ceph/ceph-osd.&lt;osdid&gt;.asok config set debug_osd "20/20"</span></span><br></pre></td></tr></table></figure>
 <h2 id="分析log"><a href="#分析log" class="headerlink" title="分析log"></a>分析log</h2><p>在cephfs client的log中能循环发现如下：</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231008] ceph_sock_data_ready on ffff88202c987030 state = 5, queueing work</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231012] get_osd ffff88202c987000 3 -&gt; 4</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231015] queue_con_delay ffff88202c987030 0</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231034] try_read start on ffff88202c987030 state 5</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231035] try_read tag 1 in_base_pos 0</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231036] try_read got tag 8</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231036] prepare_read_ack ffff88202c987030</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231041] ceph_sock_data_ready on ffff88202c987030 state = 5, queueing work</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231041] get_osd ffff88202c987000 4 -&gt; 5</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231053] queue_con_delay ffff88202c987030 0</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231062] got ack <span class="keyword">for</span> seq 1 <span class="built_in">type</span> 42 at ffff881008668100</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231066] ceph_msg_put ffff881008668100 (was 2)</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231081] prepare_read_tag ffff88202c987030</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231083] try_read start on ffff88202c987030 state 5</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231086] try_read tag 1 in_base_pos 0</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231088] try_read got tag 7</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231088] prepare_read_message ffff88202c987030</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231089] read_partial_message con ffff88202c987030 msg           (null)</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231090] try_read <span class="keyword">done</span> on ffff88202c987030 ret -5</span><br></pre></td></tr></table></figure>
@@ -900,7 +900,7 @@
     
       <script type="text/javascript">
         var disqus_config = function () {
-          this.page.url = 'http://www.ictfox.cn/2017/07/18/cephfs-io-hang-analysis/';
+          this.page.url = 'http://www.yangguanjun.com/2017/07/18/cephfs-io-hang-analysis/';
           this.page.identifier = '2017/07/18/cephfs-io-hang-analysis/';
           this.page.title = 'Cephfs测试中IO hang问题分析';
         };

@@ -82,7 +82,7 @@
 <meta name="description" content="学无止境">
 <meta property="og:type" content="website">
 <meta property="og:title" content="ictfox blog">
-<meta property="og:url" content="http://www.ictfox.cn/page/8/index.html">
+<meta property="og:url" content="http://www.yangguanjun.com/page/8/index.html">
 <meta property="og:site_name" content="ictfox blog">
 <meta property="og:description" content="学无止境">
 <meta property="og:locale" content="en">
@@ -118,7 +118,7 @@
 
 
 
-  <link rel="canonical" href="http://www.ictfox.cn/page/8/"/>
+  <link rel="canonical" href="http://www.yangguanjun.com/page/8/"/>
 
 
 
@@ -304,7 +304,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2015/06/18/ceph-osd-requst-analysis/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2015/06/18/ceph-osd-requst-analysis/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -493,7 +493,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2015/06/12/rgw-perf-with-memstore-cachetiering/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2015/06/12/rgw-perf-with-memstore-cachetiering/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -598,7 +598,7 @@
         
           
             <h2 id="MemStore"><a href="#MemStore" class="headerlink" title="MemStore"></a>MemStore</h2><p>MemStore配置简单，应用中会占用host内存来存储objects数据，OSD在mkfs的时候会在对应目录下创建一个collections的文件，用于存放OSD对应内存中的objects数据。</p>
-<p>参考文章：<a href="http://www.yangguanjun.com/2015/05/25/ceph-use-memstore/" target="_blank" rel="noopener">How to configure ceph use memstore?</a></p>
+<p>参考文章：<a href="http://www.yangguanjun.com/2015/05/25/ceph-use-memstore/">How to configure ceph use memstore?</a></p>
 <h3 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h3><p>在ceph.conf里添加相应配置:</p>
 <p>如果要所有OSD都启动MemStore，在[global]或[osd]里添加即可：</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">osd objectstore = MemStore</span><br></pre></td></tr></table></figure>
@@ -616,7 +616,7 @@
 <p> MemStore OSDs较少，rest-bench压力测试的话，MemStore性能受限。</p>
 </li>
 </ol>
-<p>详细参考文章：<a href="http://www.yangguanjun.com/2015/06/05/rgw-perf-with-filestore-memstore/" target="_blank" rel="noopener">RGW performance with FileStore and MemStore</a></p>
+<p>详细参考文章：<a href="http://www.yangguanjun.com/2015/06/05/rgw-perf-with-filestore-memstore/">RGW performance with FileStore and MemStore</a></p>
 <h3 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h3><ol>
 <li><p>MemStore何时刷数据到disk不确定？</p>
 <p> 看代码是在OSD::umount里调用_save()函数，但是在实际测试中，stop一个OSD并没在log文件中找到对应log。</p>
@@ -704,7 +704,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2015/06/05/rgw-perf-with-filestore-memstore/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2015/06/05/rgw-perf-with-filestore-memstore/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -811,7 +811,7 @@
             <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>针对我们的应用，ceph使用Filestore和Memstore的性能有多大差距呢？我们通过ceph的rest-bench工具对之进行了性能对比测试。</p>
 <h2 id="FileStore"><a href="#FileStore" class="headerlink" title="FileStore"></a>FileStore</h2><p>分两次的测试结果如下：</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rest-bench --proxy=localhost --proxy-port=36666 --bucket=bug_fix --api-host=localhost --access-key=LC5O0HVGBZ1RJXBW4FZ4 --secret=2MsVUZ+h4lTrSAUx9ZCY4D4a874X+MPULzlUc0RB write</span></span><br><span class="line">...</span><br><span class="line">2015-05-21 15:08:16.741796min lat: 0.158293 max lat: 1.01379 avg lat: 0.359322</span><br><span class="line">   sec Cur ops   started  finished  avg MB/s  cur MB/s  last lat   avg lat</span><br><span class="line">    60      16      2681      2665   177.642       168   0.31313  0.359322</span><br><span class="line"> Total time run:         60.523804</span><br><span class="line">Total writes made:      2681</span><br><span class="line">Write size:             4194304</span><br><span class="line">Bandwidth (MB/sec):     177.186</span><br><span class="line"></span><br><span class="line">Stddev Bandwidth:       30.3802</span><br><span class="line">Max bandwidth (MB/sec): 208</span><br><span class="line">Min bandwidth (MB/sec): 0</span><br><span class="line">Average Latency:        0.360339</span><br><span class="line">Stddev Latency:         0.131017</span><br><span class="line">Max latency:            1.01379</span><br><span class="line">Min latency:            0.158293</span><br><span class="line">In sync_write(), oid: benchmark_last_metadata</span><br><span class="line"></span><br><span class="line"><span class="comment"># rest-bench --proxy=localhost --proxy-port=36666 --bucket=bug_fix --api-host=localhost --access-key=LC5O0HVGBZ1RJXBW4FZ4 --secret=2MsVUZ+h4lTrSAUx9ZCY4D4a874X+MPULzlUc0RB write</span></span><br><span class="line">...</span><br><span class="line">2015-05-21 15:18:32.523700min lat: 0.169844 max lat: 1.1016 avg lat: 0.338614</span><br><span class="line">   sec Cur ops   started  finished  avg MB/s  cur MB/s  last lat   avg lat</span><br><span class="line">    60      16      2842      2826   188.376       188  0.197176  0.338614</span><br><span class="line"> Total time run:         60.473186</span><br><span class="line">Total writes made:      2842</span><br><span class="line">Write size:             4194304</span><br><span class="line">Bandwidth (MB/sec):     187.984</span><br><span class="line"></span><br><span class="line">Stddev Bandwidth:       27.4199</span><br><span class="line">Max bandwidth (MB/sec): 208</span><br><span class="line">Min bandwidth (MB/sec): 0</span><br><span class="line">Average Latency:        0.339906</span><br><span class="line">Stddev Latency:         0.131774</span><br><span class="line">Max latency:            1.1016</span><br><span class="line">Min latency:            0.169844</span><br><span class="line">In sync_write(), oid: benchmark_last_metadata</span><br></pre></td></tr></table></figure>
-<h2 id="MemStore"><a href="#MemStore" class="headerlink" title="MemStore"></a>MemStore</h2><p>参考文章配置memstore：<a href="http://www.yangguanjun.com/2015/05/25/ceph-use-memstore/" target="_blank" rel="noopener">How to configure ceph use memstore?</a></p>
+<h2 id="MemStore"><a href="#MemStore" class="headerlink" title="MemStore"></a>MemStore</h2><p>参考文章配置memstore：<a href="http://www.yangguanjun.com/2015/05/25/ceph-use-memstore/">How to configure ceph use memstore?</a></p>
 <p>分两次的测试结果如下：</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rest-bench --proxy=localhost --proxy-port=36666 --bucket=bug_fix --api-host=localhost --access-key=GR73W0UWWQ6U43DUHVCC --secret= GzgWGEp0hO0JdfdbrxLuopCv+ufHyHYgFSgjvU0U write</span></span><br><span class="line">...</span><br><span class="line">2015-05-21 16:03:21.806960min lat: 0.069719 max lat: 1.45503 avg lat: 0.302808</span><br><span class="line">   sec Cur ops   started  finished  avg MB/s  cur MB/s  last lat   avg lat</span><br><span class="line">    60      16      3177      3161   210.701       224  0.193723  0.302808</span><br><span class="line"> Total time run:         60.187152</span><br><span class="line">Total writes made:      3178</span><br><span class="line">Write size:             4194304</span><br><span class="line">Bandwidth (MB/sec):     211.208</span><br><span class="line"></span><br><span class="line">Stddev Bandwidth:       34.5447</span><br><span class="line">Max bandwidth (MB/sec): 244</span><br><span class="line">Min bandwidth (MB/sec): 0</span><br><span class="line">Average Latency:        0.302945</span><br><span class="line">Stddev Latency:         0.101357</span><br><span class="line">Max latency:            1.45503</span><br><span class="line">Min latency:            0.069719</span><br><span class="line">In sync_write(), oid: benchmark_last_metadata</span><br><span class="line"></span><br><span class="line"><span class="comment"># rest-bench --proxy=localhost --proxy-port=36666 --bucket=bug_fix --api-host=localhost --access-key=GR73W0UWWQ6U43DUHVCC --secret= GzgWGEp0hO0JdfdbrxLuopCv+ufHyHYgFSgjvU0U write</span></span><br><span class="line">...</span><br><span class="line">2015-05-21 16:04:45.235222min lat: 0.080655 max lat: 1.23022 avg lat: 0.287523</span><br><span class="line">   sec Cur ops   started  finished  avg MB/s  cur MB/s  last lat   avg lat</span><br><span class="line">    60      16      3344      3328   221.834       204  0.295268  0.287523</span><br><span class="line"> Total time run:         60.175814</span><br><span class="line">Total writes made:      3345</span><br><span class="line">Write size:             4194304</span><br><span class="line">Bandwidth (MB/sec):     222.348</span><br><span class="line"></span><br><span class="line">Stddev Bandwidth:       30.089</span><br><span class="line">Max bandwidth (MB/sec): 240</span><br><span class="line">Min bandwidth (MB/sec): 0</span><br><span class="line">Average Latency:        0.287704</span><br><span class="line">Stddev Latency:         0.0919689</span><br><span class="line">Max latency:            1.23022</span><br><span class="line">Min latency:            0.080655</span><br><span class="line">In sync_write(), oid: benchmark_last_metadata</span><br></pre></td></tr></table></figure>
 <h2 id="测试结果"><a href="#测试结果" class="headerlink" title="测试结果"></a>测试结果</h2><p>总结上述各两次的测试结果如下：</p>
@@ -895,7 +895,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2015/05/25/ceph-use-memstore/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2015/05/25/ceph-use-memstore/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -1064,7 +1064,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2015/05/13/ceph-osd-journal-test/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2015/05/13/ceph-osd-journal-test/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">

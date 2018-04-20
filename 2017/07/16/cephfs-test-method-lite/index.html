@@ -83,19 +83,19 @@
 <meta name="keywords" content="ceph,cephfs">
 <meta property="og:type" content="article">
 <meta property="og:title" content="cephfs的测试简报">
-<meta property="og:url" content="http://www.ictfox.cn/2017/07/16/cephfs-test-method-lite/index.html">
+<meta property="og:url" content="http://www.yangguanjun.com/2017/07/16/cephfs-test-method-lite/index.html">
 <meta property="og:site_name" content="ictfox blog">
 <meta property="og:description" content="cephfs简介cephfs是ceph提供的兼容POSIX协议的文件系统，对比rbd和rgw功能，这个是ceph里最晚满足production ready的一个功能，它底层还是使用rados存储数据 cephfs的架构 使用cephfs的两种方式 cephfs kernel module cephfs-fuse  从上面的架构可以看出，cephfs-fuse的IO path比较长，性能会比ceph">
 <meta property="og:locale" content="en">
-<meta property="og:image" content="http://www.ictfox.cn/images/cephfs-intro-fun1.jpg">
-<meta property="og:image" content="http://www.ictfox.cn/images/ceph-used-in-cloudin7.jpg">
-<meta property="og:image" content="http://www.ictfox.cn/images/cephfs-tstenv-structure.jpg">
-<meta property="og:image" content="http://www.ictfox.cn/images/fio-randwrite-bw-mds-crush.jpg">
+<meta property="og:image" content="http://www.yangguanjun.com/images/cephfs-intro-fun1.jpg">
+<meta property="og:image" content="http://www.yangguanjun.com/images/ceph-used-in-cloudin7.jpg">
+<meta property="og:image" content="http://www.yangguanjun.com/images/cephfs-tstenv-structure.jpg">
+<meta property="og:image" content="http://www.yangguanjun.com/images/fio-randwrite-bw-mds-crush.jpg">
 <meta property="og:updated_time" content="2018-04-04T02:10:00.368Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="cephfs的测试简报">
 <meta name="twitter:description" content="cephfs简介cephfs是ceph提供的兼容POSIX协议的文件系统，对比rbd和rgw功能，这个是ceph里最晚满足production ready的一个功能，它底层还是使用rados存储数据 cephfs的架构 使用cephfs的两种方式 cephfs kernel module cephfs-fuse  从上面的架构可以看出，cephfs-fuse的IO path比较长，性能会比ceph">
-<meta name="twitter:image" content="http://www.ictfox.cn/images/cephfs-intro-fun1.jpg">
+<meta name="twitter:image" content="http://www.yangguanjun.com/images/cephfs-intro-fun1.jpg">
 
 
 
@@ -125,7 +125,7 @@
 
 
 
-  <link rel="canonical" href="http://www.ictfox.cn/2017/07/16/cephfs-test-method-lite/"/>
+  <link rel="canonical" href="http://www.yangguanjun.com/2017/07/16/cephfs-test-method-lite/"/>
 
 
 
@@ -310,7 +310,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/07/16/cephfs-test-method-lite/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/07/16/cephfs-test-method-lite/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -538,7 +538,7 @@
 </li>
 </ol>
 <p><strong>参考</strong></p>
-<p><a href="http://www.yangguanjun.com/2017/06/15/cephfs-stripe/" target="_blank" rel="noopener">cephfs的stripe配置</a></p>
+<p><a href="http://www.yangguanjun.com/2017/06/15/cephfs-stripe/">cephfs的stripe配置</a></p>
 <h4 id="dd"><a href="#dd" class="headerlink" title="dd"></a>dd</h4><p>dd是linux系统常用的测试设备和系统性能的工具。</p>
 <p><strong>测试分类与测试命令</strong></p>
 <ol>
@@ -600,7 +600,7 @@
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ls /usr/local/share/filebench/workloads/</span></span><br><span class="line">compflow_demo.f                 filemicro_rwrite.f              fivestreamreaddirect.f          openfiles.f                     singlestreamwrite.f</span><br><span class="line">copyfiles.f                     filemicro_rwritefsync.f         fivestreamread.f                randomfileaccess.f              tpcso.f</span><br><span class="line">createfiles.f                   filemicro_seqread.f             fivestreamwritedirect.f         randomread.f                    varmail.f</span><br><span class="line">cvar_example.f                  filemicro_seqwrite.f            fivestreamwrite.f               randomrw.f                      videoserver.f</span><br><span class="line">filemicro_create.f              filemicro_seqwriterand.f        listdirs.f                      randomwrite.f                   webproxy.f</span><br><span class="line">filemicro_createfiles.f         filemicro_seqwriterandvargam.f  makedirs.f                      ratelimcopyfiles.f              webserver.f</span><br><span class="line">filemicro_createrand.f          filemicro_seqwriterandvartab.f  mongo.f                         removedirs.f</span><br><span class="line">filemicro_delete.f              filemicro_statfile.f            netsfs.f                        singlestreamreaddirect.f</span><br><span class="line">filemicro_rread.f               filemicro_writefsync.f          networkfs.f                     singlestreamread.f</span><br><span class="line">filemicro_rwritedsync.f         fileserver.f                    oltp.f                          singlestreamwritedirect.f</span><br></pre></td></tr></table></figure>
 <p>因为最新的filebench修改了变量的定义，所以这里面的一些workload并不能成功运行，只需选择可用的有代表性的workload测试即可。</p>
 <p><strong>参考</strong></p>
-<p><a href="http://www.yangguanjun.com/2017/07/08/fs-testtool-filebench/" target="_blank" rel="noopener">filesystem测试工具之filebench</a></p>
+<p><a href="http://www.yangguanjun.com/2017/07/08/fs-testtool-filebench/">filesystem测试工具之filebench</a></p>
 <h4 id="结论-1"><a href="#结论-1" class="headerlink" title="结论"></a>结论</h4><ol>
 <li>cephfs的direct IO性能有限</li>
 <li>cephfs读写能跑满ceph cluster集群性能</li>
@@ -1157,7 +1157,7 @@
     
       <script type="text/javascript">
         var disqus_config = function () {
-          this.page.url = 'http://www.ictfox.cn/2017/07/16/cephfs-test-method-lite/';
+          this.page.url = 'http://www.yangguanjun.com/2017/07/16/cephfs-test-method-lite/';
           this.page.identifier = '2017/07/16/cephfs-test-method-lite/';
           this.page.title = 'cephfs的测试简报';
         };

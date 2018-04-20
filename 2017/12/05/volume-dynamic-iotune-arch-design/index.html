@@ -83,18 +83,18 @@
 <meta name="keywords" content="ceph,nova,openstack,cinder">
 <meta property="og:type" content="article">
 <meta property="og:title" content="基于Cinder的云硬盘动态限速框架设计">
-<meta property="og:url" content="http://www.ictfox.cn/2017/12/05/volume-dynamic-iotune-arch-design/index.html">
+<meta property="og:url" content="http://www.yangguanjun.com/2017/12/05/volume-dynamic-iotune-arch-design/index.html">
 <meta property="og:site_name" content="ictfox blog">
 <meta property="og:description" content="当前状况当前我们仅仅通过cinder创建type，指定type的IO限制来限制不同类型的云硬盘的IO值。 具体方案和调研，参考：云硬盘动态限速调研 目的 充分利用系统的资源，在系统负载和Ceph负载小的情况下，动态调整云硬盘的IO值，给用户提供更好的体验。 设计一个框架，能满足云硬盘动态限速的要求；以后也能方便的加入网络的动态限速；  框架设计需求 统一配置选项 模块化设计，能方便添加别的动态限速">
 <meta property="og:locale" content="en">
-<meta property="og:image" content="http://www.ictfox.cn/images/volume-dynamic-iotune-arch1">
-<meta property="og:image" content="http://www.ictfox.cn/images/volume-dynamic-iotune-arch2">
-<meta property="og:image" content="http://www.ictfox.cn/images/volume-dynamic-iotune-agent">
+<meta property="og:image" content="http://www.yangguanjun.com/images/volume-dynamic-iotune-arch1">
+<meta property="og:image" content="http://www.yangguanjun.com/images/volume-dynamic-iotune-arch2">
+<meta property="og:image" content="http://www.yangguanjun.com/images/volume-dynamic-iotune-agent">
 <meta property="og:updated_time" content="2018-04-04T02:10:00.378Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="基于Cinder的云硬盘动态限速框架设计">
 <meta name="twitter:description" content="当前状况当前我们仅仅通过cinder创建type，指定type的IO限制来限制不同类型的云硬盘的IO值。 具体方案和调研，参考：云硬盘动态限速调研 目的 充分利用系统的资源，在系统负载和Ceph负载小的情况下，动态调整云硬盘的IO值，给用户提供更好的体验。 设计一个框架，能满足云硬盘动态限速的要求；以后也能方便的加入网络的动态限速；  框架设计需求 统一配置选项 模块化设计，能方便添加别的动态限速">
-<meta name="twitter:image" content="http://www.ictfox.cn/images/volume-dynamic-iotune-arch1">
+<meta name="twitter:image" content="http://www.yangguanjun.com/images/volume-dynamic-iotune-arch1">
 
 
 
@@ -124,7 +124,7 @@
 
 
 
-  <link rel="canonical" href="http://www.ictfox.cn/2017/12/05/volume-dynamic-iotune-arch-design/"/>
+  <link rel="canonical" href="http://www.yangguanjun.com/2017/12/05/volume-dynamic-iotune-arch-design/"/>
 
 
 
@@ -309,7 +309,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/12/05/volume-dynamic-iotune-arch-design/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/12/05/volume-dynamic-iotune-arch-design/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -415,7 +415,7 @@
 
       
         <h2 id="当前状况"><a href="#当前状况" class="headerlink" title="当前状况"></a>当前状况</h2><p>当前我们仅仅通过<code>cinder</code>创建<code>type</code>，指定<code>type</code>的<code>IO限制</code>来限制不同类型的云硬盘的<code>IO值</code>。</p>
-<p>具体方案和调研，参考：<a href="http://www.yangguanjun.com/2017/11/28/volume-dynamic-iotune-invest/" target="_blank" rel="noopener">云硬盘动态限速调研</a></p>
+<p>具体方案和调研，参考：<a href="http://www.yangguanjun.com/2017/11/28/volume-dynamic-iotune-invest/">云硬盘动态限速调研</a></p>
 <h2 id="目的"><a href="#目的" class="headerlink" title="目的"></a>目的</h2><ul>
 <li>充分利用系统的资源，在系统负载和<code>Ceph</code>负载小的情况下，动态调整云硬盘的<code>IO值</code>，给用户提供更好的体验。</li>
 <li>设计一个框架，能满足云硬盘动态限速的要求；以后也能方便的加入网络的动态限速；</li>
@@ -952,7 +952,7 @@
     
       <script type="text/javascript">
         var disqus_config = function () {
-          this.page.url = 'http://www.ictfox.cn/2017/12/05/volume-dynamic-iotune-arch-design/';
+          this.page.url = 'http://www.yangguanjun.com/2017/12/05/volume-dynamic-iotune-arch-design/';
           this.page.identifier = '2017/12/05/volume-dynamic-iotune-arch-design/';
           this.page.title = '基于Cinder的云硬盘动态限速框架设计';
         };

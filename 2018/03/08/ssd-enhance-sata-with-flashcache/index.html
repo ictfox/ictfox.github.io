@@ -83,16 +83,16 @@
 <meta name="keywords" content="flashcache,ssd">
 <meta property="og:type" content="article">
 <meta property="og:title" content="SSD加速SATA盘之flashcache策略">
-<meta property="og:url" content="http://www.ictfox.cn/2018/03/08/ssd-enhance-sata-with-flashcache/index.html">
+<meta property="og:url" content="http://www.yangguanjun.com/2018/03/08/ssd-enhance-sata-with-flashcache/index.html">
 <meta property="og:site_name" content="ictfox blog">
 <meta property="og:description" content="概述通常SATA盘的性能比较低，对于大多数应用来说性能不够，但纯SSD的盘又比较昂贵，结合这两种盘的使用策略是业内讨论的一个热点，也有很多成熟的方案来使用。 之前有文章讨论过cache策略，我们这里选择通用的flashcache方案来用SSD盘加速SATA盘。 flashcache源码：https://github.com/facebookarchive/flashcache参考：http://w">
 <meta property="og:locale" content="en">
-<meta property="og:image" content="http://www.ictfox.cn/images/flashcache-cachemodes.png">
+<meta property="og:image" content="http://www.yangguanjun.com/images/flashcache-cachemodes.png">
 <meta property="og:updated_time" content="2018-04-04T02:10:00.384Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="SSD加速SATA盘之flashcache策略">
 <meta name="twitter:description" content="概述通常SATA盘的性能比较低，对于大多数应用来说性能不够，但纯SSD的盘又比较昂贵，结合这两种盘的使用策略是业内讨论的一个热点，也有很多成熟的方案来使用。 之前有文章讨论过cache策略，我们这里选择通用的flashcache方案来用SSD盘加速SATA盘。 flashcache源码：https://github.com/facebookarchive/flashcache参考：http://w">
-<meta name="twitter:image" content="http://www.ictfox.cn/images/flashcache-cachemodes.png">
+<meta name="twitter:image" content="http://www.yangguanjun.com/images/flashcache-cachemodes.png">
 
 
 
@@ -122,7 +122,7 @@
 
 
 
-  <link rel="canonical" href="http://www.ictfox.cn/2018/03/08/ssd-enhance-sata-with-flashcache/"/>
+  <link rel="canonical" href="http://www.yangguanjun.com/2018/03/08/ssd-enhance-sata-with-flashcache/"/>
 
 
 
@@ -307,7 +307,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2018/03/08/ssd-enhance-sata-with-flashcache/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2018/03/08/ssd-enhance-sata-with-flashcache/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -414,7 +414,7 @@
       
         <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>通常SATA盘的性能比较低，对于大多数应用来说性能不够，但纯SSD的盘又比较昂贵，结合这两种盘的使用策略是业内讨论的一个热点，也有很多成熟的方案来使用。</p>
 <p>之前有文章讨论过cache策略，我们这里选择通用的flashcache方案来用SSD盘加速SATA盘。</p>
-<h2 id="flashcache"><a href="#flashcache" class="headerlink" title="flashcache"></a>flashcache</h2><p>源码：<a href="https://github.com/facebookarchive/flashcache" target="_blank" rel="noopener">https://github.com/facebookarchive/flashcache</a><br>参考：<a href="http://www.yangguanjun.com/2018/01/30/lvm-with-cache/" target="_blank" rel="noopener">http://www.yangguanjun.com/2018/01/30/lvm-with-cache/</a></p>
+<h2 id="flashcache"><a href="#flashcache" class="headerlink" title="flashcache"></a>flashcache</h2><p>源码：<a href="https://github.com/facebookarchive/flashcache" target="_blank" rel="noopener">https://github.com/facebookarchive/flashcache</a><br>参考：<a href="http://www.yangguanjun.com/2018/01/30/lvm-with-cache/">http://www.yangguanjun.com/2018/01/30/lvm-with-cache/</a></p>
 <h3 id="Ubuntu上安装"><a href="#Ubuntu上安装" class="headerlink" title="Ubuntu上安装"></a>Ubuntu上安装</h3><p>测试使用的是”Ubuntu 16.04.2 LTS”，它的内核比较新，所以这里编译安装flashcache很方便。</p>
 <h4 id="系统信息"><a href="#系统信息" class="headerlink" title="系统信息"></a>系统信息</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># lsb_release -a</span></span><br><span class="line">No LSB modules are available.</span><br><span class="line">Distributor ID:	Ubuntu</span><br><span class="line">Description:	Ubuntu 16.04.2 LTS</span><br><span class="line">Release:	16.04</span><br><span class="line">Codename:	xenial</span><br><span class="line"><span class="comment"># uname -r</span></span><br><span class="line">4.4.0-62-generic</span><br></pre></td></tr></table></figure>
 <h4 id="编译安装"><a href="#编译安装" class="headerlink" title="编译安装"></a>编译安装</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># apt install -y git make gcc</span></span><br><span class="line"><span class="comment"># git clone git@github.com:facebookarchive/flashcache.git</span></span><br><span class="line"><span class="comment"># cd flashcache/</span></span><br><span class="line"><span class="comment"># make</span></span><br><span class="line"><span class="comment"># make install</span></span><br><span class="line"><span class="comment"># modprobe flashcache</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># cat /proc/flashcache/flashcache_version</span></span><br><span class="line">Flashcache Version : flashcache-3.1.1</span><br><span class="line">git commit: 1.0-248-g437afbfe233e</span><br><span class="line"></span><br><span class="line"><span class="comment"># flashcache_</span></span><br><span class="line">flashcache_create    flashcache_destroy   flashcache_load      flashcache_setioctl</span><br></pre></td></tr></table></figure>
@@ -927,7 +927,7 @@
     
       <script type="text/javascript">
         var disqus_config = function () {
-          this.page.url = 'http://www.ictfox.cn/2018/03/08/ssd-enhance-sata-with-flashcache/';
+          this.page.url = 'http://www.yangguanjun.com/2018/03/08/ssd-enhance-sata-with-flashcache/';
           this.page.identifier = '2018/03/08/ssd-enhance-sata-with-flashcache/';
           this.page.title = 'SSD加速SATA盘之flashcache策略';
         };

@@ -82,7 +82,7 @@
 <meta name="description" content="学无止境">
 <meta property="og:type" content="website">
 <meta property="og:title" content="ictfox blog">
-<meta property="og:url" content="http://www.ictfox.cn/page/3/index.html">
+<meta property="og:url" content="http://www.yangguanjun.com/page/3/index.html">
 <meta property="og:site_name" content="ictfox blog">
 <meta property="og:description" content="学无止境">
 <meta property="og:locale" content="en">
@@ -118,7 +118,7 @@
 
 
 
-  <link rel="canonical" href="http://www.ictfox.cn/page/3/"/>
+  <link rel="canonical" href="http://www.yangguanjun.com/page/3/"/>
 
 
 
@@ -304,7 +304,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/08/25/cloud-storage-gateway/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/08/25/cloud-storage-gateway/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -775,7 +775,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/08/15/data-encryption-algorithm/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/08/15/data-encryption-algorithm/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -1006,7 +1006,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/08/08/ceph-knowledges-tree/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/08/08/ceph-knowledges-tree/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -1162,7 +1162,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/07/27/compare-mysql-on-localdisk-rbddisk/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/07/27/compare-mysql-on-localdisk-rbddisk/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -1345,7 +1345,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/07/18/cephfs-io-hang-analysis/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/07/18/cephfs-io-hang-analysis/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -1484,7 +1484,7 @@
 </ul>
 <p>通过<code>strace</code>命令查看dd读数据时确实hang在read函数：</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># strace dd if=foxfile of=/dev/null bs=64M count=1</span></span><br><span class="line">...</span><br><span class="line">open(<span class="string">"foxfile"</span>, O_RDONLY) = 3</span><br><span class="line">dup2(3, 0) = 0</span><br><span class="line">close(3) = 0</span><br><span class="line">lseek(0, 0, SEEK_CUR) = 0</span><br><span class="line">open(<span class="string">"/dev/null"</span>, O_WRONLY|O_CREAT|O_TRUNC, 0666) = 3</span><br><span class="line">dup2(3, 1) = 1</span><br><span class="line">close(3) = 0</span><br><span class="line">mmap(NULL, 67121152, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f01712d8000</span><br><span class="line"><span class="built_in">read</span>(0,</span><br></pre></td></tr></table></figure>
-<h2 id="收集client-log"><a href="#收集client-log" class="headerlink" title="收集client log"></a>收集client log</h2><p>参考文章 <a href="http://www.yangguanjun.com/2017/06/08/cephfs-client-debug/" target="_blank" rel="noopener">cephfs kernel client debug</a></p>
+<h2 id="收集client-log"><a href="#收集client-log" class="headerlink" title="收集client log"></a>收集client log</h2><p>参考文章 <a href="http://www.yangguanjun.com/2017/06/08/cephfs-client-debug/">cephfs kernel client debug</a></p>
 <h2 id="收集osd-log"><a href="#收集osd-log" class="headerlink" title="收集osd log"></a>收集osd log</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph daemon /var/run/ceph/ceph-osd.&lt;osdid&gt;.asok config set debug_osd "20/20"</span></span><br></pre></td></tr></table></figure>
 <h2 id="分析log"><a href="#分析log" class="headerlink" title="分析log"></a>分析log</h2><p>在cephfs client的log中能循环发现如下：</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231008] ceph_sock_data_ready on ffff88202c987030 state = 5, queueing work</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231012] get_osd ffff88202c987000 3 -&gt; 4</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231015] queue_con_delay ffff88202c987030 0</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231034] try_read start on ffff88202c987030 state 5</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231035] try_read tag 1 in_base_pos 0</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231036] try_read got tag 8</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231036] prepare_read_ack ffff88202c987030</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231041] ceph_sock_data_ready on ffff88202c987030 state = 5, queueing work</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231041] get_osd ffff88202c987000 4 -&gt; 5</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231053] queue_con_delay ffff88202c987030 0</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231062] got ack <span class="keyword">for</span> seq 1 <span class="built_in">type</span> 42 at ffff881008668100</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231066] ceph_msg_put ffff881008668100 (was 2)</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231081] prepare_read_tag ffff88202c987030</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231083] try_read start on ffff88202c987030 state 5</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231086] try_read tag 1 in_base_pos 0</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231088] try_read got tag 7</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231088] prepare_read_message ffff88202c987030</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231089] read_partial_message con ffff88202c987030 msg           (null)</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231090] try_read <span class="keyword">done</span> on ffff88202c987030 ret -5</span><br></pre></td></tr></table></figure>
@@ -1545,7 +1545,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/07/16/cephfs-test-method-lite/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/07/16/cephfs-test-method-lite/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -1772,7 +1772,7 @@
 </li>
 </ol>
 <p><strong>参考</strong></p>
-<p><a href="http://www.yangguanjun.com/2017/06/15/cephfs-stripe/" target="_blank" rel="noopener">cephfs的stripe配置</a></p>
+<p><a href="http://www.yangguanjun.com/2017/06/15/cephfs-stripe/">cephfs的stripe配置</a></p>
 <h4 id="dd"><a href="#dd" class="headerlink" title="dd"></a>dd</h4><p>dd是linux系统常用的测试设备和系统性能的工具。</p>
 <p><strong>测试分类与测试命令</strong></p>
 <ol>
@@ -1834,7 +1834,7 @@
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ls /usr/local/share/filebench/workloads/</span></span><br><span class="line">compflow_demo.f                 filemicro_rwrite.f              fivestreamreaddirect.f          openfiles.f                     singlestreamwrite.f</span><br><span class="line">copyfiles.f                     filemicro_rwritefsync.f         fivestreamread.f                randomfileaccess.f              tpcso.f</span><br><span class="line">createfiles.f                   filemicro_seqread.f             fivestreamwritedirect.f         randomread.f                    varmail.f</span><br><span class="line">cvar_example.f                  filemicro_seqwrite.f            fivestreamwrite.f               randomrw.f                      videoserver.f</span><br><span class="line">filemicro_create.f              filemicro_seqwriterand.f        listdirs.f                      randomwrite.f                   webproxy.f</span><br><span class="line">filemicro_createfiles.f         filemicro_seqwriterandvargam.f  makedirs.f                      ratelimcopyfiles.f              webserver.f</span><br><span class="line">filemicro_createrand.f          filemicro_seqwriterandvartab.f  mongo.f                         removedirs.f</span><br><span class="line">filemicro_delete.f              filemicro_statfile.f            netsfs.f                        singlestreamreaddirect.f</span><br><span class="line">filemicro_rread.f               filemicro_writefsync.f          networkfs.f                     singlestreamread.f</span><br><span class="line">filemicro_rwritedsync.f         fileserver.f                    oltp.f                          singlestreamwritedirect.f</span><br></pre></td></tr></table></figure>
 <p>因为最新的filebench修改了变量的定义，所以这里面的一些workload并不能成功运行，只需选择可用的有代表性的workload测试即可。</p>
 <p><strong>参考</strong></p>
-<p><a href="http://www.yangguanjun.com/2017/07/08/fs-testtool-filebench/" target="_blank" rel="noopener">filesystem测试工具之filebench</a></p>
+<p><a href="http://www.yangguanjun.com/2017/07/08/fs-testtool-filebench/">filesystem测试工具之filebench</a></p>
 <h4 id="结论-1"><a href="#结论-1" class="headerlink" title="结论"></a>结论</h4><ol>
 <li>cephfs的direct IO性能有限</li>
 <li>cephfs读写能跑满ceph cluster集群性能</li>
@@ -1997,7 +1997,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/07/08/fs-testtool-filebench/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/07/08/fs-testtool-filebench/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -2177,7 +2177,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/07/01/cephfs-client-authentication/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/07/01/cephfs-client-authentication/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -2368,7 +2368,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/06/26/cephfs-dd-direct-io-tst-analysis/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/06/26/cephfs-dd-direct-io-tst-analysis/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -2481,7 +2481,7 @@
 <p>针对direct IO的处理过程如下：</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> ssize_t <span class="title">ceph_write_iter</span><span class="params">(struct kiocb *iocb, struct iov_iter *from)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">...</span><br><span class="line">        <span class="keyword">if</span> (iocb-&gt;ki_flags &amp; IOCB_DIRECT)</span><br><span class="line">            written = ceph_direct_read_write(iocb, &amp;data, snapc,        <span class="comment">// direct IO处理函数</span></span><br><span class="line">                             &amp;prealloc_cf);</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">            written = ceph_sync_write(iocb, &amp;data, pos, snapc);</span><br><span class="line">...</span><br><span class="line">&#125;</span><br><span class="line">  </span><br><span class="line"><span class="keyword">static</span> <span class="keyword">ssize_t</span></span><br><span class="line">ceph_direct_read_write(struct kiocb *iocb, struct iov_iter *iter,</span><br><span class="line">               struct ceph_snap_context *snapc,</span><br><span class="line">               struct ceph_cap_flush **pcf)</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">    <span class="keyword">while</span> (iov_iter_count(iter) &gt; <span class="number">0</span>) &#123;                                   <span class="comment">// 循环发送数据</span></span><br><span class="line">...</span><br><span class="line">        req = ceph_osdc_new_request(&amp;fsc-&gt;client-&gt;osdc, &amp;ci-&gt;i_layout, <span class="comment">// 初始化osd request</span></span><br><span class="line">                        vino, pos, &amp;size, <span class="number">0</span>,</span><br><span class="line">                        <span class="comment">/*include a 'startsync' command*/</span></span><br><span class="line">                        write ? <span class="number">2</span> : <span class="number">1</span>,</span><br><span class="line">                        write ? CEPH_OSD_OP_WRITE :</span><br><span class="line">                            CEPH_OSD_OP_READ,</span><br><span class="line">                        flags, snapc,</span><br><span class="line">                        ci-&gt;i_truncate_seq,</span><br><span class="line">                        ci-&gt;i_truncate_size,</span><br><span class="line">                        <span class="literal">false</span>);</span><br><span class="line">...</span><br><span class="line">        ret = ceph_osdc_start_request(req-&gt;r_osdc, req, <span class="literal">false</span>);          <span class="comment">// 发送osd request写数据</span></span><br><span class="line">        <span class="keyword">if</span> (!ret)</span><br><span class="line">            ret = ceph_osdc_wait_request(&amp;fsc-&gt;client-&gt;osdc, req);        <span class="comment">// 等待osd request写返回</span></span><br><span class="line">...</span><br><span class="line">    &#125;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>所以从上面的逻辑看：cephfs写direct IO是会被切分为一个个写osd的request，顺序的每个osd request都会等待写成功返回。这样就无法发挥出分布式集群的整体性能，所以cephfs的direct IO写性能较低。</p>
-<h4 id="测试验证"><a href="#测试验证" class="headerlink" title="测试验证"></a>测试验证</h4><p>按照 <a href="http://www.yangguanjun.com/2017/06/08/cephfs-client-debug/" target="_blank" rel="noopener">cephfs kernel client debug</a> 方法 打开cephfs client端的log，测试一个12M的direct IO；</p>
+<h4 id="测试验证"><a href="#测试验证" class="headerlink" title="测试验证"></a>测试验证</h4><p>按照 <a href="http://www.yangguanjun.com/2017/06/08/cephfs-client-debug/">cephfs kernel client debug</a> 方法 打开cephfs client端的log，测试一个12M的direct IO；</p>
 <p>命令：<code>dd if=/dev/zero of=file bs=12M count=1 oflag=direct</code></p>
 <p>log信息：</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">[260262.367080] aio_write ffff8801f403b418 10000002393.fffffffffffffffe 0~12582912 getting caps. i_size 0</span><br><span class="line">[260262.367085] aio_write ffff8801f403b418 10000002393.fffffffffffffffe 0~12582912 got <span class="built_in">cap</span> refs on Fwb  // get caps花了5us</span><br><span class="line">[260262.367086] sync_direct_read_write (write) on file ffff88142f83ba00 0~12582912</span><br><span class="line"> </span><br><span class="line">// 第一个osd写4M</span><br><span class="line">[260262.367092] ceph_osdc_alloc_request req ffff881257eb8000</span><br><span class="line">[260262.367173] ----- ffff88142f83a200 to osd23 42=osd_op len 201+0+4194304 ——</span><br><span class="line">[260262.367177] wait_request_timeout req ffff881257eb8000 tid 4</span><br><span class="line">[260262.394196] ===== ffff88142f83b400 4 from osd23 43=osd_opreply len 182+0 (1765759831 0 0) =====</span><br><span class="line"> </span><br><span class="line">// 第二个osd写4M</span><br><span class="line">[260262.394264] ceph_osdc_alloc_request req ffff881257eb8000</span><br><span class="line">[260262.394379] ----- ffff88142f83b400 to osd3 42=osd_op len 201+0+4194304 ——</span><br><span class="line">[260262.394380] wait_request_timeout req ffff881257eb8000 tid 5</span><br><span class="line">[260262.433310] ===== ffff88142f83be00 1 from osd3 43=osd_opreply len 182+0 (93139192 0 0) =====</span><br><span class="line"> </span><br><span class="line">// 第三个osd写4M</span><br><span class="line">[260262.433426] ceph_osdc_alloc_request req ffff881257eb8000</span><br><span class="line">[260262.433534] ----- ffff88142f83a200 to osd26 42=osd_op len 201+0+4194304 ——</span><br><span class="line">[260262.433535] wait_request_timeout req ffff881257eb8000 tid 6</span><br><span class="line">[260262.464063] ===== ffff88142f83b700 1 from osd26 43=osd_opreply len 182+0 (3847263551 0 0) =====</span><br><span class="line"> </span><br><span class="line">[260262.464151] aio_write ffff8801f403b418 10000002393.fffffffffffffffe 0~12582912  dropping <span class="built_in">cap</span> refs on Fwb</span><br></pre></td></tr></table></figure>
@@ -2566,7 +2566,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2017/06/15/cephfs-stripe/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/06/15/cephfs-stripe/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">

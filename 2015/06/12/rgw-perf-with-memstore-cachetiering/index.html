@@ -83,7 +83,7 @@
 <meta name="keywords" content="ceph,memstore,radosgw,cache tiering">
 <meta property="og:type" content="article">
 <meta property="og:title" content="RGW performance with MemStore and CacheTiering">
-<meta property="og:url" content="http://www.ictfox.cn/2015/06/12/rgw-perf-with-memstore-cachetiering/index.html">
+<meta property="og:url" content="http://www.yangguanjun.com/2015/06/12/rgw-perf-with-memstore-cachetiering/index.html">
 <meta property="og:site_name" content="ictfox blog">
 <meta property="og:description" content="MemStoreMemStore配置简单，应用中会占用host内存来存储objects数据，OSD在mkfs的时候会在对应目录下创建一个collections的文件，用于存放OSD对应内存中的objects数据。 参考文章：How to configure ceph use memstore? 配置在ceph.conf里添加相应配置: 如果要所有OSD都启动MemStore，在[global]或[">
 <meta property="og:locale" content="en">
@@ -120,7 +120,7 @@
 
 
 
-  <link rel="canonical" href="http://www.ictfox.cn/2015/06/12/rgw-perf-with-memstore-cachetiering/"/>
+  <link rel="canonical" href="http://www.yangguanjun.com/2015/06/12/rgw-perf-with-memstore-cachetiering/"/>
 
 
 
@@ -305,7 +305,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.ictfox.cn/2015/06/12/rgw-perf-with-memstore-cachetiering/">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2015/06/12/rgw-perf-with-memstore-cachetiering/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="ictfox">
@@ -411,7 +411,7 @@
 
       
         <h2 id="MemStore"><a href="#MemStore" class="headerlink" title="MemStore"></a>MemStore</h2><p>MemStore配置简单，应用中会占用host内存来存储objects数据，OSD在mkfs的时候会在对应目录下创建一个collections的文件，用于存放OSD对应内存中的objects数据。</p>
-<p>参考文章：<a href="http://www.yangguanjun.com/2015/05/25/ceph-use-memstore/" target="_blank" rel="noopener">How to configure ceph use memstore?</a></p>
+<p>参考文章：<a href="http://www.yangguanjun.com/2015/05/25/ceph-use-memstore/">How to configure ceph use memstore?</a></p>
 <h3 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h3><p>在ceph.conf里添加相应配置:</p>
 <p>如果要所有OSD都启动MemStore，在[global]或[osd]里添加即可：</p>
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">osd objectstore = MemStore</span><br></pre></td></tr></table></figure>
@@ -429,7 +429,7 @@
 <p> MemStore OSDs较少，rest-bench压力测试的话，MemStore性能受限。</p>
 </li>
 </ol>
-<p>详细参考文章：<a href="http://www.yangguanjun.com/2015/06/05/rgw-perf-with-filestore-memstore/" target="_blank" rel="noopener">RGW performance with FileStore and MemStore</a></p>
+<p>详细参考文章：<a href="http://www.yangguanjun.com/2015/06/05/rgw-perf-with-filestore-memstore/">RGW performance with FileStore and MemStore</a></p>
 <h3 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h3><ol>
 <li><p>MemStore何时刷数据到disk不确定？</p>
 <p> 看代码是在OSD::umount里调用_save()函数，但是在实际测试中，stop一个OSD并没在log文件中找到对应log。</p>
@@ -915,7 +915,7 @@
     
       <script type="text/javascript">
         var disqus_config = function () {
-          this.page.url = 'http://www.ictfox.cn/2015/06/12/rgw-perf-with-memstore-cachetiering/';
+          this.page.url = 'http://www.yangguanjun.com/2015/06/12/rgw-perf-with-memstore-cachetiering/';
           this.page.identifier = '2015/06/12/rgw-perf-with-memstore-cachetiering/';
           this.page.title = 'RGW performance with MemStore and CacheTiering';
         };
