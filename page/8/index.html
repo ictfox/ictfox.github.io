@@ -304,6 +304,190 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2015/08/06/ceph-osd-write-op-tracker-analysis/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2015/08/06/ceph-osd-write-op-tracker-analysis/" itemprop="url">Ceph osd write op tracker analysis</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2015-08-06T22:31:17+08:00">
+                2015-08-06
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2015/08/06/ceph-osd-write-op-tracker-analysis/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2015/08/06/ceph-osd-write-op-tracker-analysis/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>Ceph OSD op tracker是osd的一个调试手段，通过op tracker可以分析osd的op在各个操作端的时间开销，进而分析出系统的性能瓶颈和需要调优的参数。</p>
+<p>我们基于Hammer版本的op tracker添加了几个events，能更细粒度的切分op的各个阶段，下面是我们通过op tracker的log来分析OSD端性能的实例。</p>
+<h2 id="tracker-events"><a href="#tracker-events" class="headerlink" title="tracker events"></a>tracker events</h2><h3 id="Primary-write"><a href="#Primary-write" class="headerlink" title="Primary write"></a>Primary write</h3><p>这里把op的处理过程分为5个阶段，后面会对每一阶段进行分析；</p>
+<p>op: osd_op</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:32.301230, event: header_read                         - OpRequest::OpRequest</span><br><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:32.301232, event: throttled                           - OpRequest::OpRequest</span><br><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:32.301726, event: all_read                            - OpRequest::OpRequest</span><br><span class="line"> tracker -- seq: 329476, time: 0.000000, event: dispatched                                            - OpRequest::OpRequest</span><br><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:33.429736, event: reached_pg                          - OSD::dequeue_op - OSD::ShardedOpWQ::_process</span><br><span class="line">1. 上面这部分延时是osd op queue的处理时延</span><br><span class="line"></span><br><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:33.430201, event: started                             - ReplicatedPG::do_pg_op</span><br><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:33.430800, event: waiting <span class="keyword">for</span> subops from 6,47        - ReplicatedBackend::issue_op</span><br><span class="line">                                                                                                         -&gt; ReplicatedPG::send_message_osd_cluster</span><br><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:33.510099, event: commit_queued_for_journal_write     - FileJournal::submit_entry</span><br><span class="line">2. 上面这部分延时主要是reserve filestore throttle等待的时间，往replica osd发送请求应该比较快。</span><br><span class="line"></span><br><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:33.510596, event: sub_op_commit_rec                   - ReplicatedBackend::sub_op_modify_reply</span><br><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:33.510983, event: write_thread_in_journal_buffer      - FileJournal::prepare_single_write [-&gt; journalq.push_back()]</span><br><span class="line">                                                                                                         &lt;- FileJournal::prepare_multi_write</span><br><span class="line">                                                                                                         &lt;- FileJournal::write_thread_entry</span><br><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:35.071590, event: journaled_completion_queued         - FileJournal::queue_completions_thru</span><br><span class="line">                                                                                                         &lt;- FileJournal::committed_thru</span><br><span class="line">                                                                                                         &lt;- JournalingObjectStore::ApplyManager::commit_finish</span><br><span class="line">3. 上面这部分延时是写journal的花费时间</span><br><span class="line"></span><br><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:35.074449, event: sub_op_commit_rec                   - ReplicatedBackend::sub_op_modify_reply</span><br><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:35.906469, event: op_applied                          - ReplicatedBackend::op_applied</span><br><span class="line">                                                                                                         &lt;- C_OSD_OnOpApplied.finish()</span><br><span class="line">4. 上面这部分延时是filestore数据罗盘的花费时间</span><br><span class="line"></span><br><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:35.947938, event: op_commit                           - ReplicatedBackend::op_commit</span><br><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:35.947989, event: commit_sent                         - ReplicatedPG::eval_repop</span><br><span class="line"> tracker -- seq: 329476, time: 2015-08-06 13:42:35.948057, event: <span class="keyword">done</span></span><br><span class="line">5. 上面这部分是发送reply给client的时延</span><br></pre></td></tr></table></figure>
+<h3 id="Secondary-write"><a href="#Secondary-write" class="headerlink" title="Secondary write"></a>Secondary write</h3><p>op: osd_repop</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">tracker -- seq: 329473, time: 2015-08-06 13:42:32.292964, event: header_read                         - OpRequest::OpRequest</span><br><span class="line">tracker -- seq: 329473, time: 2015-08-06 13:42:32.292965, event: throttled                           - OpRequest::OpRequest</span><br><span class="line">tracker -- seq: 329473, time: 2015-08-06 13:42:32.293070, event: all_read                            - OpRequest::OpRequest</span><br><span class="line">tracker -- seq: 329473, time: 0.000000, event: dispatched                                            - OpRequest::OpRequest</span><br><span class="line">tracker -- seq: 329473, time: 2015-08-06 13:42:33.427436, event: reached_pg                          - OSD::dequeue_op - OSD::ShardedOpWQ::_process</span><br><span class="line">tracker -- seq: 329473, time: 2015-08-06 13:42:33.427459, event: started                             - ReplicatedPG::do_pg_op</span><br><span class="line">tracker -- seq: 329473, time: 2015-08-06 13:42:33.428036, event: started</span><br><span class="line">tracker -- seq: 329473, time: 2015-08-06 13:42:33.428083, event: commit_queued_for_journal_write     - FileJournal::submit_entry</span><br><span class="line">tracker -- seq: 329473, time: 2015-08-06 13:42:33.507348, event: write_thread_in_journal_buffer      - FileJournal::prepare_single_write</span><br><span class="line">                                                                                                        &lt;- FileJournal::prepare_multi_write</span><br><span class="line">                                                                                                        &lt;- FileJournal::write_thread_entry</span><br><span class="line">tracker -- seq: 329473, time: 2015-08-06 13:42:35.071399, event: journaled_completion_queued         - FileJournal::queue_completions_thru</span><br><span class="line">                                                                                                        &lt;- FileJournal::committed_thru</span><br><span class="line">                                                                                                        &lt;- JournalingObjectStore::ApplyManager::commit_finish</span><br><span class="line">tracker -- seq: 329473, time: 2015-08-06 13:42:35.724058, event: sub_op_applied                      - ReplicatedBackend::sub_op_modify_applied</span><br><span class="line">tracker -- seq: 329473, time: 2015-08-06 13:42:35.878877, event: commit_sent                         - ReplicatedBackend::sub_op_modify_commit</span><br><span class="line">tracker -- seq: 329473, time: 2015-08-06 13:42:35.878919, event: <span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>针对上述primary osd上的op tracker events，我们对前4个阶段的分析如下：</p>
+<ol>
+<li><p>第1阶段：osd op queue的处理时延</p>
+<p> 处理osd op的workqueue和threadpool为op_shardedwq, osd_op_tp;</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">op_shardedwq(cct-&gt;_conf-&gt;osd_op_num_shards, this,</span><br><span class="line">             cct-&gt;_conf-&gt;osd_op_thread_timeout, &amp;osd_op_tp),</span><br><span class="line">osd_op_tp(cct, <span class="string">"OSD::osd_op_tp"</span>,</span><br><span class="line">          cct-&gt;_conf-&gt;osd_op_num_threads_per_shard * cct-&gt;_conf-&gt;osd_op_num_shards),</span><br></pre></td></tr></table></figure>
+<p> 可以调大如下值来提高osd的处理能力，减少在这个阶段的时延</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">OPTION(osd_op_num_threads_per_shard, OPT_INT, 2)</span><br><span class="line">OPTION(osd_op_num_shards, OPT_INT, 5)</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>第2阶段：reserve filestore throttle等待的时间</p>
+<p> 所耗时间包括<code>往replica osd发送message的时间</code> + <code>reserve filestore queue throttle wait时间</code> + <code>filejournal throttle wait时间</code></p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"> void ReplicatedBackend::submit_transaction()</span><br><span class="line">|--  void ReplicatedBackend::issue_op()</span><br><span class="line">|    |-- void ReplicatedPG::send_message_osd_cluster()     // send write data to replica osds</span><br><span class="line">|    |-- void OSDService::send_message_osd_cluster(int peer, Message *m, epoch_t from_epoch) </span><br><span class="line">|--  parent-&gt;queue_transaction(op_t, op.op);</span><br><span class="line">|    |-- int FileStore::queue_transactions()    // 没有journal或需要同时写journal和disk时，会调用 queue_op(osr, o);</span><br><span class="line">|    |-- void JournalingObjectStore::_op_journal_transactions()</span><br><span class="line">|    |-- void FileJournal::submit_entry()      //添加到 deque&lt;write_item&gt; writeq;</span><br><span class="line"></span><br><span class="line">FileStore::queue_transactions()里会调用：（获取filestore和filejournal的throttle）</span><br><span class="line">     op_queue_reserve_throttle(o, handle);</span><br><span class="line">     journal-&gt;throttle();</span><br></pre></td></tr></table></figure>
+<p> 调整这些参数应该可以减少这部分的处理时间</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">OPTION(filestore_queue_max_ops, OPT_INT, 50)</span><br><span class="line">OPTION(filestore_queue_max_bytes, OPT_INT, 100 &lt;&lt; 20)</span><br><span class="line"></span><br><span class="line">OPTION(journal_queue_max_ops, OPT_INT, 300)</span><br><span class="line">OPTION(journal_queue_max_bytes, OPT_INT, 32 &lt;&lt; 20)</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>第3阶段：写journal的时间</p>
+<p> journal写数据：</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">FileJournal.Writer.entry() -&gt; FileJournal::write_thread_entry() -&gt; FileJournal::do_write() -&gt; FileJournal::write_bl()</span><br></pre></td></tr></table></figure>
+<p> 使用高性能ssd作为journal应该能减少这部分时间。</p>
+</li>
+<li><p>第4阶段：写filestore的时间</p>
+<p> 所耗时间为所有osd写filestore的时间，这里测试发现数据写filestore比写journal更快，可能因为journal带的盘数较多的缘故。</p>
+<p> filestore的处理线程配置参数：</p>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">OPTION(filestore_op_threads, OPT_INT, 2)</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2015/06/18/ceph-osd-requst-analysis/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1310,7 +1494,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">75</span>
+                  <span class="site-state-item-count">76</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>

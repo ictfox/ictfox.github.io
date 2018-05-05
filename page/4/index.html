@@ -304,6 +304,182 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/06/15/cephfs-stripe/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/06/15/cephfs-stripe/" itemprop="url">cephfs的stripe配置</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-06-15T18:31:17+08:00">
+                2017-06-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/06/15/cephfs-stripe/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/06/15/cephfs-stripe/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>cephfs支持配置file layout，可以控制file分配到指定的ceph rados objects上，这些信息是写在file/dir的xattrs上。</p>
+<ul>
+<li>文件的layout xattrs为：ceph.file.layout</li>
+<li>目录的layout xattrs为：ceph.dir.layout</li>
+</ul>
+<p>目录中的文件和子目录默认继承父目录的layout配置</p>
+<p>支持的layout配置项有：</p>
+<ol>
+<li>pool<br> file的数据存储在哪个RADOS pool里</li>
+<li>namespace<br>file的数据存储在RADOS pool里的哪个namespace里，但现在rbd/rgw/cephfs都还不支持</li>
+<li>stripe_unit<br> 条带的大小，以Bytes为单位</li>
+<li>stripe_count<br> 条带的个数</li>
+</ol>
+<p>比如，<code>stripe_unit=524288</code>，<code>stripe_count=2</code>，默认object size是4MB，则file写10MB的数据分配如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">   --- object <span class="built_in">set</span> 0 ---               --- object <span class="built_in">set</span> 1 ---</span><br><span class="line">/---------\    /---------\         /---------\    /---------\  </span><br><span class="line">| obj 0   |    | obj 1   |         | obj 2   |    | obj 3   |</span><br><span class="line">|=========|    |=========|         |=========|    |=========|</span><br><span class="line">| stripe  |    | stripe  |         | stripe  |    | stripe  |</span><br><span class="line">| unit 0  |    | unit 1  |         | unit 0  |    | unit 1  |</span><br><span class="line">|---------|    |---------|         |---------|    |---------|</span><br><span class="line">| stripe  |    | stripe  |         | stripe  |    | stripe  |</span><br><span class="line">| unit 2  |    | unit 3  |         | unit 2  |    | unit 3  |</span><br><span class="line">|---------|    |---------|         \=========/    \=========/</span><br><span class="line">| stripe  |    | stripe  |</span><br><span class="line">| unit 4  |    | unit 5  |            osd 16         osd 20</span><br><span class="line">|---------|    |---------|         </span><br><span class="line">| stripe  |    | stripe  |         </span><br><span class="line">| unit 6  |    | unit 7  |         </span><br><span class="line">|---------|    |---------|         </span><br><span class="line">| stripe  |    | stripe  |         </span><br><span class="line">| unit 8  |    | unit 9  |         </span><br><span class="line">|---------|    |---------|         </span><br><span class="line">| stripe  |    | stripe  |         </span><br><span class="line">| unit 10 |    | unit 11 |         </span><br><span class="line">|---------|    |---------|         </span><br><span class="line">| stripe  |    | stripe  |         </span><br><span class="line">| unit 12 |    | unit 13 |         </span><br><span class="line">|---------|    |---------|         </span><br><span class="line">| stripe  |    | stripe  |         </span><br><span class="line">| unit 14 |    | unit 15 |         </span><br><span class="line">\=========/    \=========/        </span><br><span class="line"></span><br><span class="line">   osd 25         osd 3</span><br></pre></td></tr></table></figure>
+<h2 id="配置file-stripe"><a href="#配置file-stripe" class="headerlink" title="配置file stripe"></a>配置file stripe</h2><p>以admin的user登录，配置dir的attribute</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph 10.10.2.1:6789:/ /mnt/tstfs2/</span></span><br><span class="line"><span class="comment"># mkdir /mnt/tstfs2/mike512K/</span></span><br><span class="line"><span class="comment"># setfattr -n ceph.dir.layout -v "stripe_unit=524288 stripe_count=8 object_size=4194304 pool=cephfs_data2" /mnt/tstfs2/mike512K/</span></span><br></pre></td></tr></table></figure>
+<p>配置目录的attribute，默认其子目录和文件都会集成该目录的</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># touch /mnt/tstfs2/mike512K/tstfile</span></span><br><span class="line"><span class="comment"># getfattr -d -m ceph /mnt/tstfs2/mike512K</span></span><br><span class="line">getfattr: Removing leading <span class="string">'/'</span> from absolute path names</span><br><span class="line"><span class="comment"># file: mnt/tstfs2/mike512K</span></span><br><span class="line">ceph.dir.entries=<span class="string">"1"</span></span><br><span class="line">ceph.dir.files=<span class="string">"1"</span></span><br><span class="line">ceph.dir.rbytes=<span class="string">"4194304000"</span></span><br><span class="line">ceph.dir.rctime=<span class="string">"1495766140.09204154946"</span></span><br><span class="line">ceph.dir.rentries=<span class="string">"2"</span></span><br><span class="line">ceph.dir.rfiles=<span class="string">"1"</span></span><br><span class="line">ceph.dir.rsubdirs=<span class="string">"1"</span></span><br><span class="line">ceph.dir.subdirs=“0<span class="string">"</span></span><br></pre></td></tr></table></figure>
+<h2 id="验证file-stripe"><a href="#验证file-stripe" class="headerlink" title="验证file stripe"></a>验证file stripe</h2><p>查看file的location</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># dd if=/dev/zero of= /mnt/tstfs2/mike512K/tstfile bs=4M count=100</span></span><br><span class="line"><span class="comment"># cephfs /mnt/tstfs2/mike512K/tstfile show_location</span></span><br><span class="line">WARNING: This tool is deprecated.  Use the layout.* xattrs to query and modify layouts.</span><br><span class="line">location.file_offset:  0		// file的偏移</span><br><span class="line">location.object_offset:0		// object的偏移</span><br><span class="line">location.object_no:    0		// object的number</span><br><span class="line">location.object_size:  4194304 // object size为4M</span><br><span class="line">location.object_name:  10000002356.00000000 // object的name</span><br><span class="line">location.block_offset: 0		// block的偏移</span><br><span class="line">location.block_size:   524288	// block size为512k</span><br><span class="line">location.osd:          0		// 存储在osd 0 上</span><br><span class="line"></span><br><span class="line"><span class="comment"># cephfs /mnt/tstfs2/mike512K/tstfile show_location -l 524288</span></span><br><span class="line">WARNING: This tool is deprecated.  Use the layout.* xattrs to query and modify layouts.</span><br><span class="line">location.file_offset:  524288	// file的偏移</span><br><span class="line">location.object_offset:0		// object的偏移</span><br><span class="line">location.object_no:    1		// object的number</span><br><span class="line">location.object_size:  4194304 // object size为4M</span><br><span class="line">location.object_name:  10000002356.00000001 // object的name</span><br><span class="line">location.block_offset: 0		// block的偏移</span><br><span class="line">location.block_size:   524288	// block size为512k</span><br><span class="line">location.osd:          24		// 存储在osd 24 上</span><br></pre></td></tr></table></figure>
+<p>查看osd上的object</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cd /var/lib/ceph/osd/ceph-0/current/</span></span><br><span class="line"><span class="comment"># find . -name "*10000002356.0000000*"</span></span><br><span class="line">./14.126_head/10000002356.00000000__head_8CE99726__e</span><br><span class="line"><span class="comment"># ll -h ./14.126_head/10000002356.00000000__head_8CE99726__e</span></span><br><span class="line">-rw-r--r-- 1 ceph ceph 4.0M May 26 10:35 ./14.126_head/10000002356.00000000__head_8CE99726__e</span><br></pre></td></tr></table></figure>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://docs.ceph.com/docs/jewel/architecture/#data-striping" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/architecture/#data-striping</a><br><a href="http://docs.ceph.com/docs/jewel/cephfs/file-layouts/" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/cephfs/file-layouts/</a></p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/06/12/ceph-radosgw-multisite/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2332,214 +2508,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/05/09/rgw-multi-region/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="ictfox">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/ictfox.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ictfox blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2017/05/09/rgw-multi-region/" itemprop="url">对象存储跨机房容灾调研</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-05-09T15:31:37+08:00">
-                2017-05-09
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/ceph/" itemprop="url" rel="index">
-                    <span itemprop="name">ceph</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2017/05/09/rgw-multi-region/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2017/05/09/rgw-multi-region/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>随着机房的增加和客户对可靠性的要求提高，我们需要提供数据的跨机房容灾，本文档结合Ceph Radosgw的实现描述对象存储的跨机房容灾。</p>
-<h2 id="当前状况"><a href="#当前状况" class="headerlink" title="当前状况"></a>当前状况</h2><p>当前应用中，每个机房的Ceph都是独立的cluster，彼此之间没有任何关系。</p>
-<p>多个机房都独立的提供对象存储功能，每个Ceph Radosgw都有自己独立的命名空间和存储空间。</p>
-<h3 id="这样带来两个问题："><a href="#这样带来两个问题：" class="headerlink" title="这样带来两个问题："></a>这样带来两个问题：</h3><p>1，针对Radosgw来说，我们的业务没法提供统一的命名空间；</p>
-<p>2，没有机房级别的容灾，若一个机房Radosgw无法访问，则机房提供的对象存储瘫痪；</p>
-<h2 id="方案"><a href="#方案" class="headerlink" title="方案"></a>方案</h2><p>针对上述中的情况和需求，Ceph的Radosgw原生支持的联合架构，支持Region，Zone级别的备份同步，能很好的解决这个问题。</p>
-<h3 id="Ceph要求"><a href="#Ceph要求" class="headerlink" title="Ceph要求"></a>Ceph要求</h3><ul>
-<li>版本Ceph version 0.67以后即可，我们当前使用的0.94.5支持该feature</li>
-<li>每个Ceph cluster必须配置启动RADOSGW</li>
-</ul>
-<h3 id="概念解释"><a href="#概念解释" class="headerlink" title="概念解释"></a>概念解释</h3><ul>
-<li>Region: A region represents a logical geographic area and contains one or more zones. A cluster with multiple regions must specify a master region.</li>
-<li>Zone: A zone is a logical grouping of one or more Ceph Object Gateway instance(s). A region has a master zone that processes client requests.<br>注：Only write objects to the master zone in a region. You may read objects from secondary zones. Currently, the Gateway does not prevent you from writing to a secondary zone, but DON’T DO IT.</li>
-</ul>
-<h3 id="应用模式1"><a href="#应用模式1" class="headerlink" title="应用模式1"></a>应用模式1</h3><p>同一Region内的不同Zones之间数据同步，如下图所示：</p>
-<p><img src="/images/rgw-multi-region1.jpg" alt="rgw-multi-region1"></p>
-<p><strong>特点：</strong></p>
-<ul>
-<li>主zone支持读写操作</li>
-<li>从zone支持读操作</li>
-<li>主从zone之间同步数据</li>
-</ul>
-<p><strong>用途：</strong></p>
-<ul>
-<li>主从zone之间数据备份，提供跨机房容灾</li>
-<li>从zone分担主zone的读数据压力，提高集群扩展性</li>
-</ul>
-<h3 id="应用模式2"><a href="#应用模式2" class="headerlink" title="应用模式2"></a>应用模式2</h3><p>不同Regions之间的数据同步，如下图所示：</p>
-<p><img src="/images/rgw-multi-region2.jpg" alt="rgw-multi-region2"></p>
-<p><strong>特点：</strong></p>
-<ul>
-<li>主从Region都支持读写操作</li>
-<li>主从Region之间只同步元数据信息</li>
-<li>主从Region之间数据是独立的</li>
-</ul>
-<p><strong>用途：</strong></p>
-<ul>
-<li>多个Regions一起来提供统一命名空间</li>
-<li>不同Region服务不同地区的客户，提高集群扩展性</li>
-</ul>
-<h3 id="展望"><a href="#展望" class="headerlink" title="展望"></a>展望</h3><p>在10.2 jewel版本中，radosgw增加了一个新特性，也就是多中心同步。 </p>
-<p>所谓多中心同步，也就是不同radosgw实例之间可以自动进行同步的特性。</p>
-<p>为了便于管理，又进行了逻辑上的组织，也即realm、zonegroup、zone和radosgw。这是个从上至下的组织结构，也就是realm包括若干个zonegroup，其中一个是master，其它是secondary。每个zonegroup下包括一个master zone，其它都是secondary zone。</p>
-<p>zone可以认为是一个实际上的集群，由至少一个radosgw实例提供服务，但是对外服务地址是一致的。 </p>
-<p>同步分两种，也就是元数据同步和数据同步。zonegroup之间只会同步元数据，而同一个zonegroup下的zone之间是同步元数据和数据。这里的元数据是指用户和桶，数据是用户的对象数据。</p>
-<h4 id="概念："><a href="#概念：" class="headerlink" title="概念："></a>概念：</h4><ul>
-<li>Zone: A zone is logical grouping of one or more Ceph Object Gateway instances. There will be one Zone that should be designated as the master zone in a zonegroup, which will handle all bucket and user creation.</li>
-<li>Zonegroup: A zonegroup consists of multiple zones, this approximately corresponds to what used to be called as a region in pre Jewel releases for federated deployments. There should be a master zonegroup that will handle changes to the system configuration.</li>
-<li>Zonegroup map: A zonegroup map is a configuration structure that holds the map of the entire system, ie. which zonegroup is the master, relationships between different zonegroups and certain configurables like storage policies.</li>
-<li>Realm: A realm is a container for zonegroups, this allows for separation of zonegroups themselves between clusters. It is possible to create multiple realms, making it easier to run completely different configurations in the same cluster.</li>
-<li>Period: A period holds the configuration structure for the current state of the realm. Every period contains a unique id and an epoch. A period’s epoch is incremented on every commit operation. Every realm has an associated current period, holding the current state of configuration of the zonegroups and storage policies. Any configuration change for a non master zone will increment the period’s epoch. Changing the master zone to a different zone will trigger the following changes: - A new period is generated with a new period id and epoch of 1 - Realm’s current period is updated to point to the newly generated period id - Realm’s epoch is incremented</li>
-</ul>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="http://docs.ceph.com/docs/master/radosgw/federated-config/" target="_blank" rel="noopener">http://docs.ceph.com/docs/master/radosgw/federated-config/</a></p>
-<p><a href="http://qinghua.github.io/ceph-radosgw-replication/" target="_blank" rel="noopener">http://qinghua.github.io/ceph-radosgw-replication/</a></p>
-<p><a href="http://www.cnphp6.com/archives/79981" target="_blank" rel="noopener">http://www.cnphp6.com/archives/79981</a></p>
-<p><a href="http://lyang.top/2016/01/18/Radosgw-%E5%A4%9A-zone-%E9%83%A8%E7%BD%B2%E4%BB%A5%E5%8F%8A-radosgw_agent-%E5%90%8C%E6%AD%A5/" target="_blank" rel="noopener">http://lyang.top/2016/01/18/Radosgw-%E5%A4%9A-zone-%E9%83%A8%E7%BD%B2%E4%BB%A5%E5%8F%8A-radosgw_agent-%E5%90%8C%E6%AD%A5/</a></p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2594,7 +2562,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">75</span>
+                  <span class="site-state-item-count">76</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>

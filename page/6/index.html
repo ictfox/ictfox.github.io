@@ -304,6 +304,174 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2016/09/12/ceph-node-high-workload-issue/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2016/09/12/ceph-node-high-workload-issue/" itemprop="url">Ceph节点load很高问题的分析解决</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-09-12T22:31:17+08:00">
+                2016-09-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2016/09/12/ceph-node-high-workload-issue/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2016/09/12/ceph-node-high-workload-issue/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="现象"><a href="#现象" class="headerlink" title="现象"></a>现象</h2><p>当ceph在做数据迁移的时候，有一个节点的系统load很高，通过top命令可以看到如下信息：</p>
+<p><img src="/images/ceph-node-high-workload-issue1.jpg" alt="high workload"></p>
+<p>从上图中可以看出，ceph-osd占的cpu很高，这个比较奇怪。。。<br>对比别的机器上的ceph配置，没找到差异信息。</p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>在该机器上安装perf工具，通过perf看到如下数据：<br><code>perf top -p &lt;ceph-osd-pid&gt;</code></p>
+<p><img src="/images/ceph-node-high-workload-issue2.jpg" alt="perf top"></p>
+<p>从上面的输出中看出，ceph-osd很多的时间花费在内核内存分配函数：<code>isolate_freepages_block</code><br>搜索网上的信息，都是两年前的帖子，而我们用的ceph版本为: Hammer 0.94.5-1，不应该出这个问题。</p>
+<p>查看该机器上的内存信息，发现free的内存很少，执行命令把内存释放掉：</p>
+<p><code>sync; echo 3 &gt; /proc/sys/vm/drop_caches</code></p>
+<p>然后继续触发数据迁移，在该机器上监控系统load和ceph-osd的 perf top输出：</p>
+<p><img src="/images/ceph-node-high-workload-issue3.jpg" alt="normal workload"></p>
+<p>这时候系统的负载正常，ceph-osd也没有花费太多时间在内存的分配上。</p>
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>后续的测试中发现，当物理机的free内存很小时(约2GB)，会导致ceph-osd花费较多时间在memory的分配上。</p>
+<h2 id="原因分析"><a href="#原因分析" class="headerlink" title="原因分析"></a>原因分析</h2><p>我们系统的物理内存有256G，当free命令显示只有2GB时，可能很多都是零散的小内存了，而ceph-osd可能在运行时分配大内存，这就会触发内存页的回收和合并，所以我们就会看到ceph-osd花费很多时间在内核内存分配函数<code>isolate_freepages_block</code>上。</p>
+<h2 id="解决办法"><a href="#解决办法" class="headerlink" title="解决办法"></a>解决办法</h2><p>登陆物理机，执行命令：<code>sync; echo 3 &gt; /proc/sys/vm/drop_caches</code></p>
+<p>当然每次都手动的执行这个命令并不明智，我们把ceph节点的内存监控添加到监控项里，在监控到物理机内存小于配置值时自动触发上述命令。</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="https://lkml.org/lkml/2012/6/27/545" target="_blank" rel="noopener">https://lkml.org/lkml/2012/6/27/545</a><br><a href="http://lists.opennebula.org/pipermail/ceph-users-ceph.com/2014-November/044679.html" target="_blank" rel="noopener">http://lists.opennebula.org/pipermail/ceph-users-ceph.com/2014-November/044679.html</a></p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2016/08/30/rgw-user-statistics/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2196,214 +2364,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2016/04/06/trove-glance-image-creation/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="ictfox">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/ictfox.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ictfox blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2016/04/06/trove-glance-image-creation/" itemprop="url">创建trove使用的glance image</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-04-06T12:31:17+08:00">
-                2016-04-06
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/openstack/" itemprop="url" rel="index">
-                    <span itemprop="name">openstack</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2016/04/06/trove-glance-image-creation/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2016/04/06/trove-glance-image-creation/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>使用Trove提供database服务，首先我们需要制作一个Trove对应database服务的glance image，这样才能基于该image启动虚拟机提供database服务；</p>
-<p>本文档以创建mysql 5.6为例，描述下制作Trove对应服务的glance image的步骤：</p>
-<ol>
-<li><p>选择base系统，启动虚拟机</p>
-<p> 比如选择基本的Ubuntu 14.04镜像，启动一个nova instance</p>
-</li>
-<li><p>配置apt-get源</p>
-<p> 登陆nova instance上，设置合适的apt-get源</p>
-</li>
-<li><p>安装相应软件包</p>
-<p> 比如安装mysql-server-5.6，安装mysql备份插件xtrabackup，安装其他软件：比如keepalived</p>
-</li>
-<li><p>创建调试用户</p>
-<p> 默认openstack创建nova instance的root账号是随机密码，所以这里添加一个ubuntu的user，设置密码和super权限，方便之后登陆nova instance查看调试</p>
-</li>
-<li><p>配置trove运行环境</p>
-<p> copy trove部署机器上的 <code>.venv/</code> 目录到虚拟机 <code>/home/ubuntu/</code> 目录下，提供python的运行环境</p>
-</li>
-<li><p>获取trove源码</p>
-<p> copy trove部署机器上的 <code>/opt/openstace/trove</code> 目录到虚拟机 <code>/home/ubuntu/</code> 目录下；</p>
-<p>若使用trove源码，需要执行trove代码的安装：</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /opt/openstack/trove</span><br><span class="line">git checkout stable/kilo</span><br><span class="line">python setup.py egg_info</span><br><span class="line">pip install -r trove.egg-info/requires.txt</span><br><span class="line">python setup.py develop</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>查看配置trove的开机自启动</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">$ cat /etc/init/trove-guestagent.conf</span><br><span class="line">description <span class="string">"Trove Guest Agent"</span></span><br><span class="line">author <span class="string">"Thomas Goirand &lt;zigo@debian.org&gt;"</span></span><br><span class="line">start on runlevel [2345]</span><br><span class="line">stop on runlevel [!2345]</span><br><span class="line">respawn</span><br><span class="line"> </span><br><span class="line"><span class="built_in">exec</span> /home/ubuntu/trove/contrib/trove-guestagent --config-dir=/etc/trove/conf.d</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>配置ceilometer监控代码</p>
-<p>  copy ceilometer的相关代码到 <code>/home/ubuntu/</code> 目录下<br> copy ceilometer的agent程序、配置文件、启动脚本（根据业务自己写）到指定目录</p>
-<blockquote>
-<p>注：ceilometer的监控看自己项目需要</p>
-</blockquote>
-</li>
-<li><p>配置ceilometer的开机自启动</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">$ cat /etc/rc.local</span><br><span class="line"><span class="comment">#!/bin/sh -e</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># rc.local</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># This script is executed at the end of each multiuser runlevel.</span></span><br><span class="line"><span class="comment"># Make sure that the script will "exit 0" on success or any other</span></span><br><span class="line"><span class="comment"># value on error.</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># In order to enable or disable this script just change the execution</span></span><br><span class="line"><span class="comment"># bits.</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># By default this script does nothing.</span></span><br><span class="line"> </span><br><span class="line">bash /home/ubuntu/ceilometer/start-ceilometer.sh</span><br><span class="line"><span class="built_in">exit</span> 0</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>配置nova instance启动自动更新trove代码</p>
-<p>在调试的情况下，可以每次在nova instance启动时候更新trove代码，这样不用每次都重做glance image；</p>
-<p>步骤如下：</p>
-<ul>
-<li>把nova instance的id_rsa.pub文件的内容添加到放置trove代码的服务器的authorized_keys里；</li>
-<li>在nova instance的rc.local文件中添加：<code>scp -o StrictHostKeyChecking=no -r root@&lt;serverip&gt;:/opt/openstack/trove/trove /home/ubuntu/trove/</code></li>
-</ul>
-</li>
-<li><p>创建glance镜像</p>
-<p>退出nova instance，通过nova show <instance-id>查找instance所在物理机，然后通过qemu-img命令导出instance为一个镜像；</instance-id></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">root@compute01:~<span class="comment"># qemu-img convert -O qcow2 /var/lib/nova/instances/a61216f6-eacc-45b3-a6a7-9d1829f6de99/disk ~/new.image</span></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>上传镜像到glance中</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">root@compute01:~<span class="comment"># glance --debug image-create --name "mysql-ubuntu"  --file ~/new.image --disk-format qcow2 --container-format bare --is-public True --progress</span></span><br><span class="line">...</span><br><span class="line">+------------------+--------------------------------------+</span><br><span class="line">| Property         | Value                                |</span><br><span class="line">+------------------+--------------------------------------+</span><br><span class="line">| checksum         | 31b45bf9d9e8c2e9a6215f2912c22113     |</span><br><span class="line">| container_format | bare                                 |</span><br><span class="line">| created_at       | 2016-02-27T07:00:26.000000           |</span><br><span class="line">| deleted          | False                                |</span><br><span class="line">| deleted_at       | None                                 |</span><br><span class="line">| disk_format      | qcow2                                |</span><br><span class="line">| id               | 296c7baf-5041-4fd5-8640-1b3bc03e5236 |</span><br><span class="line">| is_public        | True                                 |</span><br><span class="line">| min_disk         | 0                                    |</span><br><span class="line">| min_ram          | 0                                    |</span><br><span class="line">| name             | mysql-ubuntu                         |</span><br><span class="line">| owner            | None                                 |</span><br><span class="line">| protected        | False                                |</span><br><span class="line">| size             | 2938568704                           |</span><br><span class="line">| status           | active                               |</span><br><span class="line">| updated_at       | 2016-02-27T07:02:56.000000           |</span><br><span class="line">| virtual_size     | None                                 |</span><br><span class="line">+------------------+--------------------------------------+</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>更新trove的mysql的datastore后即可使用该镜像创建Trove实例了</p>
-<blockquote>
-<p>注：trove是支持使用cinder volume的，所以这里要配置好cinder volume type与nova instance运行机器的对应关系；</p>
-</blockquote>
-</li>
-</ol>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2458,7 +2418,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">75</span>
+                  <span class="site-state-item-count">76</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>

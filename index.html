@@ -304,6 +304,249 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2018/05/05/ceph-osd-deploy-with-bcache/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2018/05/05/ceph-osd-deploy-with-bcache/" itemprop="url">使用Bcache加速Ceph OSD性能</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-05-05T22:11:17+08:00">
+                2018-05-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/05/05/ceph-osd-deploy-with-bcache/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/05/05/ceph-osd-deploy-with-bcache/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在Ceph的环境中，我们通常会使用SSD来作为OSD的Journal，而OSD的数据盘是普通的SATA盘，在实践中，经常会发现SATA盘的性能瓶颈影响了OSD的性能，那能不能继续压榨SSD的性能来提升OSD的性能呢？</p>
+<p>答案是肯定的，可以使用SSD加速SATA盘的策略来加速作为OSD数据盘的SATA盘，通常的策略有：</p>
+<ul>
+<li>flashcache</li>
+<li>bcache</li>
+</ul>
+<p>有文章对比测试过这两种cache策略的性能，bcache的性能会好很多，这里介绍如何使用bcache来给OSD加速。</p>
+<h2 id="测试环境"><a href="#测试环境" class="headerlink" title="测试环境"></a>测试环境</h2><p>Ceph版本：Jewel 10.2.9</p>
+<p>作为Ceph机器的物理机的磁盘配置如下：</p>
+<ol>
+<li>SSD - 745 G，三块</li>
+<li>SATA - 3.7 T，九块</li>
+</ol>
+<p>对磁盘规划如下：</p>
+<ol>
+<li>每个SSD分出3个10G分区，作为三个SATA盘OSD的journal</li>
+<li>每个SSD剩余空间分为1个分区，使用bcache来加速三个SATA盘</li>
+</ol>
+<p>磁盘分区前如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:~/yangguanjun<span class="comment"># lsblk</span></span><br><span class="line">NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT</span><br><span class="line">...</span><br><span class="line">sdb      8:16   0 745.2G  0 disk</span><br><span class="line">sdc      8:32   0 745.2G  0 disk</span><br><span class="line">sdd      8:48   0 745.2G  0 disk</span><br></pre></td></tr></table></figure>
+<p>磁盘分区后为：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:~<span class="comment"># lsblk</span></span><br><span class="line">NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT</span><br><span class="line">...</span><br><span class="line">sdb           8:16   0 745.2G  0 disk</span><br><span class="line">├─sdb1        8:17   0    10G  0 part</span><br><span class="line">├─sdb2        8:18   0    10G  0 part</span><br><span class="line">├─sdb3        8:19   0    10G  0 part</span><br><span class="line">└─sdb4        8:20   0 715.2G  0 part</span><br><span class="line">sdc           8:32   0 745.2G  0 disk</span><br><span class="line">├─sdc1        8:33   0    10G  0 part</span><br><span class="line">├─sdc2        8:34   0    10G  0 part</span><br><span class="line">├─sdc3        8:35   0    10G  0 part</span><br><span class="line">└─sdc4        8:36   0 715.2G  0 part</span><br><span class="line">sdd           8:48   0 745.2G  0 disk</span><br><span class="line">├─sdd1        8:49   0    10G  0 part</span><br><span class="line">├─sdd2        8:50   0    10G  0 part</span><br><span class="line">├─sdd1        8:51   0    10G  0 part</span><br><span class="line">└─sdd4        8:52   0 715.2G  0 part</span><br></pre></td></tr></table></figure>
+<h2 id="设备性能"><a href="#设备性能" class="headerlink" title="设备性能"></a>设备性能</h2><p>针对当前环境，先要了解下各个硬件的性能，通过fio测试结果如下：</p>
+<table>
+<thead>
+<tr>
+<th>磁盘类型</th>
+<th>read</th>
+<th>write</th>
+<th>randread</th>
+<th>randwrite</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SATA</td>
+<td>155MB/s</td>
+<td>158MB/s</td>
+<td>126</td>
+<td>219</td>
+</tr>
+<tr>
+<td>SSD</td>
+<td>508MB/s</td>
+<td>426MB/s</td>
+<td>69.2k</td>
+<td>45.5k</td>
+</tr>
+</tbody>
+</table>
+<p>参考文章配置SATA盘与SSD盘的bcache策略：<a href="http://www.yangguanjun.com/2018/03/26/lvm-sata-ssd-bcache/">http://www.yangguanjun.com/2018/03/26/lvm-sata-ssd-bcache/</a></p>
+<p>配置bcache命令如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># make-bcache -B /dev/sde -C /dev/sdc4</span></span><br></pre></td></tr></table></figure>
+<p>配置后的块设备信息如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># lsblk</span></span><br><span class="line">...</span><br><span class="line">sdc           8:32   0 745.2G  0 disk</span><br><span class="line">├─sdc1        8:33   0    10G  0 part</span><br><span class="line">├─sdc2        8:34   0    10G  0 part</span><br><span class="line">├─sdc3        8:35   0    10G  0 part</span><br><span class="line">└─sdc4        8:36   0 715.2G  0 part</span><br><span class="line">  ├─bcache0 253:0    0   3.7T  0 disk</span><br><span class="line">...</span><br><span class="line">sde           8:64   0   3.7T  0 disk</span><br><span class="line">└─bcache0   253:0    0   3.7T  0 disk</span><br></pre></td></tr></table></figure>
+<p>之后测试bcache加速设备性能：</p>
+<table>
+<thead>
+<tr>
+<th>bcache的不同缓存策略</th>
+<th>randwrite</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bcache [writethrough]</td>
+<td>218</td>
+</tr>
+<tr>
+<td>bcache [writeback]</td>
+<td>38.8k</td>
+</tr>
+</tbody>
+</table>
+<p>上面结果看出 <code>bcache</code> 配置为<code>writeback</code>模式后，加速设备性能很高，会比SSD盘的性能略差些。但之后数据会回刷到SATA上，通过<code>iostat</code>可以看到SATA盘会繁忙好一阵子。</p>
+<h2 id="部署OSD"><a href="#部署OSD" class="headerlink" title="部署OSD"></a>部署OSD</h2><p>默认直接使用<code>ceph-deploy</code>部署<code>bcache</code>设备时会报错，如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy osd prepare ceph0:/dev/bcache0:/dev/sdd1</span></span><br><span class="line">[ceph_deploy.conf][DEBUG ] found configuration file at: /root/.cephdeploy.conf</span><br><span class="line">[ceph_deploy.cli][INFO  ] Invoked (1.5.37): /usr/bin/ceph-deploy osd prepare ceph0:/dev/bcache0:/dev/sdd1</span><br><span class="line">[ceph_deploy.cli][INFO  ] ceph-deploy options:</span><br><span class="line">[ceph_deploy.cli][INFO  ]  username                      : None</span><br><span class="line">[ceph_deploy.cli][INFO  ]  disk                          : [(<span class="string">'ceph0'</span>, <span class="string">'/dev/bcache0'</span>, <span class="string">'/dev/sdd1'</span>)]</span><br><span class="line">[ceph_deploy.cli][INFO  ]  dmcrypt                       : False</span><br><span class="line">[ceph_deploy.cli][INFO  ]  verbose                       : False</span><br><span class="line">[ceph_deploy.cli][INFO  ]  bluestore                     : None</span><br><span class="line">[ceph_deploy.cli][INFO  ]  overwrite_conf                : False</span><br><span class="line">[ceph_deploy.cli][INFO  ]  subcommand                    : prepare</span><br><span class="line">[ceph_deploy.cli][INFO  ]  dmcrypt_key_dir               : /etc/ceph/dmcrypt-keys</span><br><span class="line">[ceph_deploy.cli][INFO  ]  quiet                         : False</span><br><span class="line">[ceph_deploy.cli][INFO  ]  cd_conf                       : &lt;ceph_deploy.conf.cephdeploy.Conf instance at 0x7f81bab7b200&gt;</span><br><span class="line">[ceph_deploy.cli][INFO  ]  cluster                       : ceph</span><br><span class="line">[ceph_deploy.cli][INFO  ]  fs_type                       : xfs</span><br><span class="line">[ceph_deploy.cli][INFO  ]  func                          : &lt;<span class="keyword">function</span> osd at 0x7f81bab6a938&gt;</span><br><span class="line">[ceph_deploy.cli][INFO  ]  ceph_conf                     : None</span><br><span class="line">[ceph_deploy.cli][INFO  ]  default_release               : False</span><br><span class="line">[ceph_deploy.cli][INFO  ]  zap_disk                      : False</span><br><span class="line">[ceph_deploy.osd][DEBUG ] Preparing cluster ceph disks ceph0:/dev/bcache0:/dev/sdd1</span><br><span class="line">[ceph0][DEBUG ] connected to host: ceph0</span><br><span class="line">[ceph0][DEBUG ] detect platform information from remote host</span><br><span class="line">[ceph0][DEBUG ] detect machine <span class="built_in">type</span></span><br><span class="line">[ceph0][DEBUG ] find the location of an executable</span><br><span class="line">[ceph_deploy.osd][INFO  ] Distro info: CentOS Linux 7.4.1708 Core</span><br><span class="line">[ceph_deploy.osd][DEBUG ] Deploying osd to ceph0</span><br><span class="line">[ceph0][DEBUG ] write cluster configuration to /etc/ceph/&#123;cluster&#125;.conf</span><br><span class="line">[ceph_deploy.osd][DEBUG ] Preparing host ceph0 disk /dev/bcache0 journal /dev/sdd1 activate False</span><br><span class="line">[ceph0][DEBUG ] find the location of an executable</span><br><span class="line">[ceph0][INFO  ] Running <span class="built_in">command</span>: /usr/sbin/ceph-disk -v prepare --cluster ceph --fs-type xfs -- /dev/bcache0 /dev/sdd1</span><br><span class="line">[ceph0][WARNIN] <span class="built_in">command</span>: Running <span class="built_in">command</span>: /usr/bin/ceph-osd --cluster=ceph --show-config-value=fsid</span><br><span class="line">[ceph0][WARNIN] <span class="built_in">command</span>: Running <span class="built_in">command</span>: /usr/bin/ceph-osd --check-allows-journal -i 0 --<span class="built_in">log</span>-file <span class="variable">$run_dir</span>/<span class="variable">$cluster</span>-osd-check.log --cluster ceph --setuser ceph --setgroup ceph</span><br><span class="line">[ceph0][WARNIN] <span class="built_in">command</span>: Running <span class="built_in">command</span>: /usr/bin/ceph-osd --check-wants-journal -i 0 --<span class="built_in">log</span>-file <span class="variable">$run_dir</span>/<span class="variable">$cluster</span>-osd-check.log --cluster ceph --setuser ceph --setgroup ceph</span><br><span class="line">[ceph0][WARNIN] <span class="built_in">command</span>: Running <span class="built_in">command</span>: /usr/bin/ceph-osd --check-needs-journal -i 0 --<span class="built_in">log</span>-file <span class="variable">$run_dir</span>/<span class="variable">$cluster</span>-osd-check.log --cluster ceph --setuser ceph --setgroup ceph</span><br><span class="line">[ceph0][WARNIN] get_dm_uuid: get_dm_uuid /dev/bcache0 uuid path is /sys/dev/block/252:8/dm/uuid</span><br><span class="line">[ceph0][WARNIN] <span class="built_in">command</span>: Running <span class="built_in">command</span>: /usr/bin/ceph-osd --cluster=ceph --show-config-value=osd_journal_size</span><br><span class="line">[ceph0][WARNIN] get_dm_uuid: get_dm_uuid /dev/bcache0 uuid path is /sys/dev/block/252:8/dm/uuid</span><br><span class="line">[ceph0][WARNIN] get_dm_uuid: get_dm_uuid /dev/bcache0 uuid path is /sys/dev/block/252:8/dm/uuid</span><br><span class="line">[ceph0][WARNIN] get_dm_uuid: get_dm_uuid /dev/bcache0 uuid path is /sys/dev/block/252:8/dm/uuid</span><br><span class="line">[ceph0][WARNIN] <span class="built_in">command</span>: Running <span class="built_in">command</span>: /usr/bin/ceph-conf --cluster=ceph --name=osd. --lookup osd_mkfs_options_xfs</span><br><span class="line">[ceph0][WARNIN] <span class="built_in">command</span>: Running <span class="built_in">command</span>: /usr/bin/ceph-conf --cluster=ceph --name=osd. --lookup osd_fs_mkfs_options_xfs</span><br><span class="line">[ceph0][WARNIN] <span class="built_in">command</span>: Running <span class="built_in">command</span>: /usr/bin/ceph-conf --cluster=ceph --name=osd. --lookup osd_mount_options_xfs</span><br><span class="line">[ceph0][WARNIN] <span class="built_in">command</span>: Running <span class="built_in">command</span>: /usr/bin/ceph-conf --cluster=ceph --name=osd. --lookup osd_fs_mount_options_xfs</span><br><span class="line">[ceph0][WARNIN] get_dm_uuid: get_dm_uuid /dev/sdd1 uuid path is /sys/dev/block/8:51/dm/uuid</span><br><span class="line">[ceph0][WARNIN] prepare_device: Journal /dev/sdd1 is a partition</span><br><span class="line">[ceph0][WARNIN] get_dm_uuid: get_dm_uuid /dev/sdd1 uuid path is /sys/dev/block/8:51/dm/uuid</span><br><span class="line">[ceph0][WARNIN] prepare_device: OSD will not be hot-swappable <span class="keyword">if</span> journal is not the same device as the osd data</span><br><span class="line">[ceph0][WARNIN] <span class="built_in">command</span>: Running <span class="built_in">command</span>: /usr/sbin/blkid -o udev -p /dev/sdd1</span><br><span class="line">[ceph0][WARNIN] prepare_device: Journal /dev/sdd1 was not prepared with ceph-disk. Symlinking directly.</span><br><span class="line">[ceph0][WARNIN] get_dm_uuid: get_dm_uuid /dev/bcache0 uuid path is /sys/dev/block/252:8/dm/uuid</span><br><span class="line">[ceph0][WARNIN] set_data_partition: Creating osd partition on /dev/bcache0</span><br><span class="line">[ceph0][WARNIN] get_dm_uuid: get_dm_uuid /dev/bcache0 uuid path is /sys/dev/block/252:8/dm/uuid</span><br><span class="line">[ceph0][WARNIN] ptype_tobe_for_name: name = data</span><br><span class="line">[ceph0][WARNIN] get_dm_uuid: get_dm_uuid /dev/bcache0 uuid path is /sys/dev/block/252:8/dm/uuid</span><br><span class="line">[ceph0][WARNIN] create_partition: Creating data partition num 1 size 0 on /dev/bcache0</span><br><span class="line">[ceph0][WARNIN] command_check_call: Running <span class="built_in">command</span>: /usr/sbin/sgdisk --largest-new=1 --change-name=1:ceph data --partition-guid=1:cf599e47-c299-46c1-a385-aff4b0d25f1f --typecode=1:89c57f98-2fe5-4dc0-89c1-f3ad0ceff2be --mbrtogpt -- /dev/bcache0</span><br><span class="line">[ceph0][WARNIN] Caution: invalid main GPT header, but valid backup; regenerating main header</span><br><span class="line">[ceph0][WARNIN] from backup!</span><br><span class="line">[ceph0][WARNIN]</span><br><span class="line">[ceph0][WARNIN] Invalid partition data!</span><br><span class="line">[ceph0][WARNIN] <span class="string">'/usr/sbin/sgdisk --largest-new=1 --change-name=1:ceph data --partition-guid=1:cf599e47-c299-46c1-a385-aff4b0d25f1f --typecode=1:89c57f98-2fe5-4dc0-89c1-f3ad0ceff2be --mbrtogpt -- /dev/bcache0'</span> failed with status code 2</span><br><span class="line">[ceph0][ERROR ] RuntimeError: <span class="built_in">command</span> returned non-zero <span class="built_in">exit</span> status: 1</span><br><span class="line">[ceph_deploy.osd][ERROR ] Failed to execute <span class="built_in">command</span>: /usr/sbin/ceph-disk -v prepare --cluster ceph --fs-type xfs -- /dev/bcache0 /dev/sdd1</span><br><span class="line">[ceph_deploy][ERROR ] GenericError: Failed to create 1 OSDs</span><br></pre></td></tr></table></figure>
+<p>搜索有如下参考，<code>ceph-deploy</code>还不支持<code>bcache</code>设备，默认<code>ceph-deploy</code>会尝试对<code>bcache</code>设备进行分区，而<code>bcache</code>设备是不支持分区后挂载的，所以会导致命令失败。</p>
+<p><a href="http://tracker.ceph.com/issues/13278" target="_blank" rel="noopener">http://tracker.ceph.com/issues/13278</a></p>
+<p><a href="https://github.com/ceph/ceph/pull/16327" target="_blank" rel="noopener">https://github.com/ceph/ceph/pull/16327</a></p>
+<h3 id="解决办法一"><a href="#解决办法一" class="headerlink" title="解决办法一"></a>解决办法一</h3><p>修改<code>ceph-disk</code>的代码，把上述链接中的patch加上，可惜没搞成功，很奇怪修改后的代码貌似没跑到。。。因时间紧急就没再研究，但这个办法肯定是可行的！</p>
+<h3 id="解决办法二"><a href="#解决办法二" class="headerlink" title="解决办法二"></a>解决办法二</h3><p>手动格式化<code>bcache</code>设备，mount上后，通过<code>ceph-deploy</code>指定目录来部署了，步骤如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mkdir /var/lib/ceph/osd/ceph-0</span></span><br><span class="line"><span class="comment"># mkfs.xfs /dev/bcache0</span></span><br><span class="line"><span class="comment"># mount /dev/bcache0 /var/lib/ceph/osd/ceph-0</span></span><br></pre></td></tr></table></figure>
+<p>然后再尝试部署，报错如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy --overwrite-conf osd prepare ceph0:/var/lib/ceph/osd/ceph-0:/dev/sdd1</span></span><br><span class="line">...</span><br><span class="line">[ceph0][WARNIN] <span class="built_in">command</span>: Running <span class="built_in">command</span>: /usr/bin/timeout 300 ceph-osd --cluster ceph --mkfs --mkkey -i 195 --monmap /var/lib/ceph/osd/ceph-0/activate.monmap --osd-data /var/lib/ceph/osd/ceph-0 --osd-journal /var/lib/ceph/osd/ceph-0/journal --osd-uuid 9ff0983b-74e2-4fc1-8ba8-cfb688024284 --keyring /var/lib/ceph/osd/ceph-0/keyring --setuser ceph --setgroup ceph</span><br><span class="line">[ceph0][WARNIN] Traceback (most recent call last):</span><br><span class="line">[ceph0][WARNIN]   File <span class="string">"/usr/sbin/ceph-disk"</span>, line 9, <span class="keyword">in</span> &lt;module&gt;</span><br><span class="line">[ceph0][WARNIN]     load_entry_point(<span class="string">'ceph-disk==1.0.0'</span>, <span class="string">'console_scripts'</span>, <span class="string">'ceph-disk'</span>)()</span><br><span class="line">[ceph0][WARNIN]   File <span class="string">"/usr/lib/python2.7/site-packages/ceph_disk/main.py"</span>, line 5553, <span class="keyword">in</span> run</span><br><span class="line">[ceph0][WARNIN]     main(sys.argv[1:])</span><br><span class="line">[ceph0][WARNIN]   File <span class="string">"/usr/lib/python2.7/site-packages/ceph_disk/main.py"</span>, line 5504, <span class="keyword">in</span> main</span><br><span class="line">[ceph0][WARNIN]     args.func(args)</span><br><span class="line">[ceph0][WARNIN]   File <span class="string">"/usr/lib/python2.7/site-packages/ceph_disk/main.py"</span>, line 3631, <span class="keyword">in</span> main_activate</span><br><span class="line">[ceph0][WARNIN]     init=args.mark_init,</span><br><span class="line">[ceph0][WARNIN]   File <span class="string">"/usr/lib/python2.7/site-packages/ceph_disk/main.py"</span>, line 3451, <span class="keyword">in</span> activate_dir</span><br><span class="line">[ceph0][WARNIN]     (osd_id, cluster) = activate(path, activate_key_template, init)</span><br><span class="line">[ceph0][WARNIN]   File <span class="string">"/usr/lib/python2.7/site-packages/ceph_disk/main.py"</span>, line 3556, <span class="keyword">in</span> activate</span><br><span class="line">[ceph0][WARNIN]     keyring=keyring,</span><br><span class="line">[ceph0][WARNIN]   File <span class="string">"/usr/lib/python2.7/site-packages/ceph_disk/main.py"</span>, line 3010, <span class="keyword">in</span> mkfs</span><br><span class="line">[ceph0][WARNIN]     <span class="string">'--setgroup'</span>, get_ceph_group(),</span><br><span class="line">[ceph0][WARNIN]   File <span class="string">"/usr/lib/python2.7/site-packages/ceph_disk/main.py"</span>, line 2957, <span class="keyword">in</span> ceph_osd_mkfs</span><br><span class="line">[ceph0][WARNIN]     raise Error(<span class="string">'%s failed : %s'</span> % (str(arguments), error))</span><br><span class="line">[ceph0][WARNIN] ceph_disk.main.Error: Error: [<span class="string">'ceph-osd'</span>, <span class="string">'--cluster'</span>, <span class="string">'ceph'</span>, <span class="string">'--mkfs'</span>, <span class="string">'--mkkey'</span>, <span class="string">'-i'</span>, u<span class="string">'195'</span>, <span class="string">'--monmap'</span>, <span class="string">'/var/lib/ceph/osd/ceph-0/activate.monmap'</span>, <span class="string">'--osd-data'</span>, <span class="string">'/var/lib/ceph/osd/ceph-0'</span>, <span class="string">'--osd-journal'</span>, <span class="string">'/var/lib/ceph/osd/ceph-0/journal'</span>, <span class="string">'--osd-uuid'</span>, u<span class="string">'9ff0983b-74e2-4fc1-8ba8-cfb688024284'</span>, <span class="string">'--keyring'</span>, <span class="string">'/var/lib/ceph/osd/ceph-0/keyring'</span>, <span class="string">'--setuser'</span>, <span class="string">'ceph'</span>, <span class="string">'--setgroup'</span>, <span class="string">'ceph'</span>] failed : parse error setting <span class="string">'osd_deep_scrub_interval'</span> to <span class="string">'2592000 // every mouth'</span></span><br><span class="line">[ceph0][WARNIN] 2018-04-26 16:02:27.180328 7f3085e23940 -1 filestore(/var/lib/ceph/osd/ceph-0) mkfs: write_version_stamp() failed: (13) Permission denied</span><br><span class="line">[ceph0][WARNIN] 2018-04-26 16:02:27.180346 7f3085e23940 -1 OSD::mkfs: ObjectStore::mkfs failed with error -13</span><br><span class="line">[ceph0][WARNIN] 2018-04-26 16:02:27.180441 7f3085e23940 -1  ** ERROR: error creating empty object store <span class="keyword">in</span> /var/lib/ceph/osd/ceph-0: (13) Permission denied</span><br><span class="line">[ceph0][WARNIN]</span><br><span class="line">[ceph0][ERROR ] RuntimeError: <span class="built_in">command</span> returned non-zero <span class="built_in">exit</span> status: 1</span><br><span class="line">[ceph_deploy][ERROR ] RuntimeError: Failed to execute <span class="built_in">command</span>: /usr/sbin/ceph-disk -v activate --mark-init systemd --mount /var/lib/ceph/osd/ceph-0</span><br></pre></td></tr></table></figure>
+<p>从输出里看是权限的问题，执行如下两条命令后，部署成功：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:/var/lib/ceph/osd<span class="comment"># chown -R ceph:ceph /dev/sdd1</span></span><br><span class="line">root@ceph0:/var/lib/ceph/osd<span class="comment"># chown -R ceph:ceph ceph-0</span></span><br></pre></td></tr></table></figure>
+<h2 id="Ceph-OSD开机自启动"><a href="#Ceph-OSD开机自启动" class="headerlink" title="Ceph OSD开机自启动"></a>Ceph OSD开机自启动</h2><h3 id="bcache开机启动"><a href="#bcache开机启动" class="headerlink" title="bcache开机启动"></a>bcache开机启动</h3><p>添加bcache开机启动</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat /etc/sysconfig/modules/bcache.modules</span></span><br><span class="line"><span class="meta">#! /bin/sh</span></span><br><span class="line"></span><br><span class="line">/sbin/modinfo -F filename bcache &gt; /dev/null 2&gt;&amp;1</span><br><span class="line"><span class="keyword">if</span> [ $? -eq 0 ]; <span class="keyword">then</span></span><br><span class="line">    /sbin/modprobe -f bcache</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># chmod 755 /etc/sysconfig/modules/bcache.modules</span></span><br></pre></td></tr></table></figure>
+<h3 id="自动挂载OSD目录"><a href="#自动挂载OSD目录" class="headerlink" title="自动挂载OSD目录"></a>自动挂载OSD目录</h3><p>添加磁盘自动挂载，保证重启后Ceph OSD能自动运行</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:~<span class="comment"># blkid</span></span><br><span class="line">/dev/sdd1: PARTUUID=<span class="string">"81732128-2073-4d93-8582-377f4f9a701f"</span></span><br><span class="line">...</span><br><span class="line">/dev/bcache0: UUID=<span class="string">"88ef6ba6-fd13-478c-8b56-82951183f1d3"</span> TYPE=<span class="string">"xfs"</span></span><br><span class="line"></span><br><span class="line">root@ceph0:~<span class="comment"># cat /etc/fstab</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># /etc/fstab</span></span><br><span class="line"><span class="comment"># Created by anaconda on Wed May 24 15:20:03 2017</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># Accessible filesystems, by reference, are maintained under '/dev/disk'</span></span><br><span class="line"><span class="comment"># See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line">LABEL=/  /                       ext4    defaults        1 1</span><br><span class="line">UUID=88ef6ba6-fd13-478c-8b56-82951183f1d3 /var/lib/ceph/osd/ceph-0 xfs defaults 0 2</span><br></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2018/04/06/ceph-deploy-latest-luminous/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2347,206 +2590,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/11/28/volume-dynamic-iotune-invest/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="ictfox">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/ictfox.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ictfox blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2017/11/28/volume-dynamic-iotune-invest/" itemprop="url">基于Cinder的云硬盘动态限速调研</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-11-28T21:31:17+08:00">
-                2017-11-28
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/openstack/" itemprop="url" rel="index">
-                    <span itemprop="name">openstack</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2017/11/28/volume-dynamic-iotune-invest/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2017/11/28/volume-dynamic-iotune-invest/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>最近忙存储网关的开发，没有投放精力在Ceph和Openstack上了，这里翻出来一些之前做的项目，分享给大家。</p>
-<h2 id="一、QOS概况"><a href="#一、QOS概况" class="headerlink" title="一、QOS概况"></a>一、QOS概况</h2><p>在<code>OpenStack H</code>版中块存储引入了<code>QoS</code>特性，主要在<code>Cinder</code>和<code>Nova</code>项目中实施。</p>
-<p>在<code>OpenStack</code>的<code>QoS</code>特性上，主要依赖于后段存储和前端的<code>Hypervisor</code>来实现，而在<code>Cinder</code>中，提供了一个<code>QoS Spec</code>框架，用户可以创建一个<code>QoS Spec</code>，这个<code>Spec</code>说明了针对目标(后端或者前端)，限制键值对<code>(total_iops_sec=1000)</code>等，每个<code>QoS Spec</code>与<code>Volume Type</code>相联系，用户在创建一个卷时可以将该卷与一个<code>Volume Type</code>联系，这样就间接使得该卷与特定<code>QoS Spec</code>联系。</p>
-<p>换句话说，该卷获得了一系列<code>QoS</code>键值对，当该<code>QoS</code>是面向后端时，创建卷命令会将<code>QoS Spec</code>的键值对传给<code>Cinder</code>的后端存储解释。当该<code>QoS</code>面向前端时，在这个卷被附加到一个虚拟机上时才会被实现，比如通过<code>QEMU</code>来实现。</p>
-<h2 id="二、当前实现"><a href="#二、当前实现" class="headerlink" title="二、当前实现"></a>二、当前实现</h2><p>硬盘：<code>Ceph</code>的<code>RBD</code>提供</p>
-<p>当前限速实现：通过<code>Openstack Cinder</code>创建<code>type</code>，指定<code>QOS</code>来实现。具体步骤如下：</p>
-<h3 id="1）创建cinder-volume-type"><a href="#1）创建cinder-volume-type" class="headerlink" title="1）创建cinder volume type"></a>1）创建cinder volume type</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">usage: cinder <span class="built_in">type</span>-create &lt;name&gt;</span><br><span class="line">例如：cinder <span class="built_in">type</span>-create sata</span><br></pre></td></tr></table></figure>
-<h3 id="2）创建cinder的一个qos标准"><a href="#2）创建cinder的一个qos标准" class="headerlink" title="2）创建cinder的一个qos标准"></a>2）创建cinder的一个qos标准</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">usage: cinder qos-create &lt;name&gt; &lt;key=value&gt; [&lt;key=value&gt; ...]</span><br><span class="line">例如： cinder qos-create sata-qos consumer=<span class="string">"front-end"</span> read_iops_sec=300 write_iops_sec=300 read_bytes_sec=104857600 write_bytes_sec=62914560</span><br></pre></td></tr></table></figure>
-<p><strong>[注释]</strong><br>consumer：通常分为两类</p>
-<ul>
-<li>front-end：表示限速在前端hypervisor（例如Qemu）实现</li>
-<li>back-end：表示限速在后端存储系统实现</li>
-</ul>
-<p>Libvirt/Qemu可配置qos keys：</p>
-<ul>
-<li>total_bytes_sec: the total allowed bandwidth for the guest per second</li>
-<li>read_bytes_sec: sequential read limitation</li>
-<li>write_bytes_sec: sequential write limitation</li>
-<li>total_iops_sec: the total allowed IOPS for the guest per second</li>
-<li>read_iops_sec: random read limitation</li>
-<li>write_iops_sec: random write limitation</li>
-</ul>
-<p>后端可配置qos keys：</p>
-<p>与具体的后端存储支持相关，当前Ceph不支持块设备的QOS配置，在Ceph社区已经提上日程。</p>
-<h3 id="3）管理cinder-volume-type和qos"><a href="#3）管理cinder-volume-type和qos" class="headerlink" title="3）管理cinder volume type和qos"></a>3）管理cinder volume type和qos</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">usage: cinder qos-associate &lt;qos_specs&gt; &lt;volume_type_id&gt;</span><br><span class="line">例如：cinder qos-associate 2b3b35b8-e19c-442d-9218-8b72b369f0e4 c224099f-2a8e-4356-ac2a-78fe56ec9523</span><br><span class="line"> </span><br><span class="line">$ cinder qos-get-association 2b3b35b8-e19c-442d-9218-8b72b369f0e4</span><br><span class="line">+------------------+------+--------------------------------------+</span><br><span class="line">| Association_Type | Name |                  ID                  |</span><br><span class="line">+------------------+------+--------------------------------------+</span><br><span class="line">|   volume_type    | sata | c224099f-2a8e-4356-ac2a-78fe56ec9523 |</span><br><span class="line">+------------------+------+--------------------------------------+</span><br></pre></td></tr></table></figure>
-<h4 id="4）cinder-volume-attach到nova-instance"><a href="#4）cinder-volume-attach到nova-instance" class="headerlink" title="4）cinder volume attach到nova instance"></a>4）cinder volume attach到nova instance</h4><p>attach后可以查看到这些iotune信息</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">$ virsh dumpxml cde0ab13-ff3d-46d0-a7c6-b797f18d0465</span><br><span class="line">...</span><br><span class="line">    &lt;disk <span class="built_in">type</span>=<span class="string">'network'</span> device=<span class="string">'disk'</span>&gt;</span><br><span class="line">      &lt;driver name=<span class="string">'qemu'</span> <span class="built_in">type</span>=<span class="string">'raw'</span> cache=<span class="string">'none'</span>/&gt;</span><br><span class="line">      &lt;auth username=<span class="string">'volumes'</span>&gt;</span><br><span class="line">        &lt;secret <span class="built_in">type</span>=<span class="string">'ceph'</span> uuid=<span class="string">'c22ced15-b23b-4b31-8329-e14a59273b81'</span>/&gt;</span><br><span class="line">      &lt;/auth&gt;</span><br><span class="line">      &lt;<span class="built_in">source</span> protocol=<span class="string">'rbd'</span> name=<span class="string">'volumes_2/volume-f9daf542-4ca7-4228-b6b4-d450c7c7dbb4'</span>&gt;</span><br><span class="line">        &lt;host name=<span class="string">'172.16.0.6'</span> port=<span class="string">'6789'</span>/&gt;</span><br><span class="line">        &lt;host name=<span class="string">'172.16.0.7'</span> port=<span class="string">'6789'</span>/&gt;</span><br><span class="line">        &lt;host name=<span class="string">'172.16.0.17'</span> port=<span class="string">'6789'</span>/&gt;</span><br><span class="line">      &lt;/<span class="built_in">source</span>&gt;</span><br><span class="line">      &lt;backingStore/&gt;</span><br><span class="line">      &lt;target dev=<span class="string">'vdb'</span> bus=<span class="string">'virtio'</span>/&gt;</span><br><span class="line">      &lt;iotune&gt;</span><br><span class="line">        &lt;read_bytes_sec&gt;104857600&lt;/read_bytes_sec&gt;</span><br><span class="line">        &lt;write_bytes_sec&gt;62914560&lt;/write_bytes_sec&gt;</span><br><span class="line">        &lt;read_iops_sec&gt;300&lt;/read_iops_sec&gt;</span><br><span class="line">        &lt;write_iops_sec&gt;300&lt;/write_iops_sec&gt;</span><br><span class="line">      &lt;/iotune&gt;</span><br><span class="line">      &lt;serial&gt;f9daf542-4ca7-4228-b6b4-d450c7c7dbb4&lt;/serial&gt;</span><br><span class="line">      &lt;<span class="built_in">alias</span> name=<span class="string">'virtio-disk1'</span>/&gt;</span><br><span class="line">      &lt;address <span class="built_in">type</span>=<span class="string">'pci'</span> domain=<span class="string">'0x0000'</span> bus=<span class="string">'0x00'</span> slot=<span class="string">'0x05'</span> <span class="keyword">function</span>=<span class="string">'0x0'</span>/&gt;</span><br><span class="line">    &lt;/disk&gt;</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
-<h2 id="三、如何动态限速磁盘？"><a href="#三、如何动态限速磁盘？" class="headerlink" title="三、如何动态限速磁盘？"></a>三、如何动态限速磁盘？</h2><h3 id="1）根据磁盘容量动态调整"><a href="#1）根据磁盘容量动态调整" class="headerlink" title="1）根据磁盘容量动态调整"></a>1）根据磁盘容量动态调整</h3><p><strong>难度一般</strong></p>
-<p>从上诉分析知道<code>cinder volume</code>的QOS设置在<code>hypervisor Qemu</code>中实现，从<code>cinder</code>中读取这些参数应该在<code>Nova</code>的逻辑中有，我们只需要修改这部分逻辑，添加代码实现随着磁盘容量递增的<code>QOS</code>即可。</p>
-<h3 id="2）根据系统负载动态调整"><a href="#2）根据系统负载动态调整" class="headerlink" title="2）根据系统负载动态调整"></a>2）根据系统负载动态调整</h3><p><strong>难度较大</strong></p>
-<p>动态调整虚拟机iotune的方法：</p>
-<h4 id="1-nova的change-disk-io-tune命令"><a href="#1-nova的change-disk-io-tune命令" class="headerlink" title="1. nova的change-disk-io-tune命令"></a>1. <code>nova</code>的<code>change-disk-io-tune</code>命令</h4><p><code>nova</code>的命令中有一个<code>change-disk-io-tune</code>的子命令，格式如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">$ nova <span class="built_in">help</span> change-disk-io-tune</span><br><span class="line">usage: nova change-disk-io-tune [--read_bytes_sec &lt;read_bytes_sec&gt;]</span><br><span class="line">                                [--write_bytes_sec &lt;write_bytes_sec&gt;]</span><br><span class="line">                                [--read_iops_sec &lt;read_iops_sec&gt;]</span><br><span class="line">                                [--write_iops_sec &lt;write_iops_sec&gt;]</span><br><span class="line">                                &lt;server&gt;</span><br><span class="line">change the root user password <span class="keyword">for</span> a server</span><br><span class="line">Positional arguments:</span><br><span class="line">  &lt;server&gt;                      Name or ID of server</span><br><span class="line">Optional arguments:</span><br><span class="line">  --read_bytes_sec &lt;read_bytes_sec&gt;</span><br><span class="line">                                read_bytes_sec bytes/s.</span><br><span class="line">  --write_bytes_sec &lt;write_bytes_sec&gt;</span><br><span class="line">                                write_bytes_sec bytes/s.</span><br><span class="line">  --read_iops_sec &lt;read_iops_sec&gt;</span><br><span class="line">                                read_iops_sec.</span><br><span class="line">  --write_iops_sec &lt;write_iops_sec&gt;</span><br><span class="line">                                write_iops_sec.</span><br></pre></td></tr></table></figure>
-<p>通过该命令可以动态修改<code>nova instance</code>中的<code>disk iotune</code>限制，但它不能区分<code>nova instance</code>中的具体硬盘，会把所有盘的<code>iotune</code>都修改为指定值，例如：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">$ nova change-disk-io-tune --read_iops_sec 200 --write_iops_sec 200 --read_bytes_sec 102400 --write_bytes_sec 102400 5ceaacab-b021-4f23-ba45-579345b843a9</span><br><span class="line">$ virsh dumpxml 5ceaacab-b021-4f23-ba45-579345b843a9 &gt; withdisk.xml</span><br><span class="line">$ vim withdisk.xml</span><br><span class="line">...</span><br><span class="line">      &lt;target dev=<span class="string">'vda'</span> bus=<span class="string">'virtio'</span>/&gt;</span><br><span class="line">      &lt;iotune&gt;</span><br><span class="line">        &lt;read_bytes_sec&gt;102400&lt;/read_bytes_sec&gt;</span><br><span class="line">        &lt;write_bytes_sec&gt;102400&lt;/write_bytes_sec&gt;</span><br><span class="line">        &lt;read_iops_sec&gt;200&lt;/read_iops_sec&gt;</span><br><span class="line">        &lt;write_iops_sec&gt;200&lt;/write_iops_sec&gt;</span><br><span class="line">      &lt;/iotune&gt;</span><br><span class="line">...</span><br><span class="line">      &lt;target dev=<span class="string">'vdb'</span> bus=<span class="string">'virtio'</span>/&gt;</span><br><span class="line">      &lt;iotune&gt;</span><br><span class="line">        &lt;read_bytes_sec&gt;102400&lt;/read_bytes_sec&gt;</span><br><span class="line">        &lt;write_bytes_sec&gt;102400&lt;/write_bytes_sec&gt;</span><br><span class="line">        &lt;read_iops_sec&gt;200&lt;/read_iops_sec&gt;</span><br><span class="line">        &lt;write_iops_sec&gt;200&lt;/write_iops_sec&gt;</span><br><span class="line">      &lt;/iotune&gt;</span><br><span class="line">...</span><br><span class="line">      &lt;target dev=<span class="string">'vdc'</span> bus=<span class="string">'virtio'</span>/&gt;</span><br><span class="line">      &lt;iotune&gt;</span><br><span class="line">        &lt;read_bytes_sec&gt;102400&lt;/read_bytes_sec&gt;</span><br><span class="line">        &lt;write_bytes_sec&gt;102400&lt;/write_bytes_sec&gt;</span><br><span class="line">        &lt;read_iops_sec&gt;200&lt;/read_iops_sec&gt;</span><br><span class="line">        &lt;write_iops_sec&gt;200&lt;/write_iops_sec&gt;</span><br><span class="line">      &lt;/iotune&gt;</span><br></pre></td></tr></table></figure>
-<p>通过<code>nova change-disk-io-tune</code> 可以实时调整虚拟机上所有<code>blk device</code>的<code>iotune</code>，并立即生效。但它不能指定具体的<code>blk device</code>，不符合我们的使用需求。</p>
-<h4 id="2-virsh的blkdeviotune命令"><a href="#2-virsh的blkdeviotune命令" class="headerlink" title="2. virsh的blkdeviotune命令"></a>2. <code>virsh</code>的<code>blkdeviotune</code>命令</h4><p><code>virsh</code>命令有<code>disk iotune</code>相关的子命令，如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">$ virsh blkdeviotune --<span class="built_in">help</span></span><br><span class="line">  NAME</span><br><span class="line">    blkdeviotune - Set or query a block device I/O tuning parameters.</span><br><span class="line">  SYNOPSIS</span><br><span class="line">    blkdeviotune &lt;domain&gt; &lt;device&gt; [--total-bytes-sec &lt;number&gt;] [--<span class="built_in">read</span>-bytes-sec &lt;number&gt;] [--write-bytes-sec &lt;number&gt;] [--total-iops-sec &lt;number&gt;] [--<span class="built_in">read</span>-iops-sec &lt;number&gt;] [--write-iops-sec &lt;number&gt;] [--total-bytes-sec-max &lt;number&gt;] [--<span class="built_in">read</span>-bytes-sec-max &lt;number&gt;] [--write-bytes-sec-max &lt;number&gt;] [--total-iops-sec-max &lt;number&gt;] [--<span class="built_in">read</span>-iops-sec-max &lt;number&gt;] [--write-iops-sec-max &lt;number&gt;] [--size-iops-sec &lt;number&gt;] [--config] [--live] [--current]</span><br><span class="line">  DESCRIPTION</span><br><span class="line">    Set or query disk I/O parameters such as block throttling.</span><br><span class="line">  OPTIONS</span><br><span class="line">    [--domain] &lt;string&gt;  domain name, id or uuid</span><br><span class="line">    [--device] &lt;string&gt;  block device</span><br><span class="line">    --total-bytes-sec &lt;number&gt;  total throughput <span class="built_in">limit</span> <span class="keyword">in</span> bytes per second</span><br><span class="line">    --<span class="built_in">read</span>-bytes-sec &lt;number&gt;  <span class="built_in">read</span> throughput <span class="built_in">limit</span> <span class="keyword">in</span> bytes per second</span><br><span class="line">    --write-bytes-sec &lt;number&gt;  write throughput <span class="built_in">limit</span> <span class="keyword">in</span> bytes per second</span><br><span class="line">    --total-iops-sec &lt;number&gt;  total I/O operations <span class="built_in">limit</span> per second</span><br><span class="line">    --<span class="built_in">read</span>-iops-sec &lt;number&gt;  <span class="built_in">read</span> I/O operations <span class="built_in">limit</span> per second</span><br><span class="line">    --write-iops-sec &lt;number&gt;  write I/O operations <span class="built_in">limit</span> per second</span><br><span class="line">    --total-bytes-sec-max &lt;number&gt;  total max <span class="keyword">in</span> bytes</span><br><span class="line">    --<span class="built_in">read</span>-bytes-sec-max &lt;number&gt;  <span class="built_in">read</span> max <span class="keyword">in</span> bytes</span><br><span class="line">    --write-bytes-sec-max &lt;number&gt;  write max <span class="keyword">in</span> bytes</span><br><span class="line">    --total-iops-sec-max &lt;number&gt;  total I/O operations max</span><br><span class="line">    --<span class="built_in">read</span>-iops-sec-max &lt;number&gt;  <span class="built_in">read</span> I/O operations max</span><br><span class="line">    --write-iops-sec-max &lt;number&gt;  write I/O operations max</span><br><span class="line">    --size-iops-sec &lt;number&gt;  I/O size <span class="keyword">in</span> bytes</span><br><span class="line">    --config         affect next boot</span><br><span class="line">    --live           affect running domain</span><br><span class="line">    --current        affect current domain</span><br></pre></td></tr></table></figure>
-<p>通过该命令可以实时调整对应<code>block device</code>的<code>iotune</code>，但必须在虚拟机对应的物理机上执行该命令。</p>
-<ul>
-<li>查看指定设备的<code>iotune</code>，命令如下：</li>
-</ul>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">$ virsh blkdeviotune 5ceaacab-b021-4f23-ba45-579345b843a9 vdc</span><br><span class="line">total_bytes_sec: 0</span><br><span class="line">read_bytes_sec : 104857600</span><br><span class="line">write_bytes_sec: 62914560</span><br><span class="line">total_iops_sec : 0</span><br><span class="line">read_iops_sec  : 1500</span><br><span class="line">write_iops_sec : 1000</span><br><span class="line">total_bytes_sec_max: 0</span><br><span class="line">read_bytes_sec_max: 10485760</span><br><span class="line">write_bytes_sec_max: 6291456</span><br><span class="line">total_iops_sec_max: 0</span><br><span class="line">read_iops_sec_max: 150</span><br><span class="line">write_iops_sec_max: 100</span><br><span class="line">size_iops_sec  : 0</span><br></pre></td></tr></table></figure>
-<ul>
-<li>修改指定设备的<code>iotune</code>值，命令如下：</li>
-</ul>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">$ virsh blkdeviotune 5ceaacab-b021-4f23-ba45-579345b843a9 vdc --read_iops_sec 5000 --write_iops_sec 3000</span><br><span class="line">$ virsh blkdeviotune 5ceaacab-b021-4f23-ba45-579345b843a9 vdc</span><br><span class="line">total_bytes_sec: 0</span><br><span class="line">read_bytes_sec : 104857600</span><br><span class="line">write_bytes_sec: 62914560</span><br><span class="line">total_iops_sec : 0</span><br><span class="line">read_iops_sec  : 5000</span><br><span class="line">write_iops_sec : 3000</span><br><span class="line">total_bytes_sec_max: 0</span><br><span class="line">read_bytes_sec_max: 10485760</span><br><span class="line">write_bytes_sec_max: 6291456</span><br><span class="line">total_iops_sec_max: 0</span><br><span class="line">read_iops_sec_max: 500</span><br><span class="line">write_iops_sec_max: 300</span><br><span class="line">size_iops_sec  : 0</span><br></pre></td></tr></table></figure>
-<p>通过<code>virsh</code>可以实时调整虚拟机指定<code>blk device</code>的<code>iotune</code>，并立即生效。但如何结合需求动态调整虚拟机上磁盘的<code>iotune</code>，还需深入考察。</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2601,7 +2644,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">75</span>
+                  <span class="site-state-item-count">76</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>

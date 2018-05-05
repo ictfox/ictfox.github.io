@@ -304,6 +304,331 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/08/28/storage-system-summary/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/08/28/storage-system-summary/" itemprop="url">开源存储系统罗列</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-08-28T13:41:17+08:00">
+                2017-08-28
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/storage/" itemprop="url" rel="index">
+                    <span itemprop="name">storage</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/08/28/storage-system-summary/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/08/28/storage-system-summary/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>整理之前的文章时候，发现了这个，仅仅是一些存储系统的简单罗列，但对想熟悉开源存储系统的人来说也有些帮助。</p>
+<blockquote>
+<p>理解有限，若有不对的地方，欢迎指正！</p>
+</blockquote>
+<h2 id="分布式文件系统"><a href="#分布式文件系统" class="headerlink" title="分布式文件系统"></a>分布式文件系统</h2><table>
+<thead>
+<tr>
+<th>名称</th>
+<th>描述</th>
+<th>存储功能</th>
+<th>语言</th>
+<th>官网 / WIKI</th>
+<th>源码</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ceph</td>
+<td>基于RADOS提供高扩展性、高可靠性、高性能的分布式文件系统</td>
+<td>对象存储，块存储，文件存储</td>
+<td>C++</td>
+<td><a href="http://ceph.com/" target="_blank" rel="noopener">http://ceph.com/</a></td>
+<td><a href="https://github.com/ceph/ceph" target="_blank" rel="noopener">https://github.com/ceph/ceph</a></td>
+</tr>
+<tr>
+<td>Swift</td>
+<td>Openstack官方的对象存储系统</td>
+<td>对象存储</td>
+<td>Python</td>
+<td><a href="https://wiki.openstack.org/wiki/Swift" target="_blank" rel="noopener">https://wiki.openstack.org/wiki/Swift</a></td>
+<td><a href="https://github.com/openstack/swift" target="_blank" rel="noopener">https://github.com/openstack/swift</a></td>
+</tr>
+<tr>
+<td>Cinder</td>
+<td>Openstack官方的块存储系统</td>
+<td>块存储</td>
+<td>Python</td>
+<td><a href="https://wiki.openstack.org/wiki/Cinder" target="_blank" rel="noopener">https://wiki.openstack.org/wiki/Cinder</a></td>
+<td><a href="https://github.com/openstack/cinder" target="_blank" rel="noopener">https://github.com/openstack/cinder</a></td>
+</tr>
+<tr>
+<td>GlusterFS</td>
+<td>分布式文件系统，弹性扩容 <br> 无metadata服务器</td>
+<td>文件存储</td>
+<td>C</td>
+<td><a href="https://www.gluster.org/" target="_blank" rel="noopener">https://www.gluster.org/</a></td>
+<td><a href="https://github.com/gluster/glusterfs" target="_blank" rel="noopener">https://github.com/gluster/glusterfs</a></td>
+</tr>
+<tr>
+<td>Lustre</td>
+<td>一个大规模的、安全可靠的，具备高可用性的集群文件系统</td>
+<td>文件存储</td>
+<td>C</td>
+<td><a href="http://lustre.org/" target="_blank" rel="noopener">http://lustre.org/</a></td>
+<td>git clone git://git.hpdd.intel.com/fs/lustre-release.git</td>
+</tr>
+<tr>
+<td>Sheepdog</td>
+<td>分布式块存储系统</td>
+<td>块存储</td>
+<td>C</td>
+<td><a href="http://www.sheepdog-project.org/" target="_blank" rel="noopener">http://www.sheepdog-project.org/</a></td>
+<td><a href="https://github.com/sheepdog/sheepdog" target="_blank" rel="noopener">https://github.com/sheepdog/sheepdog</a></td>
+</tr>
+<tr>
+<td>TFS</td>
+<td>淘宝针对海量非结构化数据存储设计的分布式系统</td>
+<td>文件存储</td>
+<td>C++</td>
+<td><a href="http://tfs.taobao.org/" target="_blank" rel="noopener">http://tfs.taobao.org/</a></td>
+<td><a href="https://github.com/alibaba/tfs" target="_blank" rel="noopener">https://github.com/alibaba/tfs</a></td>
+</tr>
+<tr>
+<td>HDFS</td>
+<td>基于GFS原理实现的java版的GFS</td>
+<td>文件存储</td>
+<td>Java</td>
+<td><a href="https://wiki.apache.org/hadoop/HDFS" target="_blank" rel="noopener">https://wiki.apache.org/hadoop/HDFS</a></td>
+<td><a href="https://github.com/apache/hadoop" target="_blank" rel="noopener">https://github.com/apache/hadoop</a></td>
+</tr>
+<tr>
+<td>MooseFS</td>
+<td>一个高容错性的分布式文件系统</td>
+<td>文件存储</td>
+<td>C</td>
+<td><a href="http://moosefs.org/" target="_blank" rel="noopener">http://moosefs.org/</a></td>
+<td><a href="https://github.com/moosefs/moosefs" target="_blank" rel="noopener">https://github.com/moosefs/moosefs</a></td>
+</tr>
+</tbody>
+</table>
+<p>参考：<a href="http://blog.csdn.net/metaxen/article/details/7108958" target="_blank" rel="noopener">http://blog.csdn.net/metaxen/article/details/7108958</a></p>
+<h2 id="数据库"><a href="#数据库" class="headerlink" title="数据库"></a>数据库</h2><table>
+<thead>
+<tr>
+<th>名称</th>
+<th>描述</th>
+<th>语言</th>
+<th>官网 / WIKI</th>
+<th>源码</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LevelDB</td>
+<td>Google开发的，一个速度非常块的KV存储库</td>
+<td>C++</td>
+<td><a href="http://leveldb.org/" target="_blank" rel="noopener">http://leveldb.org/</a></td>
+<td><a href="https://github.com/google/leveldb" target="_blank" rel="noopener">https://github.com/google/leveldb</a></td>
+</tr>
+<tr>
+<td>RocksDB</td>
+<td>Facebook 的可嵌入式的支持持久化的key-value 存储系统</td>
+<td>C++</td>
+<td><a href="http://rocksdb.org" target="_blank" rel="noopener">http://rocksdb.org</a></td>
+<td><a href="https://github.com/facebook/rocksdb" target="_blank" rel="noopener">https://github.com/facebook/rocksdb</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>开源的，支持网络、基于内存亦可持久化的日志型键－值仓储</td>
+<td>C</td>
+<td><a href="http://redis.io/" target="_blank" rel="noopener">http://redis.io/</a></td>
+<td><a href="https://github.com/antirez/redis" target="_blank" rel="noopener">https://github.com/antirez/redis</a></td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td>一个高性能，开源，无模式的文档型数据库 <br> 在许多场景下可用于替代传统的关系型数据库或键/值存储方式</td>
+<td>C++</td>
+<td><a href="https://www.mongodb.com/" target="_blank" rel="noopener">https://www.mongodb.com/</a></td>
+<td><a href="https://github.com/mongodb/mongo" target="_blank" rel="noopener">https://github.com/mongodb/mongo</a></td>
+</tr>
+<tr>
+<td>Cassandra</td>
+<td>开源分布式NoSQL数据库系统 <br> 最大的特点就是完全去中心化</td>
+<td>Go</td>
+<td><a href="http://cassandra.apache.org/" target="_blank" rel="noopener">http://cassandra.apache.org/</a></td>
+<td><a href="https://github.com/apache/cassandra" target="_blank" rel="noopener">https://github.com/apache/cassandra</a></td>
+</tr>
+<tr>
+<td>HBase</td>
+<td>运行在hadoop上的数据库 <br> 一个分布式的，扩展性高的，存储大数据的数据库</td>
+<td>Jave</td>
+<td><a href="https://hbase.apache.org/" target="_blank" rel="noopener">https://hbase.apache.org/</a></td>
+<td><a href="https://github.com/apache/hbase" target="_blank" rel="noopener">https://github.com/apache/hbase</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h2><table>
+<thead>
+<tr>
+<th>名称</th>
+<th>描述</th>
+<th>语言</th>
+<th>官网 / WIKI</th>
+<th>源码</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Alluxio</td>
+<td>一个开源内存级虚拟大数据存储系统 <br> 它是架构在底层分布式文件系统和上层分布式计算框架之间的一个中间件 <br> 主要职责是以文件形式在内存或其它存储设施中提供数据的存取服务</td>
+<td>Java</td>
+<td><a href="http://www.alluxio.org/" target="_blank" rel="noopener">http://www.alluxio.org/</a></td>
+<td><a href="https://github.com/Alluxio/alluxio" target="_blank" rel="noopener">https://github.com/Alluxio/alluxio</a></td>
+</tr>
+<tr>
+<td>TiDB</td>
+<td>基于Google Spanner，F1文章实现的开源版的NewSQL <br> 类似于国外Google工程师出来创建的Startup公司 CockroachDB</td>
+<td>Go</td>
+<td><a href="http://www.pingcap.com/" target="_blank" rel="noopener">http://www.pingcap.com/</a></td>
+<td><a href="https://github.com/pingcap/tidb" target="_blank" rel="noopener">https://github.com/pingcap/tidb</a></td>
+</tr>
+</tbody>
+</table>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/08/25/cloud-storage-gateway/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2553,182 +2878,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/06/15/cephfs-stripe/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="ictfox">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/ictfox.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ictfox blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2017/06/15/cephfs-stripe/" itemprop="url">cephfs的stripe配置</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-06-15T18:31:17+08:00">
-                2017-06-15
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/ceph/" itemprop="url" rel="index">
-                    <span itemprop="name">ceph</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2017/06/15/cephfs-stripe/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2017/06/15/cephfs-stripe/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>cephfs支持配置file layout，可以控制file分配到指定的ceph rados objects上，这些信息是写在file/dir的xattrs上。</p>
-<ul>
-<li>文件的layout xattrs为：ceph.file.layout</li>
-<li>目录的layout xattrs为：ceph.dir.layout</li>
-</ul>
-<p>目录中的文件和子目录默认继承父目录的layout配置</p>
-<p>支持的layout配置项有：</p>
-<ol>
-<li>pool<br> file的数据存储在哪个RADOS pool里</li>
-<li>namespace<br>file的数据存储在RADOS pool里的哪个namespace里，但现在rbd/rgw/cephfs都还不支持</li>
-<li>stripe_unit<br> 条带的大小，以Bytes为单位</li>
-<li>stripe_count<br> 条带的个数</li>
-</ol>
-<p>比如，<code>stripe_unit=524288</code>，<code>stripe_count=2</code>，默认object size是4MB，则file写10MB的数据分配如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">   --- object <span class="built_in">set</span> 0 ---               --- object <span class="built_in">set</span> 1 ---</span><br><span class="line">/---------\    /---------\         /---------\    /---------\  </span><br><span class="line">| obj 0   |    | obj 1   |         | obj 2   |    | obj 3   |</span><br><span class="line">|=========|    |=========|         |=========|    |=========|</span><br><span class="line">| stripe  |    | stripe  |         | stripe  |    | stripe  |</span><br><span class="line">| unit 0  |    | unit 1  |         | unit 0  |    | unit 1  |</span><br><span class="line">|---------|    |---------|         |---------|    |---------|</span><br><span class="line">| stripe  |    | stripe  |         | stripe  |    | stripe  |</span><br><span class="line">| unit 2  |    | unit 3  |         | unit 2  |    | unit 3  |</span><br><span class="line">|---------|    |---------|         \=========/    \=========/</span><br><span class="line">| stripe  |    | stripe  |</span><br><span class="line">| unit 4  |    | unit 5  |            osd 16         osd 20</span><br><span class="line">|---------|    |---------|         </span><br><span class="line">| stripe  |    | stripe  |         </span><br><span class="line">| unit 6  |    | unit 7  |         </span><br><span class="line">|---------|    |---------|         </span><br><span class="line">| stripe  |    | stripe  |         </span><br><span class="line">| unit 8  |    | unit 9  |         </span><br><span class="line">|---------|    |---------|         </span><br><span class="line">| stripe  |    | stripe  |         </span><br><span class="line">| unit 10 |    | unit 11 |         </span><br><span class="line">|---------|    |---------|         </span><br><span class="line">| stripe  |    | stripe  |         </span><br><span class="line">| unit 12 |    | unit 13 |         </span><br><span class="line">|---------|    |---------|         </span><br><span class="line">| stripe  |    | stripe  |         </span><br><span class="line">| unit 14 |    | unit 15 |         </span><br><span class="line">\=========/    \=========/        </span><br><span class="line"></span><br><span class="line">   osd 25         osd 3</span><br></pre></td></tr></table></figure>
-<h2 id="配置file-stripe"><a href="#配置file-stripe" class="headerlink" title="配置file stripe"></a>配置file stripe</h2><p>以admin的user登录，配置dir的attribute</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph 10.10.2.1:6789:/ /mnt/tstfs2/</span></span><br><span class="line"><span class="comment"># mkdir /mnt/tstfs2/mike512K/</span></span><br><span class="line"><span class="comment"># setfattr -n ceph.dir.layout -v "stripe_unit=524288 stripe_count=8 object_size=4194304 pool=cephfs_data2" /mnt/tstfs2/mike512K/</span></span><br></pre></td></tr></table></figure>
-<p>配置目录的attribute，默认其子目录和文件都会集成该目录的</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># touch /mnt/tstfs2/mike512K/tstfile</span></span><br><span class="line"><span class="comment"># getfattr -d -m ceph /mnt/tstfs2/mike512K</span></span><br><span class="line">getfattr: Removing leading <span class="string">'/'</span> from absolute path names</span><br><span class="line"><span class="comment"># file: mnt/tstfs2/mike512K</span></span><br><span class="line">ceph.dir.entries=<span class="string">"1"</span></span><br><span class="line">ceph.dir.files=<span class="string">"1"</span></span><br><span class="line">ceph.dir.rbytes=<span class="string">"4194304000"</span></span><br><span class="line">ceph.dir.rctime=<span class="string">"1495766140.09204154946"</span></span><br><span class="line">ceph.dir.rentries=<span class="string">"2"</span></span><br><span class="line">ceph.dir.rfiles=<span class="string">"1"</span></span><br><span class="line">ceph.dir.rsubdirs=<span class="string">"1"</span></span><br><span class="line">ceph.dir.subdirs=“0<span class="string">"</span></span><br></pre></td></tr></table></figure>
-<h2 id="验证file-stripe"><a href="#验证file-stripe" class="headerlink" title="验证file stripe"></a>验证file stripe</h2><p>查看file的location</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># dd if=/dev/zero of= /mnt/tstfs2/mike512K/tstfile bs=4M count=100</span></span><br><span class="line"><span class="comment"># cephfs /mnt/tstfs2/mike512K/tstfile show_location</span></span><br><span class="line">WARNING: This tool is deprecated.  Use the layout.* xattrs to query and modify layouts.</span><br><span class="line">location.file_offset:  0		// file的偏移</span><br><span class="line">location.object_offset:0		// object的偏移</span><br><span class="line">location.object_no:    0		// object的number</span><br><span class="line">location.object_size:  4194304 // object size为4M</span><br><span class="line">location.object_name:  10000002356.00000000 // object的name</span><br><span class="line">location.block_offset: 0		// block的偏移</span><br><span class="line">location.block_size:   524288	// block size为512k</span><br><span class="line">location.osd:          0		// 存储在osd 0 上</span><br><span class="line"></span><br><span class="line"><span class="comment"># cephfs /mnt/tstfs2/mike512K/tstfile show_location -l 524288</span></span><br><span class="line">WARNING: This tool is deprecated.  Use the layout.* xattrs to query and modify layouts.</span><br><span class="line">location.file_offset:  524288	// file的偏移</span><br><span class="line">location.object_offset:0		// object的偏移</span><br><span class="line">location.object_no:    1		// object的number</span><br><span class="line">location.object_size:  4194304 // object size为4M</span><br><span class="line">location.object_name:  10000002356.00000001 // object的name</span><br><span class="line">location.block_offset: 0		// block的偏移</span><br><span class="line">location.block_size:   524288	// block size为512k</span><br><span class="line">location.osd:          24		// 存储在osd 24 上</span><br></pre></td></tr></table></figure>
-<p>查看osd上的object</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cd /var/lib/ceph/osd/ceph-0/current/</span></span><br><span class="line"><span class="comment"># find . -name "*10000002356.0000000*"</span></span><br><span class="line">./14.126_head/10000002356.00000000__head_8CE99726__e</span><br><span class="line"><span class="comment"># ll -h ./14.126_head/10000002356.00000000__head_8CE99726__e</span></span><br><span class="line">-rw-r--r-- 1 ceph ceph 4.0M May 26 10:35 ./14.126_head/10000002356.00000000__head_8CE99726__e</span><br></pre></td></tr></table></figure>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://docs.ceph.com/docs/jewel/architecture/#data-striping" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/architecture/#data-striping</a><br><a href="http://docs.ceph.com/docs/jewel/cephfs/file-layouts/" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/cephfs/file-layouts/</a></p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2783,7 +2932,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">75</span>
+                  <span class="site-state-item-count">76</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
