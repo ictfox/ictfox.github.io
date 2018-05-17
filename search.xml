@@ -876,8 +876,8 @@
       </categories>
       <tags>
         <tag>ceph</tag>
-        <tag>filestore</tag>
         <tag>osd</tag>
+        <tag>filestore</tag>
       </tags>
   </entry>
   <entry>
