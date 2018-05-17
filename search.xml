@@ -530,9 +530,9 @@
       </categories>
       <tags>
         <tag>ceph</tag>
+        <tag>grafana</tag>
         <tag>diamond</tag>
         <tag>graphite</tag>
-        <tag>grafana</tag>
       </tags>
   </entry>
   <entry>
@@ -876,8 +876,8 @@
       </categories>
       <tags>
         <tag>ceph</tag>
-        <tag>osd</tag>
         <tag>filestore</tag>
+        <tag>osd</tag>
       </tags>
   </entry>
   <entry>
@@ -903,9 +903,9 @@
       </categories>
       <tags>
         <tag>ceph</tag>
-        <tag>memstore</tag>
         <tag>rest-bench</tag>
         <tag>filestore</tag>
+        <tag>memstore</tag>
       </tags>
   </entry>
   <entry>
