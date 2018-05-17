@@ -304,6 +304,339 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/08/30/cephfs-knowledge-share-part1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/08/30/cephfs-knowledge-share-part1/" itemprop="url">cephfs架构解读与测试分析-part1 </a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-08-30T20:41:17+08:00">
+                2017-08-30
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/08/30/cephfs-knowledge-share-part1/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/08/30/cephfs-knowledge-share-part1/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>前几天有幸在日知录社区里分享了自己对CephFS的理解与CephFS的测试分析，然后把内容整理如下，因为内容比较多，保持与日知录社区的文章一致，这里先贴出第一部分。</p>
+<p>若对我的分享比较感兴趣，可以访问链接：<a href="https://m.qlchat.com/topic/details?topicId=240000540003989" target="_blank" rel="noopener">日知录 - CephFS架构解读与测试分析</a></p>
+<h2 id="CephFS架构解读"><a href="#CephFS架构解读" class="headerlink" title="CephFS架构解读"></a>CephFS架构解读</h2><h3 id="cephFS简介"><a href="#cephFS简介" class="headerlink" title="cephFS简介"></a>cephFS简介</h3><p>CephFS是Ceph提供的兼容Posix协议的文件系统 ，对比RBD和RGW，它是最晚满足Production ready的一个功能。CephFS的底层还是使用rados存储数据，用MDS管理filesystem的元数据。</p>
+<p>在Jewel版本里，CephFS的基本功能已经ready，但是很多feature还是experimental的，并不建议在生成环境打开这些feature。</p>
+<h4 id="CephFS特性"><a href="#CephFS特性" class="headerlink" title="CephFS特性"></a>CephFS特性</h4><ol>
+<li><p>可扩展性</p>
+<p> CephFS的client端是直接读写OSDs的，所以OSDs的扩展性也体现在CephFS中</p>
+</li>
+<li><p>共享文件系统</p>
+<p> CephFS是一个共享的文件系统，支持多个clients同时读写文件系统的一个file</p>
+</li>
+<li><p>高可用性</p>
+<p> CephFS支持配置元数据服务器集群，也可以配置为Active-Standby的主从服务器，提高可用性</p>
+</li>
+<li><p>文件/目录Layout配置</p>
+<p> CephFS支持配置任一文件/目录的Layout，文件/目录若不单独配置，默认继承父目录的Layout属性</p>
+</li>
+<li><p>POSIX ACLs支持</p>
+<p> CephFS支持POSIX的ACLs，在CephFS支持的两个client中，kernel client默认支持，FUSE client需要修改配置来支持</p>
+</li>
+<li><p>Quotas支持</p>
+<p> CephFS在后端没有实现Quota的功能，它的Quota是在CephFS FUSE client端实现的，而kernel client里还没有添加</p>
+</li>
+</ol>
+<h4 id="CephFS架构"><a href="#CephFS架构" class="headerlink" title="CephFS架构"></a>CephFS架构</h4><p>如下图所示：</p>
+<p><img src="/images/cephfs-arch.jpg" alt="architecture"></p>
+<p>最底层还是基础的OSDs和Monitors，添加了MDSs，上层是支持客户端的CephFS kernel object，CephFS FUSE，CephFS Library等。</p>
+<h4 id="CephFS组件间通信"><a href="#CephFS组件间通信" class="headerlink" title="CephFS组件间通信"></a>CephFS组件间通信</h4><p><img src="/images/cephfs-component-communication.jpg" alt="component communication"></p>
+<p>如上图所示，CephFS各个组件间通信如下：</p>
+<ol>
+<li><p>Client &lt;–&gt; MDS</p>
+<p> 元数据操作和capalities</p>
+</li>
+<li><p>Client &lt;–&gt; OSD</p>
+<p> 数据IO</p>
+</li>
+<li><p>Client &lt;–&gt; Monitor</p>
+<p> 认证，集群map信息等</p>
+</li>
+<li><p>MDS &lt;–&gt; Monitor</p>
+<p> 心跳，集群map信息等</p>
+</li>
+<li><p>MDS &lt;–&gt; OSD</p>
+<p> 元数据IO</p>
+</li>
+<li><p>Monitor &lt;–&gt; OSD</p>
+<p> 心跳，集群map信息等</p>
+</li>
+</ol>
+<h4 id="CephFS-MDS组件"><a href="#CephFS-MDS组件" class="headerlink" title="CephFS MDS组件"></a>CephFS MDS组件</h4><p>Ceph MDS设计的比较强大，作为一个能存储PB级数据的文件系统，它充分考虑了对元数据服务器的要求，设计了MDS集群。另外也引入了MDS的动态子树迁移，MDS的热度负载均衡。</p>
+<p>但也正是这么超前的设计，使得MDS集群很难做到稳定，所以目前Jewel版本里默认还是单MDS实例，用户可配置主从MDS实例，提高可用性。 但在未来，MDS集群的这些属性都将稳定下来，为我们提供超强的元数据管理性能。</p>
+<p><img src="/images/cephfs-mds-dynamic-subtree.jpg" alt="mds dynamic subtree"></p>
+<p>上图描述了CephFS的Dynamic subtree partition功能，它支持目录分片在多个MDS之间服务，并支持基于MDS负载均衡的动态迁移。</p>
+<p>Client跟MDS通信后，会缓存对应的“目录-MDS”映射关系，这样Client任何时候都知道从哪个MDS上获取对应的元数据信息。</p>
+<p><strong>MDS自身的元数据有：</strong></p>
+<ul>
+<li><p>per-MDS journal</p>
+<p>  每个MDS都有一个对应的journal文件，支持大到几百兆字节的size，保证元数据的一致性和顺序提交的性能，它也是直接存储到OSD cluster里的</p>
+</li>
+<li><p>CephFS MetaData</p>
+<p>  MDS管理的CephFS的元数据也以文件格式存储到OSD cluster上，有些元数据信息会存到object的OMAP里</p>
+</li>
+</ul>
+<h3 id="CephFS使用方式"><a href="#CephFS使用方式" class="headerlink" title="CephFS使用方式"></a>CephFS使用方式</h3><p>与通常的网络文件系统一样，要访问cephfs，需要有对应的client端。cephfs现在支持两种client端：</p>
+<ul>
+<li>CephFS kernel client<ul>
+<li>since 2.6.34 </li>
+</ul>
+</li>
+<li>CephFS FUSE</li>
+</ul>
+<p><img src="/images/cephfs-client-access-mode.jpg" alt="client access mode"></p>
+<p>Client端访问CepFS的步骤如下：</p>
+<ol>
+<li>client端与MDS节点通讯，获取metadata信息（metadata也存在osd上）</li>
+<li>client直接写数据到OSD</li>
+</ol>
+<h4 id="Client端访问CephFS示例"><a href="#Client端访问CephFS示例" class="headerlink" title="Client端访问CephFS示例"></a>Client端访问CephFS示例</h4><ol>
+<li>Client发送open file请求给MDS </li>
+<li>MDS返回file inode，file size，capability和stripe信息 </li>
+<li>Client直接Read/Write数据到OSDs </li>
+<li>MDS管理file的capability </li>
+<li>Client发送close file请求给MDS，释放file的capability，更新file详细信息 </li>
+</ol>
+<blockquote>
+<p>这里cephfs并没有像其他分布式文件系统设计的那样，有分布式文件锁来保障数据一致性<br>它是通过文件的capability来保证的</p>
+</blockquote>
+<h4 id="CephFS相关命令"><a href="#CephFS相关命令" class="headerlink" title="CephFS相关命令"></a>CephFS相关命令</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">创建MDS Daemon</span><br><span class="line"><span class="comment"># ceph-deploy mds create &lt;…&gt;</span></span><br><span class="line">创建CephFS Data Pool</span><br><span class="line"><span class="comment"># ceph osd pool create &lt;…&gt;</span></span><br><span class="line">创建CephFS Metadata Pool</span><br><span class="line"><span class="comment"># ceph osd pool create &lt;…&gt;</span></span><br><span class="line">创建CephFS</span><br><span class="line"><span class="comment"># ceph fs new &lt;…&gt;</span></span><br><span class="line">查看CephFS</span><br><span class="line"><span class="comment"># ceph fs ls </span></span><br><span class="line">	name: tstfs, metadata pool: cephfs_metadata, data pools: [cephfs_data ]</span><br><span class="line">删除CephFS</span><br><span class="line"><span class="comment"># ceph fs rm &lt;fs-name&gt; --yes-i-really-mean-it</span></span><br></pre></td></tr></table></figure>
+<p>查看MDS状态</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph mds stat</span></span><br><span class="line">	e8: tstfs-1/1/1 up tstfs2-0/0/1 up &#123;[tstfs:0]=mds-daemon-1=up:active&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>e8 <ul>
+<li>e表示epoch</li>
+<li>8是epoch号</li>
+</ul>
+</li>
+<li>tstfs-1/1/1 up<ul>
+<li>tstfs是cephfs名字</li>
+<li>三个1分别是 mds_map.in/mds_map.up/mds_map.max_mds</li>
+<li>up是cephfs状态</li>
+</ul>
+</li>
+<li>{[tstfs:0]=mds-daemon-1=up:active} <ul>
+<li>[tstfs:0]指tstfs的rank 0</li>
+<li>mds-daemon-1是服务tstfs的mds daemon name</li>
+<li>up:active是cephfs的状态为 up &amp; active</li>
+</ul>
+</li>
+</ul>
+<h4 id="mount使用CephFS"><a href="#mount使用CephFS" class="headerlink" title="mount使用CephFS"></a>mount使用CephFS</h4><ol>
+<li>CephFS kernel client</li>
+</ol>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph &lt;monitor ip&gt;:6789 /mntdir</span></span><br><span class="line"><span class="comment"># umount /mntdir</span></span><br></pre></td></tr></table></figure>
+<ol>
+<li>CephFS FUSE</li>
+</ol>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">安装ceph-fuse pkg</span><br><span class="line"><span class="comment"># yum install -y ceph-fuse</span></span><br><span class="line"><span class="comment"># ceph-fuse -m &lt;monitor ip&gt;:6789 /mntdir </span></span><br><span class="line"><span class="comment"># fusermount -u /mntdir</span></span><br><span class="line">centos7里没有fusermount命令，可以用umount替代</span><br></pre></td></tr></table></figure>
+<p>FUSE的IO Path较长，会先从用户态调用到内核态，再返回到用户态使用CephFS FUSE模块访问Ceph集群，如下图所示：</p>
+<p><img src="/images/cephfs-fuse-arch.jpg" alt="fuse arch"></p>
+<p><strong>对比</strong></p>
+<ul>
+<li>性能：Kernel client &gt; ceph-fuse</li>
+<li>Quota支持：只有ceph-fuse(client-side quotas)</li>
+</ul>
+<blockquote>
+<p>Quota不是在CephFS后端实现的，而是在client-side实现的。若某些应用中要求使用Quota，这时就必须考虑使用CephFS FUSE了</p>
+</blockquote>
+<h3 id="CephFS-Layout"><a href="#CephFS-Layout" class="headerlink" title="CephFS Layout"></a>CephFS Layout</h3><p>Cephfs支持配置目录、文件的layout和stripe，这些元数据信息保存在目录和文件的xattr中。</p>
+<ul>
+<li>目录的layout xattrs为：ceph.dir.layout</li>
+<li>文件的layout xattrs为：ceph.file.layout</li>
+</ul>
+<p>CephFS支持的layout配置项有：</p>
+<ul>
+<li>pool<br>  数据存储到指定pool</li>
+<li>namespace<br>  数据存储到指定namespace，比pool更细的粒度(rbd/rgw/cephfs都还不支持)</li>
+<li>stripe_unit<br>  条带大小，单位Byte</li>
+<li>stripe_count<br>  条带个数</li>
+</ul>
+<p><strong>默认文件/目录继承父目录的layout和striping</strong></p>
+<p><strong>示例：</strong> 配置一个目录的Layout</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># setfattr -n ceph.dir.layout -v "stripe_unit=524288 stripe_count=8 object_size=4194304 pool=cephfs_data2" /mnt/mike512K/</span></span><br></pre></td></tr></table></figure>
+<p>目录中一个9MB的文件的layout分布图为：<br><img src="/images/cephfs-layout-example.jpg" alt="layout example"></p>
+<h3 id="CephFS认证"><a href="#CephFS认证" class="headerlink" title="CephFS认证"></a>CephFS认证</h3><p>有时候可能应用有这样的需求，不同的用户访问不同的CephFS目录，这时候就需要开启CephFS的认证。</p>
+<p>不过首先需要开启的是Ceph集群的认证，然后就可以创建CephFS认证的client端了，指定client对mon，mds，osd的访问权限。</p>
+<h4 id="开启Ceph集群认证"><a href="#开启Ceph集群认证" class="headerlink" title="开启Ceph集群认证"></a>开启Ceph集群认证</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">配置ceph.conf</span><br><span class="line"><span class="comment"># vim /etc/ceph/ceph.conf</span></span><br><span class="line">auth_cluster_required = cephx</span><br><span class="line">auth_service_required = cephx</span><br><span class="line">auth_client_required = cephx</span><br></pre></td></tr></table></figure>
+<h4 id="创建CephFS认证的client"><a href="#创建CephFS认证的client" class="headerlink" title="创建CephFS认证的client"></a>创建CephFS认证的client</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph auth get-or-create client.*client_name* \</span></span><br><span class="line">		mon <span class="string">'allow r'</span> \</span><br><span class="line">		mds <span class="string">'allow r, allow rw path=/*specified_directory*'</span> \</span><br><span class="line">		osd <span class="string">'allow rw pool=&lt;data pool&gt;’</span></span><br></pre></td></tr></table></figure>
+<p><strong>示例与解释：</strong></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph auth get-or-create client.tst1 mon ‘allow r’ mds ‘allow r, allow rw path=/tst1’ osd ‘allow rw pool=cephfs_data'</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li><p>mon ‘allow r’</p>
+<p>  允许client从monitor读取数据；必须配置</p>
+</li>
+<li><p>mds ‘allow r, allow rw path=/tst1’</p>
+<p>  允许client从MDS读取数据，允许client对目录/tst1读写；<br>  其中‘ allow r’必须配置，不然client不能从mds读取数据，mount会报permission error；</p>
+</li>
+<li><p>osd ‘allow rw pool=cephfs_data’</p>
+<p>  允许client从osd pool=cephfs_data 上读写数据；<br>  若不配置，client只能从mds上获取FS的元数据信息，没法查看各个文件的数据</p>
+</li>
+</ul>
+<blockquote>
+<p>对osd的权限也是必须配置的，不然client只能从mds上获取fs的元数据信息，没法查看文件的数据</p>
+</blockquote>
+<h4 id="检查ceph-auth"><a href="#检查ceph-auth" class="headerlink" title="检查ceph auth"></a>检查ceph auth</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph auth get client.tst1 </span></span><br><span class="line">exported keyring <span class="keyword">for</span> client.tst1 </span><br><span class="line">[client.tst] </span><br><span class="line">    key = AQCd+UBZxpi4EBAAUNyBDGdZbPgfd4oUb+u41A== </span><br><span class="line">    caps mds = allow r, allow rw path=/tst1<span class="string">" </span></span><br><span class="line"><span class="string">    caps mon = "</span>allow r<span class="string">"</span></span><br><span class="line"><span class="string">    caps osd = "</span>allow rw pool=cephfs_data<span class="string">"</span></span><br></pre></td></tr></table></figure>
+<h4 id="mount测试"><a href="#mount测试" class="headerlink" title="mount测试"></a>mount测试</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph &lt;ip&gt;:6789:/tst1 /mnt -o name=tst1,secret=AQCd+UBZxpi4EBAAUNyBDGdZbPgfd4oUb+u41A==</span></span><br></pre></td></tr></table></figure>
+<h4 id="认证机制不完善"><a href="#认证机制不完善" class="headerlink" title="认证机制不完善"></a>认证机制不完善</h4><p>CephFS的认证机制还不完善，上述client.tst1可以mount整个CephFS目录，能看到并读取整个CephFS的文件</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph &lt;ip&gt;:6789:/ /mnt -o name=tst1,secret=AQCd+UBZxpi4EBAAUNyBDGdZbPgfd4oUb+u41A==</span></span><br></pre></td></tr></table></figure>
+<p>另外没找到能支持readonly访问某一目录的方法。</p>
+<blockquote>
+<p>只验证了cephfs kernel client，没试过ceph-fuse的认证</p>
+</blockquote>
+<h3 id="CephFS的-FSCK-amp-Repair"><a href="#CephFS的-FSCK-amp-Repair" class="headerlink" title="CephFS的 FSCK &amp; Repair"></a>CephFS的 FSCK &amp; Repair</h3><p>FS的fsck和repair对一个文件系统是非常重要的，如果这个没搞定，一个文件系统是不会有人敢用的。</p>
+<p>Ceph在Jewel版本里提供了Ready的CephFS的scrub和repair工具，它哪能处理大部分的元数据损坏。<br>但在使用中请记住两点：</p>
+<ol>
+<li>修复命令==慎重执行==，需要专业人士操作</li>
+<li>若命令支持，修复前请先备份元数据</li>
+</ol>
+<h4 id="cephfs-journal工具"><a href="#cephfs-journal工具" class="headerlink" title="cephfs journal工具"></a>cephfs journal工具</h4><p>cephfs-journal-tool，用来修复损坏的MDS journal，它支持的命令有下面几类，详细的介绍看下help就明白了。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">cephfs-journal-tool：</span><br><span class="line">	- inspect/import/<span class="built_in">export</span>/reset </span><br><span class="line">	- header get/<span class="built_in">set</span></span><br><span class="line">	- event get/apply/recover_dentries/splice</span><br></pre></td></tr></table></figure>
+<h4 id="cephfs-online-check-scrub"><a href="#cephfs-online-check-scrub" class="headerlink" title="cephfs online check/scrub"></a>cephfs online check/scrub</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">ceph tell mds.&lt;id&gt; damage ls </span><br><span class="line">ceph tell mds.&lt;id&gt; damage rm &lt;int&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># scrub an inode and output results</span></span><br><span class="line">ceph mds mds.&lt;id&gt; scrub_path &lt;path&gt; &#123;force|recursive|repair [force|recursive|repair...]&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="cephfs-offline-repair"><a href="#cephfs-offline-repair" class="headerlink" title="cephfs offline repair"></a>cephfs offline repair</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">cephfs-data-scan init [--force-init] </span><br><span class="line">cephfs-data-scan scan_extents [--force-pool] &lt;data pool name&gt; </span><br><span class="line">cephfs-data-scan scan_inodes [--force-pool] [--force-corrupt] &lt;data pool name&gt;</span><br><span class="line">cephfs-data-scan scan_frags [--force-corrupt]</span><br><span class="line">cephfs-data-scan tmap_upgrade &lt;metadata_pool&gt;</span><br></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/08/28/storage-system-summary/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2680,204 +3013,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/06/26/cephfs-dd-direct-io-tst-analysis/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="ictfox">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/ictfox.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ictfox blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2017/06/26/cephfs-dd-direct-io-tst-analysis/" itemprop="url">cephfs与rbd的direct IO测试分析</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-06-26T18:31:17+08:00">
-                2017-06-26
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/ceph/" itemprop="url" rel="index">
-                    <span itemprop="name">ceph</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2017/06/26/cephfs-dd-direct-io-tst-analysis/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2017/06/26/cephfs-dd-direct-io-tst-analysis/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在测试cephfs的性能中，发现其direct IO性能较差，而rbd的direct IO性能就较好，很奇怪为什么，这里做测试对比和分析</p>
-<h2 id="性能测试"><a href="#性能测试" class="headerlink" title="性能测试"></a>性能测试</h2><h3 id="rbd设备"><a href="#rbd设备" class="headerlink" title="rbd设备"></a>rbd设备</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rbd create test -p cephfs_data3 --size=1024</span></span><br><span class="line"><span class="comment"># rbd feature disable cephfs_data3/test exclusive-lock, object-map, fast-diff, deep-flatten</span></span><br><span class="line"><span class="comment"># rbd map cephfs_data3/test</span></span><br><span class="line"> </span><br><span class="line"><span class="comment"># dd if=/dev/zero of=/dev/rbd0 bs=1024M count=1 oflag=direct</span></span><br><span class="line">1+0 records <span class="keyword">in</span></span><br><span class="line">1+0 records out</span><br><span class="line">1073741824 bytes (1.1 GB) copied, 1.72135 s, 624 MB/s</span><br></pre></td></tr></table></figure>
-<h3 id="cephfs"><a href="#cephfs" class="headerlink" title="cephfs"></a>cephfs</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph 10.10.2.1:6789:/foo mike -o name=foo,secret=AQCddEtZC8n5KRAAPw5qd3BWLzlgqiEuRR5AYg==</span></span><br><span class="line"><span class="comment"># cd mike/</span></span><br><span class="line"><span class="comment"># dd if=/dev/zero of=file bs=1024M count=1 oflag=direct</span></span><br><span class="line">1+0 records <span class="keyword">in</span></span><br><span class="line">1+0 records out</span><br><span class="line">1073741824 bytes (1.1 GB) copied, 7.31779 s, 147 MB/s</span><br></pre></td></tr></table></figure>
-<p>结论：为什么对于direct IO，rbd与cephfs的差别这么大？ </p>
-<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><h3 id="cephfs-1"><a href="#cephfs-1" class="headerlink" title="cephfs"></a>cephfs</h3><h4 id="代码分析"><a href="#代码分析" class="headerlink" title="代码分析"></a>代码分析</h4><p>cephfs client端写操作接口：</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> <span class="title">ceph_file_fops</span> = &#123;</span>    <span class="comment">// cephfs中文件的file操作集</span></span><br><span class="line">    .open = ceph_open,</span><br><span class="line">    .release = ceph_release,</span><br><span class="line">    .llseek = ceph_llseek,</span><br><span class="line">    .read_iter = ceph_read_iter,</span><br><span class="line">    .write_iter = ceph_write_iter,</span><br><span class="line">    .mmap = ceph_mmap,</span><br><span class="line">    .fsync = ceph_fsync,</span><br><span class="line">    .lock = ceph_lock,</span><br><span class="line">    .flock = ceph_flock,</span><br><span class="line">    .splice_read = generic_file_splice_read,</span><br><span class="line">    .splice_write = iter_file_splice_write,</span><br><span class="line">    .unlocked_ioctl = ceph_ioctl,</span><br><span class="line">    .compat_ioctl   = ceph_ioctl,</span><br><span class="line">    .fallocate  = ceph_fallocate,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-<p>针对direct IO的处理过程如下：</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> ssize_t <span class="title">ceph_write_iter</span><span class="params">(struct kiocb *iocb, struct iov_iter *from)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">...</span><br><span class="line">        <span class="keyword">if</span> (iocb-&gt;ki_flags &amp; IOCB_DIRECT)</span><br><span class="line">            written = ceph_direct_read_write(iocb, &amp;data, snapc,        <span class="comment">// direct IO处理函数</span></span><br><span class="line">                             &amp;prealloc_cf);</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">            written = ceph_sync_write(iocb, &amp;data, pos, snapc);</span><br><span class="line">...</span><br><span class="line">&#125;</span><br><span class="line">  </span><br><span class="line"><span class="keyword">static</span> <span class="keyword">ssize_t</span></span><br><span class="line">ceph_direct_read_write(struct kiocb *iocb, struct iov_iter *iter,</span><br><span class="line">               struct ceph_snap_context *snapc,</span><br><span class="line">               struct ceph_cap_flush **pcf)</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">    <span class="keyword">while</span> (iov_iter_count(iter) &gt; <span class="number">0</span>) &#123;                                   <span class="comment">// 循环发送数据</span></span><br><span class="line">...</span><br><span class="line">        req = ceph_osdc_new_request(&amp;fsc-&gt;client-&gt;osdc, &amp;ci-&gt;i_layout, <span class="comment">// 初始化osd request</span></span><br><span class="line">                        vino, pos, &amp;size, <span class="number">0</span>,</span><br><span class="line">                        <span class="comment">/*include a 'startsync' command*/</span></span><br><span class="line">                        write ? <span class="number">2</span> : <span class="number">1</span>,</span><br><span class="line">                        write ? CEPH_OSD_OP_WRITE :</span><br><span class="line">                            CEPH_OSD_OP_READ,</span><br><span class="line">                        flags, snapc,</span><br><span class="line">                        ci-&gt;i_truncate_seq,</span><br><span class="line">                        ci-&gt;i_truncate_size,</span><br><span class="line">                        <span class="literal">false</span>);</span><br><span class="line">...</span><br><span class="line">        ret = ceph_osdc_start_request(req-&gt;r_osdc, req, <span class="literal">false</span>);          <span class="comment">// 发送osd request写数据</span></span><br><span class="line">        <span class="keyword">if</span> (!ret)</span><br><span class="line">            ret = ceph_osdc_wait_request(&amp;fsc-&gt;client-&gt;osdc, req);        <span class="comment">// 等待osd request写返回</span></span><br><span class="line">...</span><br><span class="line">    &#125;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>所以从上面的逻辑看：cephfs写direct IO是会被切分为一个个写osd的request，顺序的每个osd request都会等待写成功返回。这样就无法发挥出分布式集群的整体性能，所以cephfs的direct IO写性能较低。</p>
-<h4 id="测试验证"><a href="#测试验证" class="headerlink" title="测试验证"></a>测试验证</h4><p>按照 <a href="http://www.yangguanjun.com/2017/06/08/cephfs-client-debug/">cephfs kernel client debug</a> 方法 打开cephfs client端的log，测试一个12M的direct IO；</p>
-<p>命令：<code>dd if=/dev/zero of=file bs=12M count=1 oflag=direct</code></p>
-<p>log信息：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">[260262.367080] aio_write ffff8801f403b418 10000002393.fffffffffffffffe 0~12582912 getting caps. i_size 0</span><br><span class="line">[260262.367085] aio_write ffff8801f403b418 10000002393.fffffffffffffffe 0~12582912 got <span class="built_in">cap</span> refs on Fwb  // get caps花了5us</span><br><span class="line">[260262.367086] sync_direct_read_write (write) on file ffff88142f83ba00 0~12582912</span><br><span class="line"> </span><br><span class="line">// 第一个osd写4M</span><br><span class="line">[260262.367092] ceph_osdc_alloc_request req ffff881257eb8000</span><br><span class="line">[260262.367173] ----- ffff88142f83a200 to osd23 42=osd_op len 201+0+4194304 ——</span><br><span class="line">[260262.367177] wait_request_timeout req ffff881257eb8000 tid 4</span><br><span class="line">[260262.394196] ===== ffff88142f83b400 4 from osd23 43=osd_opreply len 182+0 (1765759831 0 0) =====</span><br><span class="line"> </span><br><span class="line">// 第二个osd写4M</span><br><span class="line">[260262.394264] ceph_osdc_alloc_request req ffff881257eb8000</span><br><span class="line">[260262.394379] ----- ffff88142f83b400 to osd3 42=osd_op len 201+0+4194304 ——</span><br><span class="line">[260262.394380] wait_request_timeout req ffff881257eb8000 tid 5</span><br><span class="line">[260262.433310] ===== ffff88142f83be00 1 from osd3 43=osd_opreply len 182+0 (93139192 0 0) =====</span><br><span class="line"> </span><br><span class="line">// 第三个osd写4M</span><br><span class="line">[260262.433426] ceph_osdc_alloc_request req ffff881257eb8000</span><br><span class="line">[260262.433534] ----- ffff88142f83a200 to osd26 42=osd_op len 201+0+4194304 ——</span><br><span class="line">[260262.433535] wait_request_timeout req ffff881257eb8000 tid 6</span><br><span class="line">[260262.464063] ===== ffff88142f83b700 1 from osd26 43=osd_opreply len 182+0 (3847263551 0 0) =====</span><br><span class="line"> </span><br><span class="line">[260262.464151] aio_write ffff8801f403b418 10000002393.fffffffffffffffe 0~12582912  dropping <span class="built_in">cap</span> refs on Fwb</span><br></pre></td></tr></table></figure>
-<h4 id="测试增大object-size"><a href="#测试增大object-size" class="headerlink" title="测试增大object size"></a>测试增大object size</h4><p>增大cephfs中file对应的object size和stripe unit都为64M，然后测试性能</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># touch file</span></span><br><span class="line"><span class="comment"># setfattr -n ceph.file.layout.object_size -v 67108864 file</span></span><br><span class="line"><span class="comment"># setfattr -n ceph.file.layout.stripe_unit -v 67108864 file</span></span><br><span class="line"><span class="comment"># getfattr -n ceph.file.layout file</span></span><br><span class="line"><span class="comment"># file: file</span></span><br><span class="line">ceph.file.layout=<span class="string">"stripe_unit=67108864 stripe_count=1 object_size=67108864 pool=cephfs_data"</span></span><br><span class="line"> </span><br><span class="line"><span class="comment"># dd if=/dev/zero of=file bs=1024M count=1 oflag=direct</span></span><br><span class="line">1+0 records <span class="keyword">in</span></span><br><span class="line">1+0 records out</span><br><span class="line">1073741824 bytes (1.1 GB) copied, 6.77491 s, 158 MB/s</span><br></pre></td></tr></table></figure>
-<p>测试性能发现，对比4M的object size和stripe unit，性能并没有提升。</p>
-<h4 id="分析osd端的op时间开销"><a href="#分析osd端的op时间开销" class="headerlink" title="分析osd端的op时间开销"></a>分析osd端的op时间开销</h4><p>获取cephfs文件的数据的location信息：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cephfs file show_location</span></span><br><span class="line">WARNING: This tool is deprecated.  Use the layout.* xattrs to query and modify layouts.</span><br><span class="line">location.file_offset:  0</span><br><span class="line">location.object_offset:0</span><br><span class="line">location.object_no:    0</span><br><span class="line">location.object_size:  67108864</span><br><span class="line">location.object_name:  100000720de.00000000</span><br><span class="line">location.block_offset: 0</span><br><span class="line">location.block_size:   67108864</span><br><span class="line">location.osd:          25        // 数据存储在osd 25上</span><br></pre></td></tr></table></figure>
-<p>在osd 25上打开optracker：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">修改/etc/ceph/ceph.conf，在osd域添加下面两行：</span><br><span class="line">osd_enable_op_tracker = <span class="literal">true</span></span><br><span class="line">osd_op_history_size = 100</span><br><span class="line"></span><br><span class="line">然后重启osd服务</span><br><span class="line"><span class="comment"># systemctl restart ceph-osd@25.service</span></span><br></pre></td></tr></table></figure>
-<p>重新跑dd命令后，在osd端收集ops信息：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph daemon osd.25 dump_historic_ops</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"num to keep"</span>: 20,</span><br><span class="line">    <span class="string">"duration to keep"</span>: 600,</span><br><span class="line">    <span class="string">"Ops"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"osd_op(mds.0.75:987357 13.844f3494 200.00000000 [] snapc 0=[] ondisk+write+known_if_redirected+full_force e452)"</span>,  // mds操作</span><br><span class="line">            <span class="string">"initiated_at"</span>: <span class="string">"2017-06-27 09:55:39.196572"</span>,</span><br><span class="line">            <span class="string">"age"</span>: 8.391089,</span><br><span class="line">            <span class="string">"duration"</span>: 0.001696,   // 花费1ms</span><br><span class="line">            <span class="string">"type_data"</span>: [</span><br><span class="line">                <span class="string">"commit sent; apply or cleanup"</span>,</span><br><span class="line">                [</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.196572"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"initiated"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.196629"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"queued_for_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.196735"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"reached_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.196799"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"started"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.196861"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"waiting for subops from 1,18"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.196962"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"commit_queued_for_journal_write"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.197011"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"write_thread_in_journal_buffer"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.197206"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"journaled_completion_queued"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.197280"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"op_commit"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.197738"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"op_applied"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.198125"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"sub_op_commit_rec from 1"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.198225"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"sub_op_commit_rec from 18"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.198236"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"commit_sent"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.198268"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"done"</span></span><br><span class="line">                    &#125;</span><br><span class="line">                ]</span><br><span class="line">            ]</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"osd_op(mds.0.75:987359 9.a30e34e0 100000720de.00000000 [] snapc 1=[] ondisk+write+known_if_redirected+full_force e452)"</span>,  // mds操作</span><br><span class="line">            <span class="string">"initiated_at"</span>: <span class="string">"2017-06-27 09:55:39.200560"</span>,</span><br><span class="line">            <span class="string">"age"</span>: 8.387101,</span><br><span class="line">            <span class="string">"duration"</span>: 0.016664,   // 花费16ms</span><br><span class="line">            <span class="string">"type_data"</span>: [</span><br><span class="line">                <span class="string">"commit sent; apply or cleanup"</span>,</span><br><span class="line">                [</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.200560"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"initiated"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.200617"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"queued_for_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.200683"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"reached_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.200721"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"started"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.200813"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"waiting for subops from 7,15"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.200921"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"commit_queued_for_journal_write"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.200955"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"write_thread_in_journal_buffer"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.201047"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"journaled_completion_queued"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.201104"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"op_commit"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.201955"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"sub_op_commit_rec from 15"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.202224"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"sub_op_commit_rec from 7"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.202231"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"commit_sent"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.217210"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"op_applied"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.217224"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"done"</span></span><br><span class="line">                    &#125;</span><br><span class="line">                ]</span><br><span class="line">            ]</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"osd_op(client.372486.1:1048 9.a30e34e0 100000720de.00000000 [] snapc 1=[] ondisk+write+ordersnap e452)"</span>,</span><br><span class="line">            <span class="string">"initiated_at"</span>: <span class="string">"2017-06-27 09:55:39.228517"</span>,</span><br><span class="line">            <span class="string">"age"</span>: 8.359144,</span><br><span class="line">            <span class="string">"duration"</span>: 0.450798,   // 花费450ms</span><br><span class="line">            <span class="string">"type_data"</span>: [</span><br><span class="line">                <span class="string">"commit sent; apply or cleanup"</span>,</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="string">"client"</span>: <span class="string">"client.372486"</span>,</span><br><span class="line">                    <span class="string">"tid"</span>: 1048</span><br><span class="line">                &#125;,</span><br><span class="line">                [</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.228517”,   // 收到请求，创建OpRequest</span></span><br><span class="line"><span class="string">                        "</span>event<span class="string">": "</span>initiated<span class="string">"</span></span><br><span class="line"><span class="string">                    &#125;,</span></span><br><span class="line"><span class="string">                    &#123;</span></span><br><span class="line"><span class="string">                        "</span>time<span class="string">": "</span>2017-06-27 09:55:39.345624”,   // 花费117ms，simple messager，接收64MB数据的时延</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"queued_for_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.345691"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"reached_pg"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.345738"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"started"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.348961"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"waiting for subops from 7,15"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.381379”,        // 花费33ms，- FileJournal::submit_entry 这部分的延时应该是reserve filestore throttle等待的时间</span></span><br><span class="line"><span class="string">                        "</span>event<span class="string">": "</span>commit_queued_for_journal_write<span class="string">"</span></span><br><span class="line"><span class="string">                    &#125;,</span></span><br><span class="line"><span class="string">                    &#123;</span></span><br><span class="line"><span class="string">                        "</span>time<span class="string">": "</span>2017-06-27 09:55:39.381441<span class="string">",</span></span><br><span class="line"><span class="string">                        "</span>event<span class="string">": "</span>write_thread_in_journal_buffer<span class="string">"</span></span><br><span class="line"><span class="string">                    &#125;,</span></span><br><span class="line"><span class="string">                    &#123;</span></span><br><span class="line"><span class="string">                        "</span>time<span class="string">": "</span>2017-06-27 09:55:39.524101”,        // 花费43ms，这部分延时是写journal的花费时间</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"journaled_completion_queued"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.524162”,        // commit到journal成功</span></span><br><span class="line"><span class="string">                        "</span>event<span class="string">": "</span>op_commit<span class="string">"</span></span><br><span class="line"><span class="string">                    &#125;,</span></span><br><span class="line"><span class="string">                    &#123;</span></span><br><span class="line"><span class="string">                        "</span>time<span class="string">": "</span>2017-06-27 09:55:39.570412”,        // 花费46ms，apply到filestore成功</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"op_applied"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.658194"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"sub_op_commit_rec from 7"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.679285”,        // sub从发送到收到reply花费约330ms，subop commit返回</span></span><br><span class="line"><span class="string">                        "</span>event<span class="string">": "</span>sub_op_commit_rec from 15<span class="string">"</span></span><br><span class="line"><span class="string">                    &#125;,</span></span><br><span class="line"><span class="string">                    &#123;</span></span><br><span class="line"><span class="string">                        "</span>time<span class="string">": "</span>2017-06-27 09:55:39.679298”,        // 返回给客户端</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"commit_sent"</span></span><br><span class="line">                    &#125;,</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="string">"time"</span>: <span class="string">"2017-06-27 09:55:39.679315"</span>,</span><br><span class="line">                        <span class="string">"event"</span>: <span class="string">"done"</span></span><br><span class="line">                    &#125;</span><br><span class="line">                ]</span><br><span class="line">            ]</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><strong>结论：</strong><br>大的object size写，在osd这段处理时间很长，从 <code>simple messager -&gt; pg -&gt; journal -&gt; filestore</code> 每一步都是串行的，单<code>simple messager</code>接受64M的数据就花费了117ms（10G网络），所以性能比较低，很难提升；</p>
-<h3 id="rbd设备-1"><a href="#rbd设备-1" class="headerlink" title="rbd设备"></a>rbd设备</h3><h4 id="rbd到object的映射"><a href="#rbd到object的映射" class="headerlink" title="rbd到object的映射"></a>rbd到object的映射</h4><p>创建一个object size为32M的rbd设备</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rbd create foxtst -p cephfs_data3 --size=1024 --object-size 32M</span></span><br><span class="line"><span class="comment"># rbd feature disable cephfs_data3/foxtst exclusive-lock, object-map, fast-diff, deep-flatten</span></span><br><span class="line"><span class="comment"># rbd map cephfs_data3/foxtst</span></span><br><span class="line">/dev/rbd0</span><br></pre></td></tr></table></figure>
-<p>先写64M数据到该rbd设备</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># dd if=/dev/zero of=/dev/rbd0 bs=64M count=1 oflag=direct</span></span><br></pre></td></tr></table></figure>
-<p>获取rbd设备的id</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rados -p cephfs_data3 get rbd_id.foxtst myfile</span></span><br><span class="line"><span class="comment"># cat myfile</span></span><br><span class="line">56092238e1f29</span><br></pre></td></tr></table></figure>
-<p>找到rbd设备对应的rados object，这里我们就写了64M数据，所以就能找到两个32M的objects</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rados ls -p cephfs_data3 | grep 56092238e1f29</span></span><br><span class="line">rbd_data.56092238e1f29.0000000000000001</span><br><span class="line">rbd_header.56092238e1f29</span><br><span class="line">rbd_data.56092238e1f29.0000000000000000</span><br></pre></td></tr></table></figure>
-<p>找到上述两个object的location</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph osd map cephfs_data3 rbd_data.56092238e1f29.0000000000000000</span></span><br><span class="line">osdmap e467 pool <span class="string">'cephfs_data3'</span> (15) object <span class="string">'rbd_data.56092238e1f29.0000000000000000'</span> -&gt; pg 15.47ba6daa (15.1aa) -&gt; up ([21,14,2], p21) acting ([21,14,2], p21)</span><br><span class="line"><span class="comment"># ceph osd map cephfs_data3 rbd_data.56092238e1f29.0000000000000001</span></span><br><span class="line">osdmap e467 pool <span class="string">'cephfs_data3'</span> (15) object <span class="string">'rbd_data.56092238e1f29.0000000000000001'</span> -&gt; pg 15.46295241 (15.41) -&gt; up ([4,23,13], p4) acting ([4,23,13], p4)</span><br></pre></td></tr></table></figure>
-<h4 id="性能测试-1"><a href="#性能测试-1" class="headerlink" title="性能测试"></a>性能测试</h4><p>在对应osd节点上打开op tracker后，开始测试</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># dd if=/dev/zero of=/dev/rbd0 bs=64M count=1 oflag=direct</span></span><br></pre></td></tr></table></figure>
-<p>在对应的osd节点上收集ops信息：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph daemon osd.21 dump_historic_ops &gt; osd-21-dump_historic_ops</span></span><br><span class="line"><span class="comment"># ceph daemon osd.4 dump_historic_ops &gt; osd-4-dump_historic_ops</span></span><br></pre></td></tr></table></figure>
-<p><strong>分析这些ops信息可以得到以下结果：</strong></p>
-<ol>
-<li>写单个32M object会拆分很多个ops，拆分规则与device的max_sectors_kb配置有关系，默认这个值为：512</li>
-<li>写单个32M object的ops会顺序发给osd，但不是等待一个op返回后再发下一个</li>
-<li>写单个32M object的ops是流水线的处理模式；<code>simple messager -&gt; pg -&gt; journal -&gt; filestore</code>，所以这样处理多个小请求的效率更高，不会有cephfs中大object写会在simple messager里等待数据都全部接受后再走下一步的问题</li>
-<li>写两个32M object的ops是并行的，因为这里指定的bs=64M，对应到两个不同的osd上，不同osd上的ops没先后关系 </li>
-</ol>
-<p>如下图所示：<br><img src="/images/rbd-dd-io-flow.jpg" alt="rbd-dd-io-flow"></p>
-<p>所以rbd设备的direct IO写的性能随着bs的增大是逐渐提高的。</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2932,7 +3067,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">76</span>
+                  <span class="site-state-item-count">77</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>

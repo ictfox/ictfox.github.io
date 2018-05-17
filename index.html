@@ -304,6 +304,174 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2018/05/17/ceph-daemonperf-intro/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2018/05/17/ceph-daemonperf-intro/" itemprop="url">ceph daemonperf tool分析</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-05-17T22:41:27+08:00">
+                2018-05-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/05/17/ceph-daemonperf-intro/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/05/17/ceph-daemonperf-intro/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="命令格式"><a href="#命令格式" class="headerlink" title="命令格式"></a>命令格式</h2><p>Ceph有个daemonperf工具，结合Ceph daemon的asok文件，可以检查Ceph各个组件的当前状态。</p>
+<p>命令格式：ceph daemonperf <asok> <interval></interval></asok></p>
+<p>示例如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph daemonperf /var/run/ceph/ceph-osd.0.asok 2</span></span><br><span class="line">---objecter--- -----------osd-----------</span><br><span class="line">writ <span class="built_in">read</span> actv|recop rd   wr   lat  ops |</span><br><span class="line">  0    0    0 |   0   12k   0    0    1</span><br><span class="line">  0    0    0 |   0  532k   0    0   62</span><br><span class="line">  0    0    0 |   0  106k   0    0   10</span><br><span class="line">  0    0    0 |   0  487k 4.2M   1   71</span><br><span class="line"></span><br><span class="line"><span class="comment"># ceph daemonperf /var/run/ceph/ceph-mds.mds-ceph0.asok 2</span></span><br><span class="line">-----mds------ --mds_server-- ---objecter--- -----mds_cache----- ---mds_log----</span><br><span class="line">rlat inos caps|hsr  hcs  hcr |writ <span class="built_in">read</span> actv|recd recy stry purg|segs evts subm|</span><br><span class="line">  0  137k  22k|  0    0   81 |  4    0  129 |  0    0  108k   4 | 54   40k  43</span><br><span class="line">  0  139k  15k|  0    0  7.5k|941    1  132 |  0    0  111k 918 | 46   34k 4.7k</span><br><span class="line">  0  145k  16k|  0    0   11k|592    0  129 |  0    0  116k 581 | 54   40k 6.3k</span><br><span class="line">  0  123k 7.3k|  0    1  6.9k|231    1  129 |  0    0  119k 214 | 48   33k 3.7k</span><br><span class="line">  0  128k 8.2k|  0    0  9.0k|509    0  130 |  0    0  123k 503 | 54   38k 5.0k</span><br><span class="line">  1  129k 8.3k|  0    0  924 |405    1  128 |  0    0  123k 402 | 55   39k 867</span><br></pre></td></tr></table></figure>
+<h2 id="源码实现"><a href="#源码实现" class="headerlink" title="源码实现"></a>源码实现</h2><p>文件：ceph.in</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span> parsed_args.admin_socket:</span><br><span class="line">        sockpath = parsed_args.admin_socket</span><br><span class="line">    <span class="keyword">elif</span> len(childargs) &gt; <span class="number">0</span> <span class="keyword">and</span> childargs[<span class="number">0</span>] <span class="keyword">in</span> [<span class="string">"daemon"</span>, <span class="string">"daemonperf"</span>]:</span><br><span class="line">        daemon_perf = (childargs[<span class="number">0</span>] == <span class="string">"daemonperf"</span>)</span><br><span class="line">        <span class="comment"># Treat "daemon &lt;path&gt;" or "daemon &lt;name&gt;" like --admin_daemon &lt;path&gt;</span></span><br><span class="line">        <span class="comment"># Handle "daemonperf &lt;path&gt;" the same but requires no trailing args</span></span><br><span class="line">        require_args = <span class="number">2</span> <span class="keyword">if</span> daemon_perf <span class="keyword">else</span> <span class="number">3</span></span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span> sockpath <span class="keyword">and</span> daemon_perf:</span><br><span class="line">        interval = <span class="number">1</span></span><br><span class="line">        count = <span class="keyword">None</span></span><br><span class="line">        <span class="keyword">if</span> len(childargs) &gt; <span class="number">0</span>:</span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                interval = float(childargs[<span class="number">0</span>])</span><br><span class="line">                <span class="keyword">if</span> interval &lt; <span class="number">0</span>:</span><br><span class="line">                    <span class="keyword">raise</span> ValueError</span><br><span class="line">            <span class="keyword">except</span> ValueError:</span><br><span class="line">                print(<span class="string">'daemonperf: interval should be a positive number'</span>, file=sys.stderr)</span><br><span class="line">                <span class="keyword">return</span> errno.EINVAL</span><br><span class="line">        <span class="keyword">if</span> len(childargs) &gt; <span class="number">1</span>:</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">not</span> childargs[<span class="number">1</span>].isdigit():</span><br><span class="line">                print(<span class="string">'daemonperf: count should be a positive integer'</span>, file=sys.stderr)</span><br><span class="line">                <span class="keyword">return</span> errno.EINVAL</span><br><span class="line">            count = int(childargs[<span class="number">1</span>])</span><br><span class="line">        DaemonWatcher(sockpath).run(interval, count)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span></span><br><span class="line">	...</span><br></pre></td></tr></table></figure>
+<p>文件：pybind/ceph_daemon.py</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">DaemonWatcher</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="string">"""</span></span><br><span class="line"><span class="string">    Given a Ceph daemon's admin socket path, poll its performance counters</span></span><br><span class="line"><span class="string">    and output a series of output lines showing the momentary values of</span></span><br><span class="line"><span class="string">    counters of interest (those with the 'nick' property in Ceph's schema)</span></span><br><span class="line"><span class="string">    """</span></span><br><span class="line">    ...</span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_load_schema</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="string">"""</span></span><br><span class="line"><span class="string">        Populate our instance-local copy of the daemon's performance counter</span></span><br><span class="line"><span class="string">        schema, and work out which stats we will display.</span></span><br><span class="line"><span class="string">        """</span></span><br><span class="line">        self._schema = json.loads(admin_socket(self.asok_path, [<span class="string">"perf"</span>, <span class="string">"schema"</span>]))</span><br><span class="line"></span><br><span class="line">        <span class="comment"># Build list of which stats we will display, based on which</span></span><br><span class="line">        <span class="comment"># stats have a nickname</span></span><br><span class="line">        self._stats = defaultdict(dict)</span><br><span class="line">        <span class="keyword">for</span> section_name, section_stats <span class="keyword">in</span> self._schema.items():</span><br><span class="line">            <span class="keyword">for</span> name, schema_data <span class="keyword">in</span> section_stats.items():</span><br><span class="line">                <span class="keyword">if</span> schema_data.get(<span class="string">'nick'</span>):</span><br><span class="line">                    self._stats[section_name][name] = schema_data[<span class="string">'nick'</span>]</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self, interval, count=None, ostr=sys.stdout)</span>:</span></span><br><span class="line">        <span class="string">"""</span></span><br><span class="line"><span class="string">        Print output at regular intervals until interrupted.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        :param ostr: Stream to which to send output</span></span><br><span class="line"><span class="string">        """</span></span><br><span class="line"></span><br><span class="line">        self._load_schema()</span><br><span class="line">        self._colored = self.supports_color(ostr)</span><br><span class="line"></span><br><span class="line">        self._print_headers(ostr)</span><br><span class="line"></span><br><span class="line">        last_dump = json.loads(admin_socket(self.asok_path, [<span class="string">"perf"</span>, <span class="string">"dump"</span>]))</span><br><span class="line">        rows_since_header = <span class="number">0</span></span><br><span class="line">        term_height = <span class="number">25</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="keyword">while</span> <span class="keyword">True</span>:</span><br><span class="line">                dump = json.loads(admin_socket(self.asok_path, [<span class="string">"perf"</span>, <span class="string">"dump"</span>]))</span><br><span class="line">                <span class="keyword">if</span> rows_since_header &gt; term_height - <span class="number">2</span>:</span><br><span class="line">                    self._print_headers(ostr)</span><br><span class="line">                    rows_since_header = <span class="number">0</span></span><br><span class="line">                self._print_vals(ostr, dump, last_dump)</span><br><span class="line">                <span class="keyword">if</span> count <span class="keyword">is</span> <span class="keyword">not</span> <span class="keyword">None</span>:</span><br><span class="line">                    count -= <span class="number">1</span></span><br><span class="line">                    <span class="keyword">if</span> count &lt;= <span class="number">0</span>:</span><br><span class="line">                        <span class="keyword">break</span></span><br><span class="line">                rows_since_header += <span class="number">1</span></span><br><span class="line">                last_dump = dump</span><br><span class="line">                time.sleep(interval)</span><br><span class="line">        <span class="keyword">except</span> KeyboardInterrupt:</span><br><span class="line">            <span class="keyword">return</span></span><br></pre></td></tr></table></figure>
+<p>所以<code>ceph daemonperf &lt;asok&gt;</code>命令的输出是根据<code>ceph daemon &lt;asok&gt; perf dump/schema</code>的输出整理的。</p>
+<p>实现中存了上一次的<code>perf dump</code>结果，所以这里获取的值是<code>interval</code>里的数据统计。</p>
+<p>以ceph mds asok的<code>perf dump/schema</code>输出为例，看看每个项是什么含义：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br></pre></td><td class="code"><pre><span class="line">ceph daemon &lt;mds-asok&gt; perf schema</span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"mds"</span>: &#123;</span><br><span class="line">        <span class="string">"reply_latency"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 5,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Reply latency"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"rlat"</span></span><br><span class="line">        &#125;,</span><br><span class="line">        ...</span><br><span class="line">        <span class="string">"inodes"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 2,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Inodes"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"inos"</span></span><br><span class="line">        &#125;,</span><br><span class="line">        ...</span><br><span class="line">        <span class="string">"caps"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 2,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Capabilities"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"caps"</span></span><br><span class="line">        &#125;,</span><br><span class="line">        ...</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"mds_cache"</span>: &#123;</span><br><span class="line">        <span class="string">"num_strays"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 2,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Stray dentries"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"stry"</span></span><br><span class="line">        &#125;,</span><br><span class="line">        ...</span><br><span class="line">        <span class="string">"strays_purged"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 10,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Stray dentries purged"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"purg"</span></span><br><span class="line">        &#125;,</span><br><span class="line">    	...</span><br><span class="line">        <span class="string">"num_recovering_enqueued"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 2,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Files waiting for recovery"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"recy"</span></span><br><span class="line">        &#125;,</span><br><span class="line">        ...</span><br><span class="line">        <span class="string">"recovery_completed"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 10,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"File recoveries completed"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"recd"</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"mds_log"</span>: &#123;</span><br><span class="line">        <span class="string">"evadd"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 10,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Events submitted"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"subm"</span></span><br><span class="line">        &#125;,</span><br><span class="line">        ...</span><br><span class="line">        <span class="string">"ev"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 2,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Events"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"evts"</span></span><br><span class="line">        &#125;,</span><br><span class="line">        ...</span><br><span class="line">        <span class="string">"seg"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 2,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Segments"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"segs"</span></span><br><span class="line">        &#125;,</span><br><span class="line">        ...</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"mds_server"</span>: &#123;</span><br><span class="line">        <span class="string">"handle_client_request"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 10,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Client requests"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"hcr"</span></span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="string">"handle_slave_request"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 10,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Slave requests"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"hsr"</span></span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="string">"handle_client_session"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 10,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Client session messages"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"hcs"</span></span><br><span class="line">        &#125;,</span><br><span class="line">        ...</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"objecter"</span>: &#123;</span><br><span class="line">        <span class="string">"op_active"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 2,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Operations active"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"actv"</span></span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="string">"op_r"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 10,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Read operations"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"read"</span></span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="string">"op_w"</span>: &#123;</span><br><span class="line">            <span class="string">"type"</span>: 10,</span><br><span class="line">            <span class="string">"description"</span>: <span class="string">"Write operations"</span>,</span><br><span class="line">            <span class="string">"nick"</span>: <span class="string">"writ"</span></span><br><span class="line">        &#125;,</span><br><span class="line">        ...</span><br><span class="line">    &#125;,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>schema输出里的含义：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">文件：common/perf_counters.h</span><br><span class="line"></span><br><span class="line"><span class="keyword">enum</span> perfcounter_type_d</span><br><span class="line">&#123;</span><br><span class="line">    PERFCOUNTER_NONE = <span class="number">0</span>,</span><br><span class="line">    PERFCOUNTER_TIME = <span class="number">0x1</span>,</span><br><span class="line">    PERFCOUNTER_U64 = <span class="number">0x2</span>,</span><br><span class="line">    PERFCOUNTER_LONGRUNAVG = <span class="number">0x4</span>,</span><br><span class="line">    PERFCOUNTER_COUNTER = <span class="number">0x8</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">PerfCounters</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="comment">/** Represents a PerfCounters data element. */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">perf_counter_data_any_d</span> &#123;</span></span><br><span class="line">        ...</span><br><span class="line">        <span class="keyword">const</span> <span class="keyword">char</span> *name;</span><br><span class="line">        <span class="keyword">const</span> <span class="keyword">char</span> *description;</span><br><span class="line">        <span class="keyword">const</span> <span class="keyword">char</span> *nick;</span><br><span class="line">        <span class="keyword">enum</span> perfcounter_type_d type;</span><br><span class="line">        <span class="keyword">atomic64_t</span> u64;</span><br><span class="line">        <span class="keyword">atomic64_t</span> avgcount;</span><br><span class="line">        <span class="keyword">atomic64_t</span> avgcount2;</span><br><span class="line">        ...</span><br><span class="line">    &#125;;</span><br><span class="line">    ...</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>ceph daemon <asok> perf dump中与daemonperf相关的输出项：</asok></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">ceph daemon &lt;mds-asok&gt; perf dump</span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">"mds"</span>: &#123;</span><br><span class="line">    	...</span><br><span class="line">        <span class="string">"reply_latency"</span>: &#123;</span><br><span class="line">            <span class="string">"avgcount"</span>: 1879241,</span><br><span class="line">            <span class="string">"sum"</span>: 563.417555661</span><br><span class="line">        &#125;,</span><br><span class="line">        ...</span><br><span class="line">        <span class="string">"inodes"</span>: 510943,</span><br><span class="line">        ...</span><br><span class="line">        <span class="string">"caps"</span>: 68002,</span><br><span class="line">        ...</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"mds_cache"</span>: &#123;</span><br><span class="line">        <span class="string">"num_strays"</span>: 415633,</span><br><span class="line">        ...</span><br><span class="line">        <span class="string">"strays_purged"</span>: 1192320,</span><br><span class="line">        ...</span><br><span class="line">        <span class="string">"num_recovering_enqueued"</span>: 0,</span><br><span class="line">        ...</span><br><span class="line">        <span class="string">"recovery_completed"</span>: 9</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"mds_log"</span>: &#123;</span><br><span class="line">        <span class="string">"evadd"</span>: 2094629,</span><br><span class="line">        ...</span><br><span class="line">        <span class="string">"ev"</span>: 42664,</span><br><span class="line">        ...</span><br><span class="line">        <span class="string">"seg"</span>: 57,</span><br><span class="line">        ...</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"mds_server"</span>: &#123;</span><br><span class="line">        <span class="string">"handle_client_request"</span>: 1879915,</span><br><span class="line">        <span class="string">"handle_slave_request"</span>: 0,</span><br><span class="line">        <span class="string">"handle_client_session"</span>: 698,</span><br><span class="line">        ...</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"objecter"</span>: &#123;</span><br><span class="line">        <span class="string">"op_active"</span>: 64,</span><br><span class="line">        ...</span><br><span class="line">        <span class="string">"op_r"</span>: 832,</span><br><span class="line">        <span class="string">"op_w"</span>: 1219634,</span><br><span class="line">        ...</span><br><span class="line">    &#125;,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2018/05/05/ceph-osd-deploy-with-bcache/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2346,250 +2514,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/12/05/volume-dynamic-iotune-arch-design/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="ictfox">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/ictfox.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ictfox blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2017/12/05/volume-dynamic-iotune-arch-design/" itemprop="url">基于Cinder的云硬盘动态限速框架设计</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-12-05T21:41:17+08:00">
-                2017-12-05
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/openstack/" itemprop="url" rel="index">
-                    <span itemprop="name">openstack</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2017/12/05/volume-dynamic-iotune-arch-design/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2017/12/05/volume-dynamic-iotune-arch-design/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h2 id="当前状况"><a href="#当前状况" class="headerlink" title="当前状况"></a>当前状况</h2><p>当前我们仅仅通过<code>cinder</code>创建<code>type</code>，指定<code>type</code>的<code>IO限制</code>来限制不同类型的云硬盘的<code>IO值</code>。</p>
-<p>具体方案和调研，参考：<a href="http://www.yangguanjun.com/2017/11/28/volume-dynamic-iotune-invest/">云硬盘动态限速调研</a></p>
-<h2 id="目的"><a href="#目的" class="headerlink" title="目的"></a>目的</h2><ul>
-<li>充分利用系统的资源，在系统负载和<code>Ceph</code>负载小的情况下，动态调整云硬盘的<code>IO值</code>，给用户提供更好的体验。</li>
-<li>设计一个框架，能满足云硬盘动态限速的要求；以后也能方便的加入网络的动态限速；</li>
-</ul>
-<h2 id="框架设计"><a href="#框架设计" class="headerlink" title="框架设计"></a>框架设计</h2><h3 id="需求"><a href="#需求" class="headerlink" title="需求"></a>需求</h3><ul>
-<li>统一配置选项</li>
-<li>模块化设计，能方便添加别的动态限速需求</li>
-<li>统一调度，各物理节点独立运行模式</li>
-</ul>
-<h3 id="方案1"><a href="#方案1" class="headerlink" title="方案1"></a>方案1</h3><p>分散式架构设计，独立实现，各物理节点独立负责监控负载和动态限速；</p>
-<p><img src="/images/volume-dynamic-iotune-arch1" alt="arch1"></p>
-<p><strong>优点：</strong></p>
-<ul>
-<li>独立实现，比较简洁</li>
-<li>物理节点单独计算负载，通信量减少</li>
-<li><code>Master</code>只需要维护配置项，可在内存中维护该数据</li>
-</ul>
-<p><strong>缺点：</strong></p>
-<ul>
-<li>不能与现有监控系统结合</li>
-</ul>
-<h3 id="方案2"><a href="#方案2" class="headerlink" title="方案2"></a>方案2</h3><p>结合<code>Openstack</code>的设计，<code>Master</code>端集中维护系统负载，存入<code>DB</code>，<code>Master-Agent</code>通过<code>Rabbitmq</code>通信；</p>
-<p><img src="/images/volume-dynamic-iotune-arch2" alt="arch2"></p>
-<p><strong>优点：</strong></p>
-<ul>
-<li>结合<code>Openstack</code>的<code>DB</code>，<code>rabbitmq</code>，<code>rpc通信</code>，<code>wsgi等模块</code></li>
-<li>系统负载信息通过<code>DB</code>统一维护</li>
-<li>方便与现有监控系统集合</li>
-</ul>
-<p><strong>缺点：</strong></p>
-<ul>
-<li>结合<code>Openstack</code>的几个通用模块，代码量和工作量比较大</li>
-<li>系统负载信息集中保存到DB，当前看是没有必要性</li>
-</ul>
-<h3 id="方案选择"><a href="#方案选择" class="headerlink" title="方案选择"></a>方案选择</h3><p>个人倾向 方案1，不需要把<code>openstack</code>的各个模块引入进来，实现会相对简单，也满足我们项目的需求；</p>
-<h2 id="云硬盘限速部分设计"><a href="#云硬盘限速部分设计" class="headerlink" title="云硬盘限速部分设计"></a>云硬盘限速部分设计</h2><h3 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h3><p>前面在调研中指出，我们可以在<code>nova instance</code>具体的物理机上，通过<code>virsh</code>的命令调整虚拟机指定云硬盘的<code>io限制</code>。<br>所以具体执行动态限速的命令需要在<code>nova instance</code>的物理机上执行，也就是说每个运行<code>nova instance</code>的物理机需要跑一个限速的<code>agent</code>进程。</p>
-<p>我们期望云硬盘动态限速，会受到以下两个因素影响：</p>
-<ul>
-<li>物理机的负载</li>
-<li>云硬盘对应<code>Ceph Pool</code>的<code>IO</code>负载</li>
-</ul>
-<p><strong>所以比较简单的设计为：</strong></p>
-<p>每个<code>Agent</code>单独运行，负责本物理机上的<code>nova instances</code>的云硬盘IO动态调整。<code>Agent</code>可以获取本机的实时负载和<code>Ceph</code>对应<code>Pool</code>的IO负载。</p>
-<h3 id="考虑的因素"><a href="#考虑的因素" class="headerlink" title="考虑的因素"></a>考虑的因素</h3><ul>
-<li>通过配置可以关闭/开启动态限速</li>
-<li>支持白名单方式</li>
-<li>支持黑名单方式</li>
-<li>通过配置指定支持的云硬盘类型</li>
-<li>通过配置指定动态限速模式：<ul>
-<li>物理机负载 + <code>Ceph Pool</code>负载</li>
-<li>物理机负载</li>
-<li><code>Ceph Pool</code>负载</li>
-</ul>
-</li>
-<li>配置动态调整限速间隔</li>
-<li>配置指定类型云硬盘动态限速的范围: <code>[begin, end]</code></li>
-</ul>
-<h3 id="配置项示例"><a href="#配置项示例" class="headerlink" title="配置项示例"></a>配置项示例</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">[DEFAULT]</span><br><span class="line"><span class="comment"># Tune dynamic resource limitation to True/False</span></span><br><span class="line">dynamic_tune = True/False</span><br><span class="line"><span class="comment"># interval to check and reset dynamic tune, value in seconds</span></span><br><span class="line">interval = 60</span><br><span class="line"><span class="comment"># Tune modules which would do dynamic tune</span></span><br><span class="line"><span class="comment"># Keep pace with the below configurations</span></span><br><span class="line">tune_modules = iotune</span><br><span class="line"> </span><br><span class="line"><span class="comment">### io dynamic tune related</span></span><br><span class="line">[iotune]</span><br><span class="line"><span class="comment"># Which type of volumes supported, default means tune all volume types;</span></span><br><span class="line"><span class="comment"># Keep pace with the configuration of cinder type</span></span><br><span class="line"><span class="comment"># Example values: default/sata/ssd/sata, ssd</span></span><br><span class="line">volume_types = default</span><br><span class="line"><span class="comment"># Model to do tune, value maybe: default/local/ceph</span></span><br><span class="line"><span class="comment"># default model: local + ceph</span></span><br><span class="line"><span class="comment"># local: only check local load</span></span><br><span class="line"><span class="comment"># ceph: only check ceph load</span></span><br><span class="line">tune_model = default</span><br><span class="line"> </span><br><span class="line"><span class="comment"># Set the iotune range for specify volume type to [begin, end]</span></span><br><span class="line">iotune_bw_range = &#123;<span class="string">'sata'</span> : &#123;<span class="string">'read'</span> : [80, 200], <span class="string">'write'</span> : [50, 100]&#125;, <span class="string">'ssd'</span> : &#123;<span class="string">'read'</span> : [100, 300], <span class="string">'write'</span> : [80, 200]&#125;&#125;</span><br><span class="line">iotune_iops_range = &#123;<span class="string">'sata'</span> : &#123;<span class="string">'read'</span> : [100, 1000], <span class="string">'write'</span> : [100, 800]&#125;, <span class="string">'ssd'</span> : &#123;<span class="string">'read'</span> : [1000, 5000], <span class="string">'write'</span> : [600, 300]&#125;&#125;</span><br><span class="line"> </span><br><span class="line"><span class="comment"># Specify disks tune info</span></span><br><span class="line">iotune_range = &#123;<span class="string">'d-5pc4hq7y'</span> : &#123;<span class="string">'bw'</span> : &#123;<span class="string">'read'</span> : [80, 200], <span class="string">'write'</span> : [50, 100]&#125;, <span class="string">'iops'</span> : &#123;<span class="string">'read'</span> : [100, 1000], <span class="string">'write'</span> : [100, 800]&#125;&#125;,</span><br><span class="line">                <span class="string">'d-ymqagtez'</span> : &#123;<span class="string">'bw'</span> : &#123;<span class="string">'read'</span> : [100, 300], <span class="string">'write'</span> : [80, 200]&#125;, <span class="string">'iops'</span> : &#123;<span class="string">'read'</span> : [1000, 5000], <span class="string">'write'</span> : [600, 300]&#125;&#125; &#125;</span><br><span class="line"> </span><br><span class="line"><span class="comment"># Blacklist of nova instances which would not do dynamic iotune</span></span><br><span class="line"><span class="comment">#blacklist = nova-ins1, nova-ins2, ...</span></span><br><span class="line"><span class="comment"># Whitelist of nova instances which ONLY do dynamic iotune on them</span></span><br><span class="line"><span class="comment">#whitelist = nova-ins3, nova-ins4, ...</span></span><br><span class="line"> </span><br><span class="line"><span class="comment">### specify user tune info</span></span><br><span class="line">[usr-kndz857b]</span><br><span class="line">iotune_bw_range = &#123;<span class="string">'sata'</span> : &#123;<span class="string">'read'</span> : [80, 200], <span class="string">'write'</span> : [50, 100]&#125;, <span class="string">'ssd'</span> : &#123;<span class="string">'read'</span> : [100, 300], <span class="string">'write'</span> : [80, 200]&#125;&#125;</span><br><span class="line">iotune_iops_range = &#123;<span class="string">'sata'</span> : &#123;<span class="string">'read'</span> : [100, 1000], <span class="string">'write'</span> : [100, 800]&#125;, <span class="string">'ssd'</span> : &#123;<span class="string">'read'</span> : [1000, 5000], <span class="string">'write'</span> : [600, 300]&#125;&#125;</span><br></pre></td></tr></table></figure>
-<p>代码中读取上诉配置，在脚本中生成<code>conf</code>的字典信息；</p>
-<h3 id="涉及到的命令与解释"><a href="#涉及到的命令与解释" class="headerlink" title="涉及到的命令与解释"></a>涉及到的命令与解释</h3><h4 id="1-、获取系统cinder-volume的信息"><a href="#1-、获取系统cinder-volume的信息" class="headerlink" title="1)、获取系统cinder volume的信息"></a>1)、获取系统cinder volume的信息</h4><p><code>cinder list --all | grep &quot;in-use&quot; | awk &#39;{print $2,$4,$8,$12}&#39;</code></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">(.venv)openstack@Server-01-01:~$ cinder list --all | grep <span class="string">"in-use"</span> | awk <span class="string">'&#123;print $2,$4,$8,$12&#125;'</span></span><br><span class="line">...</span><br><span class="line">|               ID                  |            Tenant ID           |  Name    | Volume Type |</span><br><span class="line">04960b37-7a07-439d-9fd4-dc0664870245 a72514ab47524d00b0b43551466c7d67 d-6a3x2u8j sata</span><br><span class="line">06996e93-47ad-4003-acb4-b46aa185d479 f634c4182b634a7ca4a4c2ac72837cb7 d-ibvar57t sata</span><br><span class="line">0f45c78c-743b-4d42-b098-b2ee5f95df94 462dc39145324bb1bda7263368d176aa d-f8wkacjy ssd</span><br><span class="line">103a0e6d-382c-4caa-b313-63a95eeb351d 616eae54884147d786a3beb39ea6bcbb d-va5fe6bw sata</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
-<h4 id="2-、找到配置文件中user对应的-Tenant-ID"><a href="#2-、找到配置文件中user对应的-Tenant-ID" class="headerlink" title="2)、找到配置文件中user对应的 Tenant ID"></a>2)、找到配置文件中user对应的 Tenant ID</h4><p><code>openstack project list | grep &quot;user-id&quot;</code></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">openstack@Server-01-01:~$ openstack user list | grep usr-kndz857b</span><br><span class="line">| 63719e972d7d4afe87b7127c9daa120f | usr-kndz857b |</span><br></pre></td></tr></table></figure>
-<h4 id="3-、列出本物理机上的virsh-instances"><a href="#3-、列出本物理机上的virsh-instances" class="headerlink" title="3)、列出本物理机上的virsh instances"></a>3)、列出本物理机上的virsh instances</h4><p><code>virsh list：list domains</code></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">openstack@Server-01-01:~$ virsh list</span><br><span class="line"> Id    Name                           State</span><br><span class="line">----------------------------------------------------</span><br><span class="line"> 40    instance-0000028d              running</span><br><span class="line"> 52    instance-0000033d              running</span><br><span class="line"> 122   instance-00000721              running</span><br><span class="line"> 140   instance-000007a5              running</span><br><span class="line"> 141   instance-000007a3              running</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
-<h4 id="4-、列出指定virsh-instances的所有blocks"><a href="#4-、列出指定virsh-instances的所有blocks" class="headerlink" title="4)、列出指定virsh instances的所有blocks"></a>4)、列出指定virsh instances的所有blocks</h4><p><code>virsh domblklist &lt;domain&gt;：list all domain blocks</code></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">openstack@Server-01-01:~$ virsh domblklist instance-00000921</span><br><span class="line">Target     Source</span><br><span class="line">------------------------------------------------</span><br><span class="line">vda        /var/lib/nova/instances/7ef2900b-0653-443b-a2c0-3da7a5d7a10f/disk</span><br><span class="line">vdb        volumes/volume-7b94ccc5-6b14-4352-b4f3-74a71893f246</span><br></pre></td></tr></table></figure>
-<h4 id="5-、查看-修改block-device的iotune"><a href="#5-、查看-修改block-device的iotune" class="headerlink" title="5)、查看/修改block device的iotune"></a>5)、查看/修改block device的iotune</h4><p><code>virsh blkdeviotune &lt;domain&gt; &lt;device&gt;：Set or query a block device I/O tuning parameters</code></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">openstack@Server-01-01:~$ virsh blkdeviotune instance-00000921 vdb</span><br><span class="line">total_bytes_sec: 0</span><br><span class="line">read_bytes_sec : 104857600</span><br><span class="line">write_bytes_sec: 62914560</span><br><span class="line">total_iops_sec : 0</span><br><span class="line">read_iops_sec  : 1500</span><br><span class="line">write_iops_sec : 1000</span><br><span class="line">total_bytes_sec_max: 0</span><br><span class="line">read_bytes_sec_max: 10485760</span><br><span class="line">write_bytes_sec_max: 6291456</span><br><span class="line">total_iops_sec_max: 0</span><br><span class="line">read_iops_sec_max: 150</span><br><span class="line">write_iops_sec_max: 100</span><br><span class="line">size_iops_sec  : 0</span><br><span class="line">openstack@Server-01-01:~$ virsh blkdeviotune instance-00000921 vdb --read_iops_sec 5000 --write_iops_sec 3000</span><br></pre></td></tr></table></figure>
-<h3 id="Agent框架流程"><a href="#Agent框架流程" class="headerlink" title="Agent框架流程"></a>Agent框架流程</h3><p><img src="/images/volume-dynamic-iotune-agent" alt="agent"></p>
-<h3 id="获取负载信息"><a href="#获取负载信息" class="headerlink" title="获取负载信息"></a>获取负载信息</h3><h4 id="1-、本机负载信息"><a href="#1-、本机负载信息" class="headerlink" title="1)、本机负载信息"></a>1)、本机负载信息</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ uptime</span><br><span class="line"> 14:35:25 up 32 days, 14:54,  5 users,  load average: 2.53, 2.82, 2.80</span><br></pre></td></tr></table></figure>
-<p>获取最近1,5,15分钟负载分别为：2.53, 2.82, 2.80</p>
-<h4 id="2-、Ceph负载信息"><a href="#2-、Ceph负载信息" class="headerlink" title="2)、Ceph负载信息"></a>2)、Ceph负载信息</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">$ ceph osd tree</span><br><span class="line">ID  WEIGHT    TYPE NAME                    UP/DOWN REWEIGHT PRIMARY-AFFINITY</span><br><span class="line">-10   3.41998 root hp-default</span><br><span class="line"> -7   1.70999     host hp-Server-01-02</span><br><span class="line"> 33   0.64999         osd.33                    up  1.00000          1.00000</span><br><span class="line"> 32   0.67000         osd.32                    up  1.00000          1.00000</span><br><span class="line"> 31   0.39000         osd.31                    up  1.00000          1.00000</span><br><span class="line"> -9   1.70999     host hp-Server-02-02</span><br><span class="line"> 38   0.67000         osd.38                    up  1.00000          1.00000</span><br><span class="line"> 39   0.64999         osd.39                    up  1.00000          1.00000</span><br><span class="line"> 37   0.39000         osd.37                    up  1.00000          1.00000</span><br><span class="line"> -1 101.91998 root default</span><br><span class="line"> -2  25.48000     host Server-01-01</span><br><span class="line">  6   3.64000         osd.6                     up  1.00000          1.00000</span><br><span class="line">  5   3.64000         osd.5                     up  1.00000          1.00000</span><br><span class="line">  4   3.64000         osd.4                     up  1.00000          1.00000</span><br><span class="line">  3   3.64000         osd.3                     up  1.00000          1.00000</span><br><span class="line">  2   3.64000         osd.2                     up  1.00000          1.00000</span><br><span class="line">  1   3.64000         osd.1                     up  1.00000          1.00000</span><br><span class="line">  0   3.64000         osd.0                     up  1.00000          1.00000</span><br><span class="line"> -3  25.48000     host Server-01-02</span><br><span class="line"> 13   3.64000         osd.13                    up  1.00000          1.00000</span><br><span class="line"> 12   3.64000         osd.12                    up  1.00000          1.00000</span><br><span class="line"> 11   3.64000         osd.11                    up  1.00000          1.00000</span><br><span class="line"> 10   3.64000         osd.10                    up  1.00000          1.00000</span><br><span class="line">  9   3.64000         osd.9                     up  1.00000          1.00000</span><br><span class="line">  8   3.64000         osd.8                     up  1.00000          1.00000</span><br><span class="line">  7   3.64000         osd.7                     up  1.00000          1.00000</span><br><span class="line"> -4  25.48000     host Server-02-01</span><br><span class="line"> 20   3.64000         osd.20                    up  1.00000          1.00000</span><br><span class="line"> 19   3.64000         osd.19                    up  1.00000          1.00000</span><br><span class="line"> 18   3.64000         osd.18                    up  1.00000          1.00000</span><br><span class="line"> 17   3.64000         osd.17                    up  1.00000          1.00000</span><br><span class="line"> 16   3.64000         osd.16                    up  1.00000          1.00000</span><br><span class="line"> 15   3.64000         osd.15                    up  1.00000          1.00000</span><br><span class="line"> 14   3.64000         osd.14                    up  1.00000          1.00000</span><br><span class="line"> -5  25.48000     host Server-02-02</span><br><span class="line"> 27   3.64000         osd.27                    up  1.00000          1.00000</span><br><span class="line"> 26   3.64000         osd.26                    up  1.00000          1.00000</span><br><span class="line"> 25   3.64000         osd.25                    up  1.00000          1.00000</span><br><span class="line"> 24   3.64000         osd.24                    up  1.00000          1.00000</span><br><span class="line"> 23   3.64000         osd.23                    up  1.00000          1.00000</span><br><span class="line"> 22   3.64000         osd.22                    up  1.00000          1.00000</span><br><span class="line"> 21   3.64000         osd.21                    up  1.00000          1.00000</span><br></pre></td></tr></table></figure>
-<p>从上述输出中获取不同性质磁盘对应的<code>OSD</code>如下信息：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&#123;<span class="string">"sata"</span> : (0,1,2,3,4,5,6,7,...,26,27)&#125;</span><br><span class="line">&#123;<span class="string">"ssd"</span>: (31,32,33,37,38,39)&#125;</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>【注：这个信息是固定的，只需要获取一次即可】</p>
-</blockquote>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">$ ceph osd perf</span><br><span class="line">osd fs_commit_latency(ms) fs_apply_latency(ms)</span><br><span class="line">  0                     0                    1</span><br><span class="line">  1                     0                    1</span><br><span class="line">  2                     0                    1</span><br><span class="line">  3                     0                    1</span><br><span class="line">  4                     0                    1</span><br><span class="line">  5                     0                    1</span><br><span class="line">  6                     0                    1</span><br><span class="line">  7                     2                    4</span><br><span class="line">  8                     0                    1</span><br><span class="line">  9                     0                    0</span><br><span class="line"> 10                     0                    1</span><br><span class="line"> 11                     0                    1</span><br><span class="line"> 12                     0                    1</span><br><span class="line"> 13                     0                    0</span><br><span class="line"> 14                     0                    1</span><br><span class="line"> 15                     0                    1</span><br><span class="line"> 16                     0                    1</span><br><span class="line"> 17                     0                    1</span><br><span class="line"> 18                     0                    1</span><br><span class="line"> 19                     0                    1</span><br><span class="line"> 20                     0                    1</span><br><span class="line"> 21                     0                    1</span><br><span class="line"> 22                     0                    0</span><br><span class="line"> 23                     0                    0</span><br><span class="line"> 24                     0                    0</span><br><span class="line"> 25                     0                    1</span><br><span class="line"> 26                     0                    0</span><br><span class="line"> 27                     0                    1</span><br><span class="line"> 31                     1                    2</span><br><span class="line"> 32                     0                    7</span><br><span class="line"> 33                     0                    6</span><br><span class="line"> 37                     0                    6</span><br><span class="line"> 38                     0                    8</span><br><span class="line"> 39                     0                    3</span><br></pre></td></tr></table></figure>
-<p>分别获取SATA和SSD磁盘组内的平均负载信息：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;<span class="string">"sata"</span> : [1, 2], <span class="string">"ssd"</span> : [1, 6]&#125;</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>【注：这个信息需要周期性获取】</p>
-</blockquote>
-<h3 id="动态调整IO限速"><a href="#动态调整IO限速" class="headerlink" title="动态调整IO限速"></a>动态调整IO限速</h3><p>公式：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">sys_load_throttle = 20</span><br><span class="line">cepy_load_throttle1 = 10</span><br><span class="line">cepy_load_throttle2 = 20</span><br><span class="line"> </span><br><span class="line">系统负载，从uptime输出获取，sys_load: [2.53, 2.82, 2.80]</span><br><span class="line">ceph负载，从ceph osd perf输出获取，ceph_load: &#123;<span class="string">"sata"</span> : [1, 2], <span class="string">"ssd"</span> : [1, 6]&#125;</span><br><span class="line">根据volume_type，获取ceph对应磁盘组的负载信息: cload</span><br><span class="line">根据sys_load和cload的值决定增加还是减少bw和iops</span><br><span class="line"><span class="keyword">if</span> (cload[0] &lt; <span class="variable">$cepy_load_throttle1</span>) &amp;&amp; (cload[1] &lt; <span class="variable">$cepy_load_throttle1</span>):</span><br><span class="line">    <span class="keyword">if</span> (sys_load[0] &lt; <span class="variable">$sys_load_throttle</span>) &amp;&amp; (sys_load[1] &lt; <span class="variable">$sys_load_throttle</span>):</span><br><span class="line">        <span class="comment">#增大</span></span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="comment">#保持不变</span></span><br><span class="line"><span class="keyword">elif</span> (<span class="variable">$cepy_load_throttle2</span> &gt;= cload[0] &gt;= <span class="variable">$cepy_load_throttle1</span>) &amp;&amp; (<span class="variable">$cepy_load_throttle2</span> &gt;= cload[1] &gt;= <span class="variable">$cepy_load_throttle1</span>):</span><br><span class="line">    <span class="keyword">if</span> (sys_load[0] &gt; <span class="variable">$sys_load_throttle</span>) || (sys_load[1] &gt; <span class="variable">$sys_load_throttle</span>):</span><br><span class="line">        <span class="comment">#减少</span></span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="comment">#保持不变</span></span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">    <span class="comment">#减少</span></span><br><span class="line"></span><br><span class="line">根据ceph和sys的负载信息，可以计算出SATA/SSD磁盘的iotune是增加，减少，还是保持不变；</span><br></pre></td></tr></table></figure>
-<p>loop每个instance，针对volume类型是需要增加/减少的volume，设置volume新的iotune值：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">根据conf配置信息获取volume对应的bw_range和iops_range，然后调用下面的函数执行iotune调整。</span><br><span class="line"> </span><br><span class="line">set_volume_dynamic_iotune()</span><br><span class="line">输入：volume target - 卷的盘符，示例：vdb</span><br><span class="line">     bw_range      - 带宽范围，从配置文件获取，示例：&#123;<span class="string">'read'</span> : [80, 200], <span class="string">'write'</span> : [50, 100]&#125; <span class="comment">#单位：MB</span></span><br><span class="line">     iops_range    - iops范围，从配置文件获取，示例：&#123;<span class="string">'read'</span> : [100, 300], <span class="string">'write'</span> : [80, 200]&#125;</span><br><span class="line">     iotune        - iotune的趋势，0: 保持不变；&gt;0: 增加；&lt;0: 减少</span><br><span class="line"> </span><br><span class="line">1、获取volume现在对应的bw和iops值</span><br><span class="line">2、根据输入计算volume新的bw和iops值</span><br><span class="line">3、判断新的bw和iops值是不是在bw_range, iops_range范围内？是的话设置对应值为新值，否则保留旧值；</span><br><span class="line">4、通过virsh blkdeviotune命令设置read_bytes_sec，write_bytes_sec，read_iops_sec，write_iops_sec</span><br><span class="line"> </span><br><span class="line">注释：read_bytes_sec  - 每秒读bytes</span><br><span class="line">     write_bytes_sec - 每秒写bytes</span><br><span class="line">     read_iops_sec   - 每秒读iops</span><br><span class="line">     write_iops_sec  - 每秒写iops</span><br><span class="line"> </span><br><span class="line">bw: 增大减少幅度10MB (10485760 bytes)</span><br><span class="line">iops: 增大减少幅度100</span><br></pre></td></tr></table></figure>
-<h3 id="云硬盘默认限速"><a href="#云硬盘默认限速" class="headerlink" title="云硬盘默认限速"></a>云硬盘默认限速</h3><p>在动态限速程序退出前，需要调整相关云硬盘到默认限速值，具体的默认值如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">(.venv)openstack@Server-01-01:~$ cinder qos-list</span><br><span class="line">+--------------------------------------+--------------+-----------+----------------------------------------------------------------------------------------------------------------------------+</span><br><span class="line">|                  ID                  |     Name     |  Consumer |                                                           specs                                                            |</span><br><span class="line">+--------------------------------------+--------------+-----------+----------------------------------------------------------------------------------------------------------------------------+</span><br><span class="line">| 06661a25-27d4-4f64-93d4-8b74e3fda218 |   sata-qos   | front-end | &#123;u<span class="string">'read_bytes_sec'</span>: u<span class="string">'104857600'</span>, u<span class="string">'write_iops_sec'</span>: u<span class="string">'1000'</span>, u<span class="string">'write_bytes_sec'</span>: u<span class="string">'62914560'</span>, u<span class="string">'read_iops_sec'</span>: u<span class="string">'1500'</span>&#125;  |</span><br><span class="line">...</span><br><span class="line">| d560db69-e8f3-4a5f-a80c-fff41140f48c |   ssd-qos    | front-end | &#123;u<span class="string">'read_bytes_sec'</span>: u<span class="string">'157286400'</span>, u<span class="string">'write_iops_sec'</span>: u<span class="string">'3000'</span>, u<span class="string">'write_bytes_sec'</span>: u<span class="string">'104857600'</span>, u<span class="string">'read_iops_sec'</span>: u<span class="string">'5000'</span>&#125; |</span><br><span class="line">+--------------------------------------+--------------+-----------+----------------------------------------------------------------------------------------------------------------------------+</span><br></pre></td></tr></table></figure>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2644,7 +2568,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">76</span>
+                  <span class="site-state-item-count">77</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>

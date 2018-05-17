@@ -304,6 +304,173 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2016/04/18/linux-fstab-uuid/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2016/04/18/linux-fstab-uuid/" itemprop="url">linux fstab配置</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-04-18T15:01:17+08:00">
+                2016-04-18
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/linux/" itemprop="url" rel="index">
+                    <span itemprop="name">linux</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2016/04/18/linux-fstab-uuid/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2016/04/18/linux-fstab-uuid/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>在应用中我们经常需要在linux系统启动后自动mount文件系统，这就要用到fstab。</p>
+<p>fstab文件中包含了各种各样的文件系统描述信息，fstab中每一个文件系统描述占一行，每一行是TAB或空格分隔。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat /etc/fstab</span></span><br><span class="line"><span class="comment"># /etc/fstab: static file system information.</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># Use 'blkid' to print the universally unique identifier for a</span></span><br><span class="line"><span class="comment"># device; this may be used with UUID= as a more robust way to name devices</span></span><br><span class="line"><span class="comment"># that works even if disks are added and removed. See fstab(5).</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># &lt;file system&gt; &lt;mount point&gt;   &lt;type&gt;  &lt;options&gt;       &lt;dump&gt;  &lt;pass&gt;</span></span><br><span class="line">/dev/mapper/lvm-lv_root /               ext4    errors=remount-ro 0       1</span><br></pre></td></tr></table></figure>
+<p>因为在linux中有磁盘漂浮的问题，所以为了防止盘符漂移，建议使用UUID代替盘符来配置fstab。<br>步骤如下：</p>
+<h3 id="获取磁盘的UUID"><a href="#获取磁盘的UUID" class="headerlink" title="获取磁盘的UUID"></a>获取磁盘的UUID</h3><p>执行<code>blkid | grep vdb1</code>获取磁盘对应的UUID：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/dev/vdb1: UUID=<span class="string">"fac80332-85bf-4899-80fd-42beb49cf23b"</span> TYPE=<span class="string">"ext3"</span></span><br></pre></td></tr></table></figure>
+<h3 id="fstab写入fs信息"><a href="#fstab写入fs信息" class="headerlink" title="fstab写入fs信息"></a>fstab写入fs信息</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">'UUID=fac80332-85bf-4899-80fd-42beb49cf23b /mnt/vdb ext3 defaults 0 0'</span> &gt;&gt; /etc/fstab</span><br></pre></td></tr></table></figure>
+<p>执行<code>cat /etc/fstab</code>查看是否写入成功。</p>
+<h3 id="监测fstab中的信息"><a href="#监测fstab中的信息" class="headerlink" title="监测fstab中的信息"></a>监测fstab中的信息</h3><p>执行<code>mount -a</code>检查并mount /etc/fstab中配置的所有分区。这样能避免写错fstab后导致linux系统启动失败。</p>
+<h3 id="重启系统验证"><a href="#重启系统验证" class="headerlink" title="重启系统验证"></a>重启系统验证</h3><p>重启linux系统，待系统启动后通过<code>mount</code>命令查看是否配置fs自动mount成功。</p>
+<h3 id="fstab中各个参数的含义"><a href="#fstab中各个参数的含义" class="headerlink" title="fstab中各个参数的含义"></a>fstab中各个参数的含义</h3><p>fstab中每个fs后面的几个参数的含义需要搞清楚，特别是后面的两个参数，配置错误可能导致系统启动非常慢或者失败的。</p>
+<p><code>&lt;file system&gt;    &lt;dir&gt;    &lt;type&gt;    &lt;options&gt;    &lt;dump&gt;    &lt;pass&gt;</code></p>
+<p>其中<code>&lt;dump&gt;</code>，<code>&lt;pass&gt;</code>参数解释如下：</p>
+<p><code>&lt;dump&gt;</code><br>    dump工具通过它决定何时作备份。<br>    dump会检查其内容，并用数字来决定是否对这个文件系统进行备份。<br>    允许的数字是0/1。0表示忽略，1则进行备份。<br>    大部分的用户是没有安装dump的，则<code>&lt;dump&gt;</code>应设为0。 </p>
+<p><code>&lt;pass&gt;</code><br>    fsck读取<code>&lt;pass&gt;</code>的数值来决定需要检查的文件系统的检查顺序。<br>    允许的数字是0/1/2。<br>    根目录应当获得最高的优先权1，其它所有需要被检查的设备设置为2。0表示设备不会被fsck检查。<br>    <strong>【建议配置为0，大容量硬盘开机fsck检查会比较慢】</strong></p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2016/04/06/trove-glance-image-creation/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1987,172 +2154,6 @@ trove create [--replica_of &lt;source_instance&gt;] [--replica_count &lt;count&g
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2015/10/15/ceph-client-rbd-cache-configuration/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="ictfox">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/ictfox.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ictfox blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2015/10/15/ceph-client-rbd-cache-configuration/" itemprop="url">ceph client rbd cahce配置</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2015-10-15T18:31:17+08:00">
-                2015-10-15
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/ceph/" itemprop="url" rel="index">
-                    <span itemprop="name">ceph</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2015/10/15/ceph-client-rbd-cache-configuration/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2015/10/15/ceph-client-rbd-cache-configuration/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h2 id="修改ceph-conf文件"><a href="#修改ceph-conf文件" class="headerlink" title="修改ceph.conf文件"></a>修改ceph.conf文件</h2><p>添加如下内容：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/ceph/ceph.conf</span><br><span class="line">...</span><br><span class="line">[client]</span><br><span class="line">    rbd cache = <span class="literal">true</span></span><br><span class="line">    rbd cache size = 268435456</span><br><span class="line">    rbd cache max dirty = 134217728</span><br><span class="line">    rbd cache max dirty age = 5</span><br><span class="line">    rbd cache writethrough until flush = <span class="literal">true</span></span><br><span class="line">    admin socket = /var/run/ceph/ceph-client/<span class="variable">$cluster</span>-<span class="variable">$type</span>.<span class="variable">$id</span>.<span class="variable">$pid</span>.asok</span><br></pre></td></tr></table></figure>
-<h2 id="修改libvirt-qemu文件"><a href="#修改libvirt-qemu文件" class="headerlink" title="修改libvirt-qemu文件"></a>修改libvirt-qemu文件</h2><p>添加如下内容：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/apparmor.d/abstractions/libvirt-qemu</span><br><span class="line">...</span><br><span class="line"><span class="comment"># for rbd</span></span><br><span class="line">/etc/ceph/ceph.conf r,</span><br><span class="line">capability mknod,</span><br><span class="line">/var/<span class="built_in">log</span>/ceph/* rw,</span><br><span class="line">/&#123;,var/&#125;run/ceph/** rw,</span><br></pre></td></tr></table></figure>
-<h2 id="重启相关服务"><a href="#重启相关服务" class="headerlink" title="重启相关服务"></a>重启相关服务</h2><p>重启<code>libvirt-bin</code>和<code>nova-compute</code>服务</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">service libvirt-bin restart</span><br><span class="line">service nova-compute restart</span><br></pre></td></tr></table></figure>
-<h2 id="重启nova-instances"><a href="#重启nova-instances" class="headerlink" title="重启nova instances"></a>重启nova instances</h2><p>重启Host上的所有nova instances</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nova reboot [--hard] [--poll] &lt;server&gt; [&lt;server&gt; ...]</span><br></pre></td></tr></table></figure>
-<h2 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h2><p>查看asok文件是否存在，并执行perf dump和config show命令</p>
-<p>在 /var/run/ceph/ceph-client/ 目录下会出现类似如下的文件：<br>ceph-client.volumes.824997.asok</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ceph --admin-daemon /var/run/ceph/ceph-client.volumes.824997.asok perf dump</span><br><span class="line">ceph --admin-daemon /var/run/ceph/ceph-client.volumes.824997.asok config show</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>[注]： /var/run/ceph的目录是root权限，需要在其下创建ceph-client目录，然后执行 chmod 777 ceph-client，使得libvirt-qemu用户有创建asok的权限。</p>
-</blockquote>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2207,7 +2208,7 @@ trove create [--replica_of &lt;source_instance&gt;] [--replica_count &lt;count&g
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">76</span>
+                  <span class="site-state-item-count">77</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>

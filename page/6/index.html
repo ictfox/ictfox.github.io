@@ -304,6 +304,196 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2016/11/11/trove-lvm-thin-provision/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2016/11/11/trove-lvm-thin-provision/" itemprop="url">RDS配置使用Thin Provision LVM</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-11-11T18:31:17+08:00">
+                2016-11-11
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/openstack/" itemprop="url" rel="index">
+                    <span itemprop="name">openstack</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2016/11/11/trove-lvm-thin-provision/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2016/11/11/trove-lvm-thin-provision/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在RDS的存储中，我们使用LVM卷给Docker container使用，默认LVM是不使用thin的feature的；在LVM 的 2.02.89 版本后，引入了Thin Pool的概念，开始支持创建Thin Provision的volume；</p>
+<p>我们线上的LVM版本为：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">openstack@trove-server1:~$ sudo lvm version</span><br><span class="line">  LVM version:     2.02.98(2) (2012-10-15)</span><br><span class="line">  Library version: 1.02.77 (2012-10-15)</span><br><span class="line">  Driver version:  4.33.0</span><br></pre></td></tr></table></figure>
+<p>所以我们这里调整LVM的配置，来支持创建的volume为Thin Provision的volume，提高设备的资源使用率</p>
+<h2 id="LVM创建Thin-Provision-Volume"><a href="#LVM创建Thin-Provision-Volume" class="headerlink" title="LVM创建Thin Provision Volume"></a>LVM创建Thin Provision Volume</h2><h3 id="创建Thin-Pool"><a href="#创建Thin-Pool" class="headerlink" title="创建Thin Pool"></a>创建Thin Pool</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># vgs</span></span><br><span class="line">  VG                <span class="comment">#PV #LV #SN Attr   VSize VFree</span></span><br><span class="line">  volume-group-pcie   1   2   0 wz--n- 2.91t   2.61t</span><br><span class="line">  volume-group-sata   2   1   0 wz--n- 7.28t 372.44g</span><br><span class="line">  volume-group-ssd    3   1   0 wz--n- 1.85t  94.59g</span><br><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvcreate -L 7168G --thinpool vg-sata-thin-pool volume-group-sata</span></span><br><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvs</span></span><br><span class="line">  LV                                          VG                Attr      LSize   Pool                   Origin Data%  Move Log Copy%  Convert</span><br><span class="line">  vg-sata-thin-pool                           volume-group-sata twi<span class="_">-a</span>-tz-   7.00t                                0.00</span><br></pre></td></tr></table></figure>
+<h3 id="查看Thin-Pool"><a href="#查看Thin-Pool" class="headerlink" title="查看Thin Pool"></a>查看Thin Pool</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvdisplay volume-group-sata/vg-sata-thin-pool</span></span><br><span class="line">  --- Logical volume ---</span><br><span class="line">  LV Name                volume-group-sata-pool</span><br><span class="line">  VG Name                volume-group-sata</span><br><span class="line">  LV UUID                A3N8Bs-7mVk-VaAU-MwJp-J5RD-Dlfp-0pIHzK</span><br><span class="line">  LV Write Access        <span class="built_in">read</span>/write</span><br><span class="line">  LV Creation host, time trove-server1, 2016-11-01 14:11:12 +0800</span><br><span class="line">  LV Pool transaction ID 0</span><br><span class="line">  LV Pool metadata       volume-group-sata-pool_tmeta</span><br><span class="line">  LV Pool data           volume-group-sata-pool_tdata</span><br><span class="line">  LV Pool chunk size     4.00 MiB</span><br><span class="line">  LV Zero new blocks     yes</span><br><span class="line">  LV Status              available</span><br><span class="line">  <span class="comment"># open                 0</span></span><br><span class="line">  LV Size                7.00 TiB</span><br><span class="line">  Allocated pool data    0.00%</span><br><span class="line">  Allocated metadata     0.32%</span><br><span class="line">  Current LE             1812081</span><br><span class="line">  Segments               1</span><br><span class="line">  Allocation             inherit</span><br><span class="line">  Read ahead sectors     auto</span><br><span class="line">  - currently <span class="built_in">set</span> to     256</span><br><span class="line">  Block device           252:10</span><br></pre></td></tr></table></figure>
+<h3 id="创建Thin-Volume"><a href="#创建Thin-Volume" class="headerlink" title="创建Thin Volume"></a>创建Thin Volume</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvcreate -V 5G --thin -n thin_vol_test volume-group-sata/vg-sata-thin-pool</span></span><br><span class="line">  Logical volume <span class="string">"thin_vol_test"</span> created</span><br><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvs</span></span><br><span class="line">  LV                                          VG                Attr      LSize   Pool                   Origin Data%  Move Log Copy%  Convert</span><br><span class="line">  thin_vol_test                               volume-group-sata Vwi<span class="_">-a</span>-tz-   5.00g vg-sata-thin-pool               0.00</span><br><span class="line">  vg-sata-thin-pool                           volume-group-sata twi<span class="_">-a</span>-tz-   7.00t                                 0.00</span><br></pre></td></tr></table></figure>
+<p>从上述的Data%中可以看出，创建5.00G的volume，vg-sata-thin-pool的Data%为0.00；</p>
+<h3 id="删除Thin-Volume"><a href="#删除Thin-Volume" class="headerlink" title="删除Thin Volume"></a>删除Thin Volume</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvremove volume-group-sata/thin_vol_test</span></span><br><span class="line">Do you really want to remove and DISCARD active logical volume thin_vol_test? [y/n]: y</span><br><span class="line">  Logical volume <span class="string">"thin_vol_test"</span> successfully removed</span><br></pre></td></tr></table></figure>
+<h3 id="Thin-Volume创建时间"><a href="#Thin-Volume创建时间" class="headerlink" title="Thin Volume创建时间"></a>Thin Volume创建时间</h3><p>测试下Thin Volume的创建时间是否与volume size有关系</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">root@BJ-BGP03-001-001:/home/openstack/mikeyang<span class="comment"># time lvcreate -V 30G --thin -n volume-test volume-group-sata/volume-group-sata-pool</span></span><br><span class="line">  Logical volume <span class="string">"volume-test"</span> created</span><br><span class="line">real    0m0.378s</span><br><span class="line">user    0m0.008s</span><br><span class="line">sys 0m0.028s</span><br><span class="line"> </span><br><span class="line">root@BJ-BGP03-001-001:/home/openstack/mikeyang<span class="comment"># time lvcreate -V 300G --thin -n volume-test volume-group-sata/volume-group-sata-pool</span></span><br><span class="line">  Logical volume <span class="string">"volume-test"</span> created</span><br><span class="line">real    0m0.359s</span><br><span class="line">user    0m0.000s</span><br><span class="line">sys 0m0.036s</span><br><span class="line"> </span><br><span class="line">root@BJ-BGP03-001-001:/home/openstack/mikeyang<span class="comment"># time lvcreate -V 1000G --thin -n volume-test volume-group-sata/volume-group-sata-pool</span></span><br><span class="line">  Logical volume <span class="string">"volume-test"</span> created</span><br><span class="line">real    0m0.374s</span><br><span class="line">user    0m0.016s</span><br><span class="line">sys 0m0.024s</span><br></pre></td></tr></table></figure>
+<p>从上述测试中可以看出，Thin Volume的创建时间很短，不受volume size大小影响</p>
+<h3 id="扩容Thin-Pool"><a href="#扩容Thin-Pool" class="headerlink" title="扩容Thin Pool"></a>扩容Thin Pool</h3><p>因为Thin Pool对应的其实也是一个LVM volume，所以通过lvextend命令即可扩容</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># lvextend -L 2.5t volume-group-pcie/volume-group-pcie-pool</span></span><br><span class="line">Extending logical volume volume-group-pcie-pool to 2.50 TiB</span><br><span class="line">  Logical volume volume-group-pcie-pool successfully resized</span><br><span class="line"></span><br><span class="line">或者</span><br><span class="line"><span class="comment"># lvextend -L +1t volume-group-pcie/volume-group-pcie-pool</span></span><br><span class="line">  Extending logical volume volume-group-pcie-pool to 2.50 TiB</span><br><span class="line">  Logical volume volume-group-pcie-pool successfully resized</span><br></pre></td></tr></table></figure>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="https://linux.cn/article-4288-1.html" target="_blank" rel="noopener">https://linux.cn/article-4288-1.html</a><br><a href="http://mathslinux.org/?p=379" target="_blank" rel="noopener">http://mathslinux.org/?p=379</a>  </p>
+<h2 id="Cinder支持创建Thin-Provision-volume"><a href="#Cinder支持创建Thin-Provision-volume" class="headerlink" title="Cinder支持创建Thin Provision volume"></a>Cinder支持创建Thin Provision volume</h2><h3 id="Cinder配置"><a href="#Cinder配置" class="headerlink" title="Cinder配置"></a>Cinder配置</h3><p>查询Cinder代码，发现cinder是支持thin的lvm格式的；</p>
+<p>需要在cinder中添加如下配置：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">/opt/etc/cinder/cinder.conf</span><br><span class="line">[lvm-sata]</span><br><span class="line">volume_group = volume-group-sata</span><br><span class="line">volume_driver=cinder.volume.drivers.lvm.LVMISCSIDriver</span><br><span class="line">volume_backend_name=LVM_SATA</span><br><span class="line">volume_clear = none</span><br><span class="line">lvm_type = thin</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>如上述配置，只需要添加：lvm_type = thin 即可；LVM会自动创建名称为<vgname>-pool的thin pool；</vgname></p>
+<h3 id="重启服务"><a href="#重启服务" class="headerlink" title="重启服务"></a>重启服务</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openstack@trove-server1:~$ service cinder-api restart; service cinder-backup restart; service cinder-scheduler restart; service cinder-volume restart;</span><br></pre></td></tr></table></figure>
+<p>重启cinder服务后，测试创建RDS实例即可；</p>
+<h2 id="原有volumes迁移"><a href="#原有volumes迁移" class="headerlink" title="原有volumes迁移"></a>原有volumes迁移</h2><p>修改为支持Thin Provision Volumes后，对之前创建的volume需要迁移到Thin Provision Volume上，这里给出迁移方案</p>
+<p>在RDS的两个docker container中，一端一端的做volume的迁移；</p>
+<h3 id="Umount-volume"><a href="#Umount-volume" class="headerlink" title="Umount volume"></a>Umount volume</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">openstack@trove-server1:~$ docker <span class="built_in">exec</span> -it 583e869197cd bash</span><br><span class="line">root@rds-vpie5bx2:/<span class="comment"># df</span></span><br><span class="line">Filesystem     1K-blocks    Used Available Use% Mounted on</span><br><span class="line">none           103081248 2906328  94915656   3% /</span><br><span class="line">tmpfs          198079304       0 198079304   0% /dev</span><br><span class="line">tmpfs          198079304       0 198079304   0% /sys/fs/cgroup</span><br><span class="line">/dev/rbd0       51475068   54156  48783088   1% /var/<span class="built_in">log</span>/mysql</span><br><span class="line">/dev/rbd1      103081248 2906328  94915656   3% /var/<span class="built_in">log</span>/rds/9709c88c-d392-4a52-8301-4135cadcdea6</span><br><span class="line">shm                65536       0     65536   0% /dev/shm</span><br><span class="line">/dev/vdb         5029504  118360   4649000   3% /var/lib/mysql</span><br><span class="line">root@rds-vpie5bx2:/<span class="comment"># umount /var/lib/mysql/</span></span><br></pre></td></tr></table></figure>
+<h3 id="停止Docker-Container"><a href="#停止Docker-Container" class="headerlink" title="停止Docker Container"></a>停止Docker Container</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openstack@trove-server1:~$ docker stop 583e869197cd</span><br></pre></td></tr></table></figure>
+<h3 id="rename原有volume"><a href="#rename原有volume" class="headerlink" title="rename原有volume"></a>rename原有volume</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvrename volume-group-pcie/volume-ca880d25-c95f-4d19-993c-ee7ccfbf8d1c volume-group-pcie/backup-volume</span></span><br></pre></td></tr></table></figure>
+<h3 id="创建新的Thin-Provision-Volume"><a href="#创建新的Thin-Provision-Volume" class="headerlink" title="创建新的Thin Provision Volume"></a>创建新的Thin Provision Volume</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvcreate -V 5G --thin -n volume-ca880d25-c95f-4d19-993c-ee7ccfbf8d1c volume-group-ssd/volume-group-ssd-pool</span></span><br></pre></td></tr></table></figure>
+<h3 id="格式化新的Thin-Provision-Volume"><a href="#格式化新的Thin-Provision-Volume" class="headerlink" title="格式化新的Thin Provision Volume"></a>格式化新的Thin Provision Volume</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># mkfs.ext3 /dev/volume-group-ssd/volume-ca880d25-c95f-4d19-993c-ee7ccfbf8d1c</span></span><br></pre></td></tr></table></figure>
+<h3 id="volume数据迁移"><a href="#volume数据迁移" class="headerlink" title="volume数据迁移"></a>volume数据迁移</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># mount /dev/volume-group-ssd/volume-ca880d25-c95f-4d19-993c-ee7ccfbf8d1c /mnt/destination/</span></span><br><span class="line">root@trove-server1:/home/openstack<span class="comment"># mount /dev/volume-group-pcie/backup-volume /mnt/source/</span></span><br><span class="line">root@trove-server1:/mnt/<span class="built_in">source</span><span class="comment"># cp -r -p * /mnt/destination/</span></span><br><span class="line">root@trove-server1:/mnt/<span class="built_in">source</span><span class="comment"># cd /home/openstack/</span></span><br><span class="line">root@trove-server1:/home/openstack<span class="comment"># umount /mnt/source/</span></span><br><span class="line">root@trove-server1:/home/openstack<span class="comment"># umount /mnt/destination/</span></span><br></pre></td></tr></table></figure>
+<h3 id="启动Docker-Container"><a href="#启动Docker-Container" class="headerlink" title="启动Docker Container"></a>启动Docker Container</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openstack@trove-server1:~$ nova reboot 9709c88c-d392-4a52-8301-4135cadcdea6</span><br></pre></td></tr></table></figure>
+<p>若报错，则先执行nova start <nova-id>，然后再执行 nova reboot <nova-id></nova-id></nova-id></p>
+<h3 id="检查trove实例状态"><a href="#检查trove实例状态" class="headerlink" title="检查trove实例状态"></a>检查trove实例状态</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">openstack@trove-server1:~$ docker <span class="built_in">exec</span> -it 583e869197cd bash</span><br><span class="line">root@rds-vpie5bx2:/<span class="comment"># df</span></span><br><span class="line">Filesystem     1K-blocks    Used Available Use% Mounted on</span><br><span class="line">none           103081248 2906328  94915656   3% /</span><br><span class="line">tmpfs          198079304       0 198079304   0% /dev</span><br><span class="line">tmpfs          198079304       0 198079304   0% /sys/fs/cgroup</span><br><span class="line">/dev/rbd0       51475068   54156  48783088   1% /var/<span class="built_in">log</span>/mysql</span><br><span class="line">/dev/rbd1      103081248 2906328  94915656   3% /var/<span class="built_in">log</span>/rds/9709c88c-d392-4a52-8301-4135cadcdea6</span><br><span class="line">shm                65536       0     65536   0% /dev/shm</span><br><span class="line">/dev/vdb         5029504  118360   4649000   3% /var/lib/mysql</span><br></pre></td></tr></table></figure>
+<p>若发现mysql没启动，可能是因为/var/lib/mysql/里的文件权限导致的，把/var/lib/mysql/的权限修改为mysql:mysql 即可；</p>
+<h3 id="注意事项"><a href="#注意事项" class="headerlink" title="注意事项"></a>注意事项</h3><ol>
+<li>最好先迁移floating ip不在的trove实例上的volume；然后切换floating ip后，再迁移另外一个trove实例的volume；</li>
+<li>最好在客户使用rds服务不频繁的时候做数据迁移；</li>
+<li>迁移完一端的trove实例后，需要等待mysql为active-active状态后再迁移另外一端；</li>
+</ol>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2016/09/12/ceph-node-high-workload-issue/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2197,173 +2387,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2016/04/18/linux-fstab-uuid/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="ictfox">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/ictfox.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ictfox blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2016/04/18/linux-fstab-uuid/" itemprop="url">linux fstab配置</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-04-18T15:01:17+08:00">
-                2016-04-18
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/linux/" itemprop="url" rel="index">
-                    <span itemprop="name">linux</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2016/04/18/linux-fstab-uuid/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2016/04/18/linux-fstab-uuid/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>在应用中我们经常需要在linux系统启动后自动mount文件系统，这就要用到fstab。</p>
-<p>fstab文件中包含了各种各样的文件系统描述信息，fstab中每一个文件系统描述占一行，每一行是TAB或空格分隔。</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat /etc/fstab</span></span><br><span class="line"><span class="comment"># /etc/fstab: static file system information.</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># Use 'blkid' to print the universally unique identifier for a</span></span><br><span class="line"><span class="comment"># device; this may be used with UUID= as a more robust way to name devices</span></span><br><span class="line"><span class="comment"># that works even if disks are added and removed. See fstab(5).</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># &lt;file system&gt; &lt;mount point&gt;   &lt;type&gt;  &lt;options&gt;       &lt;dump&gt;  &lt;pass&gt;</span></span><br><span class="line">/dev/mapper/lvm-lv_root /               ext4    errors=remount-ro 0       1</span><br></pre></td></tr></table></figure>
-<p>因为在linux中有磁盘漂浮的问题，所以为了防止盘符漂移，建议使用UUID代替盘符来配置fstab。<br>步骤如下：</p>
-<h3 id="获取磁盘的UUID"><a href="#获取磁盘的UUID" class="headerlink" title="获取磁盘的UUID"></a>获取磁盘的UUID</h3><p>执行<code>blkid | grep vdb1</code>获取磁盘对应的UUID：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/dev/vdb1: UUID=<span class="string">"fac80332-85bf-4899-80fd-42beb49cf23b"</span> TYPE=<span class="string">"ext3"</span></span><br></pre></td></tr></table></figure>
-<h3 id="fstab写入fs信息"><a href="#fstab写入fs信息" class="headerlink" title="fstab写入fs信息"></a>fstab写入fs信息</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">'UUID=fac80332-85bf-4899-80fd-42beb49cf23b /mnt/vdb ext3 defaults 0 0'</span> &gt;&gt; /etc/fstab</span><br></pre></td></tr></table></figure>
-<p>执行<code>cat /etc/fstab</code>查看是否写入成功。</p>
-<h3 id="监测fstab中的信息"><a href="#监测fstab中的信息" class="headerlink" title="监测fstab中的信息"></a>监测fstab中的信息</h3><p>执行<code>mount -a</code>检查并mount /etc/fstab中配置的所有分区。这样能避免写错fstab后导致linux系统启动失败。</p>
-<h3 id="重启系统验证"><a href="#重启系统验证" class="headerlink" title="重启系统验证"></a>重启系统验证</h3><p>重启linux系统，待系统启动后通过<code>mount</code>命令查看是否配置fs自动mount成功。</p>
-<h3 id="fstab中各个参数的含义"><a href="#fstab中各个参数的含义" class="headerlink" title="fstab中各个参数的含义"></a>fstab中各个参数的含义</h3><p>fstab中每个fs后面的几个参数的含义需要搞清楚，特别是后面的两个参数，配置错误可能导致系统启动非常慢或者失败的。</p>
-<p><code>&lt;file system&gt;    &lt;dir&gt;    &lt;type&gt;    &lt;options&gt;    &lt;dump&gt;    &lt;pass&gt;</code></p>
-<p>其中<code>&lt;dump&gt;</code>，<code>&lt;pass&gt;</code>参数解释如下：</p>
-<p><code>&lt;dump&gt;</code><br>    dump工具通过它决定何时作备份。<br>    dump会检查其内容，并用数字来决定是否对这个文件系统进行备份。<br>    允许的数字是0/1。0表示忽略，1则进行备份。<br>    大部分的用户是没有安装dump的，则<code>&lt;dump&gt;</code>应设为0。 </p>
-<p><code>&lt;pass&gt;</code><br>    fsck读取<code>&lt;pass&gt;</code>的数值来决定需要检查的文件系统的检查顺序。<br>    允许的数字是0/1/2。<br>    根目录应当获得最高的优先权1，其它所有需要被检查的设备设置为2。0表示设备不会被fsck检查。<br>    <strong>【建议配置为0，大容量硬盘开机fsck检查会比较慢】</strong></p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2418,7 +2441,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">76</span>
+                  <span class="site-state-item-count">77</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>

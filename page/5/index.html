@@ -304,6 +304,282 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/05/15/Ceph-configuration/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/05/15/Ceph-configuration/" itemprop="url">Ceph配置参数详解</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-05-15T19:31:17+08:00">
+                2017-05-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/05/15/Ceph-configuration/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/05/15/Ceph-configuration/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>Ceph的配置参数很多，从网上也能搜索到一大批的调优参数，但这些参数为什么这么设置？设置为这样是否合理？解释的并不多<br>本文从当前我们的ceph.conf文件入手，解释其中的每一项配置，做为以后参数调优和新人学习的依据；</p>
+<h2 id="参数详解"><a href="#参数详解" class="headerlink" title="参数详解"></a>参数详解</h2><h3 id="1，一些固定配置参数"><a href="#1，一些固定配置参数" class="headerlink" title="1，一些固定配置参数"></a>1，一些固定配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">fsid = 6d529c3d-5745-4fa5-be5f-3962a8e8687c</span><br><span class="line">mon_initial_members = mon1, mon2, mon3</span><br><span class="line">mon_host = 10.10.40.67,10.10.40.68,10.10.40.69</span><br></pre></td></tr></table></figure>
+<p>以上通常是通过ceph-deploy生成的，都是ceph monitor相关的参数，不用修改；</p>
+<h3 id="2，网络配置参数"><a href="#2，网络配置参数" class="headerlink" title="2，网络配置参数"></a>2，网络配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">public_network = 10.10.40.0/24    默认值 <span class="string">""</span></span><br><span class="line">cluster_network = 10.10.41.0/24  默认值 <span class="string">""</span></span><br></pre></td></tr></table></figure>
+<p>public network：monitor与osd，client与monitor，client与osd通信的网络，最好配置为带宽较高的万兆网络；<br>cluster network：OSD之间通信的网络，一般配置为带宽较高的万兆网络；</p>
+<p><strong>参考：</strong><br><a href="http://docs.ceph.com/docs/master/rados/configuration/network-config-ref/" target="_blank" rel="noopener">http://docs.ceph.com/docs/master/rados/configuration/network-config-ref/</a></p>
+<h3 id="3，pool-size配置参数"><a href="#3，pool-size配置参数" class="headerlink" title="3，pool size配置参数"></a>3，pool size配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">osd_pool_default_size = 3       默认值 3</span><br><span class="line">osd_pool_default_min_size = 1  默认值 0 // 0 means no specific default; ceph will use size-size/2</span><br></pre></td></tr></table></figure>
+<p>这两个是创建ceph pool的时候的默认size参数，一般配置为3和1，3副本能足够保证数据的可靠性；</p>
+<h3 id="4，认证配置参数"><a href="#4，认证配置参数" class="headerlink" title="4，认证配置参数"></a>4，认证配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">auth_service_required = none    默认值 <span class="string">"cephx"</span></span><br><span class="line">auth_client_required = none     默认值 <span class="string">"cephx, none"</span></span><br><span class="line">auth_cluster_required = none   默认值 <span class="string">"cephx"</span></span><br></pre></td></tr></table></figure>
+<p>以上是Ceph authentication的配置参数，默认值为开启ceph认证；<br>在内部使用的ceph集群中一般配置为none，即不使用认证，这样能适当加快ceph集群访问速度；</p>
+<h3 id="5，osd-down-out配置参数"><a href="#5，osd-down-out配置参数" class="headerlink" title="5，osd down out配置参数"></a>5，osd down out配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">mon_osd_down_out_interval = 864000  默认值 300 // seconds</span><br><span class="line">mon_osd_min_down_reporters = 2      默认值 2</span><br><span class="line">mon_osd_report_timeout = 900        默认值 900</span><br><span class="line">osd_heartbeat_interval = 15         默认值 6</span><br><span class="line">osd_heartbeat_grace = 60            默认值 20</span><br></pre></td></tr></table></figure>
+<p><code>mon_osd_down_out_interval</code>：ceph标记一个osd为down and out的最大时间间隔<br><code>mon_osd_min_down_reporters</code>：mon标记一个osd为down的最小reporters个数（报告该osd为down的其他osd为一个reporter）<br><code>mon_osd_report_timeout</code>：mon标记一个osd为down的最长等待时间<br><code>osd_heartbeat_interval</code>：osd发送heartbeat给其他osd的间隔时间（同一PG之间的osd才会有heartbeat）<br><code>osd_heartbeat_grace</code>：osd报告其他osd为down的最大时间间隔，grace调大，也有副作用，如果某个osd异常退出，等待其他osd上报的时间必须为grace，在这段时间段内，这个osd负责的pg的io会hang住，所以尽量不要将grace调的太大。</p>
+<p>基于实际情况合理配置上述参数，能减少或及时发现osd变为down（降低IO hang住的时间和概率），延长osd变为down and out的时间（防止网络抖动造成的数据recovery）；</p>
+<p><strong>参考：</strong><br><a href="http://docs.ceph.com/docs/master/rados/configuration/mon-osd-interaction/" target="_blank" rel="noopener">http://docs.ceph.com/docs/master/rados/configuration/mon-osd-interaction/</a><br><a href="http://blog.wjin.org/posts/ceph-osd-heartbeat.html" target="_blank" rel="noopener">http://blog.wjin.org/posts/ceph-osd-heartbeat.html</a></p>
+<h3 id="6，objecter配置参数"><a href="#6，objecter配置参数" class="headerlink" title="6，objecter配置参数"></a>6，objecter配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">objecter_inflight_ops = 10240               默认值 1024</span><br><span class="line">objecter_inflight_op_bytes = 1048576000     默认值 100M</span><br></pre></td></tr></table></figure>
+<p>osd client端objecter的throttle配置，它的配置会影响librbd，RGW端的性能；</p>
+<p><strong>配置建议：</strong><br>调大这两个值</p>
+<h3 id="7，ceph-rgw配置参数"><a href="#7，ceph-rgw配置参数" class="headerlink" title="7，ceph rgw配置参数"></a>7，ceph rgw配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">rgw_frontends = <span class="string">"civetweb port=10080 num_threads=2000"</span>  默认值 <span class="string">"fastcgi, civetweb port=7480"</span></span><br><span class="line">rgw_thread_pool_size = 512                              默认值 100</span><br><span class="line">rgw_override_bucket_index_max_shards = 20               默认值 0</span><br><span class="line"> </span><br><span class="line">rgw_max_chunk_size = 1048576                            默认值 512 * 1024</span><br><span class="line">rgw_cache_lru_size = 1000000                            默认值 10000 // num of entries <span class="keyword">in</span> rgw cache</span><br><span class="line">rgw_bucket_default_quota_max_objects = 10000000         默认值 -1 // number of objects allowed</span><br><span class="line">  </span><br><span class="line">rgw_dns_name = object-storage.ffan.com                  默认值</span><br><span class="line">rgw_swift_url = http://object-storage.ffan.com          默认值</span><br></pre></td></tr></table></figure>
+<p><code>rgw_frontends</code>：rgw的前端配置，一般配置为使用轻量级的civetweb；prot为访问rgw的端口，根据实际情况配置；num_threads为civetweb的线程数；<br><code>rgw_thread_pool_size</code>：rgw前端web的线程数，与rgw_frontends中的num_threads含义一致，但num_threads 优于<code>rgw_thread_pool_size</code>的配置，两个只需要配置一个即可；<br><code>rgw_override_bucket_index_max_shards</code>：rgw bucket index object的最大shards数，增大这个值能减少bucket index object的访问时间，但也会加大bucket的ls时间；<br><code>rgw_max_chunk_size</code>：rgw最大chunk size，针对大文件的对象存储场景可以把这个值调大；<br><code>rgw_cache_lru_size</code>：rgw的lru cache size，对于读较多的应用场景，调大这个值能加快rgw的响应速度；<br><code>rgw_bucket_default_quota_max_objects</code>：配合该参数限制一个bucket的最大objects个数；</p>
+<p><strong>参考：</strong><br><a href="http://docs.ceph.com/docs/jewel/install/install-ceph-gateway/" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/install/install-ceph-gateway/</a><br><a href="http://ceph-users.ceph.narkive.com/mdB90g7R/rgw-increase-the-first-chunk-size" target="_blank" rel="noopener">http://ceph-users.ceph.narkive.com/mdB90g7R/rgw-increase-the-first-chunk-size</a><br><a href="https://access.redhat.com/solutions/2122231" target="_blank" rel="noopener">https://access.redhat.com/solutions/2122231</a></p>
+<h3 id="8，debug配置参数"><a href="#8，debug配置参数" class="headerlink" title="8，debug配置参数"></a>8，debug配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">debug_lockdep = 0/0</span><br><span class="line">debug_context = 0/0</span><br><span class="line">debug_crush = 0/0</span><br><span class="line">debug_buffer = 0/0</span><br><span class="line">debug_timer = 0/0</span><br><span class="line">debug_filer = 0/0</span><br><span class="line">debug_objecter = 0/0</span><br><span class="line">debug_rados = 0/0</span><br><span class="line">debug_rbd = 0/0</span><br><span class="line">debug_journaler = 0/0</span><br><span class="line">debug_objectcatcher = 0/0</span><br><span class="line">debug_client = 0/0</span><br><span class="line">debug_osd = 0/0</span><br><span class="line">debug_optracker = 0/0</span><br><span class="line">debug_objclass = 0/0</span><br><span class="line">debug_filestore = 0/0</span><br><span class="line">debug_journal = 0/0</span><br><span class="line">debug_ms = 0/0</span><br><span class="line">debug_mon = 0/0</span><br><span class="line">debug_monc = 0/0</span><br><span class="line">debug_tp = 0/0</span><br><span class="line">debug_auth = 0/0</span><br><span class="line">debug_finisher = 0/0</span><br><span class="line">debug_heartbeatmap = 0/0</span><br><span class="line">debug_perfcounter = 0/0</span><br><span class="line">debug_asok = 0/0</span><br><span class="line">debug_throttle = 0/0</span><br><span class="line">debug_paxos = 0/0</span><br><span class="line">debug_rgw = 0/0</span><br></pre></td></tr></table></figure>
+<p>关闭了所有的debug信息，能一定程度加快ceph集群速度，但也会丢失一些关键log，出问题的时候不好分析；</p>
+<p><strong>参考：</strong><br><a href="http://www.10tiao.com/html/362/201609/2654062487/1.html" target="_blank" rel="noopener">http://www.10tiao.com/html/362/201609/2654062487/1.html</a></p>
+<h3 id="9，osd-op配置参数"><a href="#9，osd-op配置参数" class="headerlink" title="9，osd op配置参数"></a>9，osd op配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">osd_enable_op_tracker = <span class="literal">false</span>       默认值 <span class="literal">true</span></span><br><span class="line">osd_num_op_tracker_shard = 32       默认值 32</span><br><span class="line">osd_op_threads = 10                 默认值 2</span><br><span class="line">osd_disk_threads = 1                默认值 1</span><br><span class="line">osd_op_num_shards = 32                 默认值 5</span><br><span class="line">osd_op_num_threads_per_shard = 2    默认值 2</span><br></pre></td></tr></table></figure>
+<p><code>osd_enable_op_tracker</code>：追踪osd op状态的配置参数，默认为true；不建议关闭，关闭后osd的 slow_request，ops_in_flight，historic_ops 无法正常统计；</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph daemon /var/run/ceph/ceph-osd.0.asok dump_ops_in_flight</span></span><br><span class="line">op_tracker tracking is not enabled now, so no ops are tracked currently, even those get stuck.  Please <span class="built_in">enable</span> <span class="string">"osd_enable_op_tracker"</span>, and the tracker will start to track new ops received afterwards.</span><br><span class="line"><span class="comment"># ceph daemon /var/run/ceph/ceph-osd.0.asok dump_historic_ops</span></span><br><span class="line">op_tracker tracking is not enabled now, so no ops are tracked currently, even those get stuck.  Please <span class="built_in">enable</span> <span class="string">"osd_enable_op_tracker"</span>, and the tracker will start to track new ops received afterwards.</span><br></pre></td></tr></table></figure>
+<p>打开op tracker后，若集群iops很高，<code>osd_num_op_tracker_shard</code>可以适当调大，因为每个shard都有个独立的mutex锁；</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">OpTracker</span> &#123;</span></span><br><span class="line">...</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">ShardedTrackingData</span> &#123;</span></span><br><span class="line">        Mutex ops_in_flight_lock_sharded;</span><br><span class="line">        xlist&lt;TrackedOp *&gt; ops_in_flight_sharded;</span><br><span class="line">        explicit ShardedTrackingData(string lock_name):</span><br><span class="line">            ops_in_flight_lock_sharded(lock_name.c_str()) &#123;&#125;</span><br><span class="line">    &#125;;</span><br><span class="line">    <span class="built_in">vector</span>&lt;ShardedTrackingData*&gt; sharded_in_flight_list;</span><br><span class="line">    <span class="keyword">uint32_t</span> num_optracker_shards;</span><br><span class="line">...</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p><code>osd_op_threads</code>：对应的work queue有<code>peering_wq</code>（osd peering请求），<code>recovery_gen_wq</code>（PG recovery请求）；<br><code>osd_disk_threads</code>：对应的work queue为 <code>remove_wq</code>（PG remove请求）；<br><code>osd_op_num_shards</code>和<code>osd_op_num_threads_per_shard</code>：对应的thread pool为<code>osd_op_tp</code>，work queue为<code>op_shardedwq</code>；</p>
+<p>处理的请求包括：</p>
+<ol>
+<li><code>OpRequestRef</code></li>
+<li><code>PGSnapTrim</code></li>
+<li><code>PGScrub</code></li>
+</ol>
+<p>调大<code>osd_op_num_shards</code>可以增大osd ops的处理线程数，增大并发性，提升OSD性能；</p>
+<h3 id="10，osd-client-message配置参数"><a href="#10，osd-client-message配置参数" class="headerlink" title="10，osd client message配置参数"></a>10，osd client message配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">osd_client_message_size_cap = 1048576000    默认值 500*1024L*1024L     // client data allowed <span class="keyword">in</span>-memory (<span class="keyword">in</span> bytes)</span><br><span class="line">osd_client_message_cap = 10000              默认值 100     // num client messages allowed <span class="keyword">in</span>-memory</span><br></pre></td></tr></table></figure>
+<p>这个是osd端收到client messages的capacity配置，配置大的话能提升osd的处理能力，但会占用较多的系统内存；</p>
+<p><strong>配置建议：</strong><br>服务器内存足够大的时候，适当增大这两个值</p>
+<h3 id="11，osd-scrub配置参数"><a href="#11，osd-scrub配置参数" class="headerlink" title="11，osd scrub配置参数"></a>11，osd scrub配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">osd_scrub_begin_hour = 2                默认值 0</span><br><span class="line">osd_scrub_end_hour = 6                   默认值 24</span><br><span class="line"> </span><br><span class="line">// The time <span class="keyword">in</span> seconds that scrubbing sleeps between two consecutive scrubs</span><br><span class="line">osd_scrub_sleep = 2                       默认值 0        // sleep between [deep]scrub ops</span><br><span class="line"> </span><br><span class="line">osd_scrub_load_threshold = 5            默认值 0.5</span><br><span class="line">  </span><br><span class="line">// chunky scrub配置的最小/最大objects数，以下是默认值</span><br><span class="line">osd_scrub_chunk_min = 5</span><br><span class="line">osd_scrub_chunk_max = 25</span><br></pre></td></tr></table></figure>
+<p>Ceph osd scrub是保证ceph数据一致性的机制，scrub以PG为单位，但每次scrub回获取PG lock，所以它可能会影响PG正常的IO；</p>
+<p>Ceph后来引入了chunky的scrub模式，每次scrub只会选取PG的一部分objects，完成后释放PG lock，并把下一次的PG scrub加入队列；这样能很好的减少PG scrub时候占用PG lock的时间，避免过多影响PG正常的IO；</p>
+<p>同理，引入的<code>osd_scrub_sleep</code>参数会让线程在每次scrub前释放PG lock，然后睡眠一段时间，也能很好的减少scrub对PG正常IO的影响；</p>
+<p><strong>配置建议：</strong></p>
+<ul>
+<li><code>osd_scrub_begin_hour</code>和<code>osd_scrub_end_hour</code>：OSD Scrub的开始结束时间，根据具体业务指定；</li>
+<li><code>osd_scrub_sleep</code>：osd在每次执行scrub时的睡眠时间；有个bug跟这个配置有关，建议关闭； </li>
+<li><code>osd_scrub_load_threshold</code>：osd开启scrub的系统load阈值，根据系统的load average值配置该参数；</li>
+<li><code>osd_scrub_chunk_min</code>和<code>osd_scrub_chunk_max</code>：根据PG中object的个数配置；针对RGW全是小文件的情况，这两个值需要调大；</li>
+</ul>
+<p><strong>参考：</strong><br><a href="http://www.jianshu.com/p/ea2296e1555c" target="_blank" rel="noopener">http://www.jianshu.com/p/ea2296e1555c</a><br><a href="http://tracker.ceph.com/issues/19497" target="_blank" rel="noopener">http://tracker.ceph.com/issues/19497</a></p>
+<h3 id="12，osd-thread-timeout配置参数"><a href="#12，osd-thread-timeout配置参数" class="headerlink" title="12，osd thread timeout配置参数"></a>12，osd thread timeout配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">osd_op_thread_timeout = 580               默认值 15</span><br><span class="line">osd_op_thread_suicide_timeout = 600         默认值 150</span><br><span class="line"> </span><br><span class="line">osd_recovery_thread_timeout = 580           默认值 30</span><br><span class="line">osd_recovery_thread_suicide_timeout = 600   默认值 300</span><br></pre></td></tr></table></figure>
+<p><code>osd_op_thread_timeout</code>和<code>osd_op_thread_suicide_timeout</code>关联的work queue为：</p>
+<ul>
+<li><code>op_shardedwq</code> - 关联的请求为：<code>OpRequestRef</code>，<code>PGSnapTrim</code>，<code>PGScrub</code></li>
+<li><code>peering_wq</code> - 关联的请求为：osd peering</li>
+</ul>
+<p><code>osd_recovery_thread_timeout</code>和<code>osd_recovery_thread_suicide_timeout</code>关联的work queue为：</p>
+<ul>
+<li><code>recovery_wq</code> - 关联的请求为：PG recovery</li>
+</ul>
+<p>Ceph的work queue都有个基类<code>WorkQueue_</code>，定义如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/// Pool of threads that share work submitted to multiple work queues.</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ThreadPool</span> :</span> <span class="keyword">public</span> <span class="keyword">md_config_obs_t</span> &#123;</span><br><span class="line">...</span><br><span class="line">    <span class="comment">/// Basic interface to a work queue used by the worker threads.</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">WorkQueue_</span> &#123;</span></span><br><span class="line">        <span class="built_in">string</span> name;</span><br><span class="line">        <span class="keyword">time_t</span> timeout_interval, suicide_interval;</span><br><span class="line">        WorkQueue_(<span class="built_in">string</span> n, <span class="keyword">time_t</span> ti, <span class="keyword">time_t</span> sti)</span><br><span class="line">            : name(n), timeout_interval(ti), suicide_interval(sti)</span><br><span class="line">        &#123; &#125;</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>这里的<code>timeout_interval</code>和<code>suicide_interval</code>分别对应上面所述的配置<code>timeout</code>和<code>suicide_timeout</code>；<br>当thread处理work queue中的一个请求时，会受到这两个timeout时间的限制：</p>
+<ul>
+<li><code>timeout_interval</code> - 到时间后设置<code>m_unhealthy_workers+1</code></li>
+<li><code>suicide_interval</code> - 到时间后调用assert，OSD进程crush</li>
+</ul>
+<p>对应的处理函数为：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">bool</span> HeartbeatMap::_check(<span class="keyword">const</span> heartbeat_handle_d *h, <span class="keyword">const</span> <span class="keyword">char</span> *who, <span class="keyword">time_t</span> now)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">bool</span> healthy = <span class="literal">true</span>;</span><br><span class="line">    <span class="keyword">time_t</span> was;</span><br><span class="line">    was = h-&gt;timeout.read();</span><br><span class="line">    <span class="keyword">if</span> (was &amp;&amp; was &lt; now) &#123;</span><br><span class="line">        ldout(m_cct, <span class="number">1</span>) &lt;&lt; who &lt;&lt; <span class="string">" '"</span> &lt;&lt; h-&gt;name &lt;&lt; <span class="string">"'"</span></span><br><span class="line">                        &lt;&lt; <span class="string">" had timed out after "</span> &lt;&lt; h-&gt;grace &lt;&lt; dendl;</span><br><span class="line">        healthy = <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    was = h-&gt;suicide_timeout.read();</span><br><span class="line">    <span class="keyword">if</span> (was &amp;&amp; was &lt; now) &#123;</span><br><span class="line">        ldout(m_cct, <span class="number">1</span>) &lt;&lt; who &lt;&lt; <span class="string">" '"</span> &lt;&lt; h-&gt;name &lt;&lt; <span class="string">"'"</span></span><br><span class="line">                        &lt;&lt; <span class="string">" had suicide timed out after "</span> &lt;&lt; h-&gt;suicide_grace &lt;&lt; dendl;</span><br><span class="line">        assert(<span class="number">0</span> == <span class="string">"hit suicide timeout"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> healthy;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>当前仅有RGW添加了worker的perfcounter，所以也只有RGW可以通过perf dump查看total/unhealthy的worker信息：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[root@ yangguanjun]<span class="comment"># ceph daemon /var/run/ceph/ceph-client.rgw.rgwdaemon.asok perf dump | grep worker</span></span><br><span class="line">        <span class="string">"total_workers"</span>: 32,</span><br><span class="line">        <span class="string">"unhealthy_workers"</span>: 0</span><br></pre></td></tr></table></figure>
+<p>对应的配置项为：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">OPTION(rgw_num_async_rados_threads, OPT_INT, 32) // num of threads to use <span class="keyword">for</span> async rados operations</span><br><span class="line">``` </span><br><span class="line"></span><br><span class="line">**配置建议：**</span><br><span class="line"></span><br><span class="line">- `*_thread_timeout`：这个值配置越小越能及时发现处理慢的请求，所以不建议配置很大；特别是针对速度快的设备，建议调小该值；</span><br><span class="line">- `*_thread_suicide_timeout`：这个值配置小了会导致超时后的OSD crush，所以建议调大；特别是在对应的throttle调大后，更应该调大该值；</span><br><span class="line"></span><br><span class="line"><span class="comment">### 13，fielstore op thread配置参数</span></span><br><span class="line">```sh</span><br><span class="line">filestore_op_threads = 10                   默认值 2</span><br><span class="line">filestore_op_thread_timeout = 580           默认值 60</span><br><span class="line">filestore_op_thread_suicide_timeout = 600   默认值 180</span><br></pre></td></tr></table></figure>
+<p><code>filestore_op_threads</code>：对应的thread pool为<code>op_tp</code>，对应的work queue为<code>op_wq</code>；filestore的所有请求都经过op_wq处理；<br>增大该参数能提升filestore的处理能力，提升filestore的性能；配合filestore的throttle一起调整； </p>
+<p><code>filestore_op_thread_timeout</code>和<code>filestore_op_thread_suicide_timeout</code>关联的work queue为：<code>op_wq</code></p>
+<p>配置的含义与上一节中的<code>thread_timeout/thread_suicide_timeout</code>保持一致；</p>
+<h3 id="13，filestore-merge-split配置参数"><a href="#13，filestore-merge-split配置参数" class="headerlink" title="13，filestore merge/split配置参数"></a>13，filestore merge/split配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">filestore_merge_threshold = -1       默认值 10</span><br><span class="line">filestore_split_multiple = 16000      默认值 2</span><br></pre></td></tr></table></figure>
+<p>这两个参数是管理filestore的目录分裂/合并的，filestore的每个目录允许的最大文件数为：<br><code>filestore_split_multiple * abs(filestore_merge_threshold) * 16</code></p>
+<p>在RGW的小文件应用场景，会很容易达到默认配置的文件数（320），若在写的过程中触发了filestore的分裂，则会非常影响filestore的性能；</p>
+<p>每次filestore的目录分裂，会依据如下规则分裂为多层目录，最底层16个子目录：<br>例如PG 31.4C0,   hash结尾是4C0，若该目录分裂，会分裂为 <code>DIR_0/DIR_C/DIR_4/{DIR_0, DIR_F}</code>；</p>
+<p>原始目录下的object会根据规则放到不同的子目录里，object的名称格式为: <code>*__head_xxxxX4C0_*</code>，分裂时候X是几，就放进子目录DIR_X里。比如object：<code>*__head_xxxxA4C0_*</code>,  就放进子目录 <code>DIR_0/DIR_C/DIR_4/DIR_A</code> 里；</p>
+<p><strong>解决办法：</strong></p>
+<ol>
+<li>增大merge/split配置参数的值，使单个目录容纳更多的文件；</li>
+<li><code>filestore_merge_threshold</code>配置为负数；这样会提前触发目录的预分裂，避免目录在某一时间段的集中分裂，详细机制没有调研；</li>
+<li>创建pool时指定<code>expected-num-objects</code>；这样会依据目录分裂规则，在创建pool的时候就创建分裂的子目录，避免了目录分裂对filestore性能的影响；</li>
+</ol>
+<p><strong>参考：</strong><br><a href="http://docs.ceph.com/docs/master/rados/configuration/filestore-config-ref/" target="_blank" rel="noopener">http://docs.ceph.com/docs/master/rados/configuration/filestore-config-ref/</a><br><a href="http://docs.ceph.com/docs/jewel/rados/operations/pools/#create-a-pool" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/rados/operations/pools/#create-a-pool</a><br><a href="http://blog.csdn.net/for_tech/article/details/51251936" target="_blank" rel="noopener">http://blog.csdn.net/for_tech/article/details/51251936</a><br><a href="http://ivanjobs.github.io/page3/" target="_blank" rel="noopener">http://ivanjobs.github.io/page3/</a></p>
+<h3 id="14，filestore-fd-cache配置参数"><a href="#14，filestore-fd-cache配置参数" class="headerlink" title="14，filestore fd cache配置参数"></a>14，filestore fd cache配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">filestore_fd_cache_shards =  32     默认值 16     // FD number of shards</span><br><span class="line">filestore_fd_cache_size = 32768     默认值 128  // FD lru size</span><br></pre></td></tr></table></figure>
+<p>filestore的fd cache是加速访问filestore里的file的，在非一次性写入的应用场景，增大配置可以很明显的提升filestore的性能；</p>
+<h3 id="15，filestore-sync配置参数"><a href="#15，filestore-sync配置参数" class="headerlink" title="15，filestore sync配置参数"></a>15，filestore sync配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">filestore_wbthrottle_enable = <span class="literal">false</span>    默认值 <span class="literal">true</span>        SSD的时候建议关闭</span><br><span class="line">filestore_min_sync_interval = 5           默认值 0.01 s     最小同步间隔秒数，sync fs的数据到disk，FileStore::sync_entry()</span><br><span class="line">filestore_max_sync_interval = 10         默认值 5 s       最大同步间隔秒数，sync fs的数据到disk，FileStore::sync_entry()</span><br><span class="line">filestore_commit_timeout = 3000         默认值 600 s       FileStore::sync_entry() 里 new SyncEntryTimeout(m_filestore_commit_timeout)</span><br></pre></td></tr></table></figure>
+<p><code>filestore_wbthrottle_enable</code>的配置是关于filestore writeback throttle的，即我们说的filestore处理workqueue <code>op_wq</code>的数据量阈值；默认值是true，开启后XFS相关的配置参数有：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">OPTION(filestore_wbthrottle_xfs_bytes_start_flusher, OPT_U64, <span class="number">41943040</span>)</span><br><span class="line">OPTION(filestore_wbthrottle_xfs_bytes_hard_limit, OPT_U64, <span class="number">419430400</span>)</span><br><span class="line">OPTION(filestore_wbthrottle_xfs_ios_start_flusher, OPT_U64, <span class="number">500</span>)</span><br><span class="line">OPTION(filestore_wbthrottle_xfs_ios_hard_limit, OPT_U64, <span class="number">5000</span>)</span><br><span class="line">OPTION(filestore_wbthrottle_xfs_inodes_start_flusher, OPT_U64, <span class="number">500</span>)</span><br><span class="line">OPTION(filestore_wbthrottle_xfs_inodes_hard_limit, OPT_U64, <span class="number">5000</span>)</span><br></pre></td></tr></table></figure>
+<p>若使用普通HDD，可以保持其为true；针对SSD，建议将其关闭，不开启writeback throttle；</p>
+<p><code>filestore_min_sync_interval</code>和<code>filestore_max_sync_interval</code>是配置filestore flush outstanding IO到disk的时间间隔的；增大配置可以让系统做尽可能多的IO merge，减少filestore写磁盘的压力，但也会增大page cache占用内存的开销，增大数据丢失的可能性；</p>
+<p><code>filestore_commit_timeout</code>是配置filestore sync entry到disk的超时时间，在filestore压力很大时，调大这个值能尽量避免IO超时导致OSD crush；</p>
+<h3 id="16，filestore-throttle配置参数"><a href="#16，filestore-throttle配置参数" class="headerlink" title="16，filestore throttle配置参数"></a>16，filestore throttle配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">filestore_expected_throughput_bytes =  536870912       默认值 200MB    /// Expected filestore throughput <span class="keyword">in</span> B/s</span><br><span class="line">filestore_expected_throughput_ops = 2500                默认值 200      /// Expected filestore throughput <span class="keyword">in</span> ops/s</span><br><span class="line">filestore_queue_max_bytes= 1048576000                   默认值 100MB</span><br><span class="line">filestore_queue_max_ops = 5000                          默认值 50</span><br><span class="line"> </span><br><span class="line">/// Use above to inject delays intended to keep the op queue between low and high</span><br><span class="line">filestore_queue_low_threshhold = 0.6                    默认值 0.3</span><br><span class="line">filestore_queue_high_threshhold = 0.9                   默认值 0.9</span><br><span class="line"> </span><br><span class="line">filestore_queue_high_delay_multiple = 2                    默认值 0    /// Filestore high delay multiple.  Defaults to 0 (disabled)</span><br><span class="line">filestore_queue_max_delay_multiple = 10                 默认值 0    /// Filestore max delay multiple.  Defaults to 0 (disabled)</span><br></pre></td></tr></table></figure>
+<p>在jewel版本里，引入了dynamic throttle，来平滑普通throttle带来的长尾效应问题；</p>
+<p>一般在使用普通磁盘时，之前的throttle机制即可很好的工作，所以这里默认<code>filestore_queue_high_delay_multiple</code>和<code>filestore_queue_max_delay_multiple</code>都为0；</p>
+<p>针对高速磁盘，需要在部署之前，通过小工具<code>ceph_smalliobenchfs</code>来测试下，获取合适的配置参数；</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">BackoffThrottle的介绍如下：</span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">* BackoffThrottle</span></span><br><span class="line"><span class="comment">*</span></span><br><span class="line"><span class="comment">* Creates a throttle which gradually induces delays when get() is called</span></span><br><span class="line"><span class="comment">* based on params low_threshhold, high_threshhold, expected_throughput,</span></span><br><span class="line"><span class="comment">* high_multiple, and max_multiple.</span></span><br><span class="line"><span class="comment">*</span></span><br><span class="line"><span class="comment">* In [0, low_threshhold), we want no delay.</span></span><br><span class="line"><span class="comment">*</span></span><br><span class="line"><span class="comment">* In [low_threshhold, high_threshhold), delays should be injected based</span></span><br><span class="line"><span class="comment">* on a line from 0 at low_threshhold to</span></span><br><span class="line"><span class="comment">* high_multiple * (1/expected_throughput) at high_threshhold.</span></span><br><span class="line"><span class="comment">*</span></span><br><span class="line"><span class="comment">* In [high_threshhold, 1), we want delays injected based on a line from</span></span><br><span class="line"><span class="comment">* (high_multiple * (1/expected_throughput)) at high_threshhold to</span></span><br><span class="line"><span class="comment">* (high_multiple * (1/expected_throughput)) +</span></span><br><span class="line"><span class="comment">* (max_multiple * (1/expected_throughput)) at 1.</span></span><br><span class="line"><span class="comment">*</span></span><br><span class="line"><span class="comment">* Let the current throttle ratio (current/max) be r, low_threshhold be l,</span></span><br><span class="line"><span class="comment">* high_threshhold be h, high_delay (high_multiple / expected_throughput) be e,</span></span><br><span class="line"><span class="comment">* and max_delay (max_muliple / expected_throughput) be m.</span></span><br><span class="line"><span class="comment">*</span></span><br><span class="line"><span class="comment">* delay = 0, r \in [0, l)</span></span><br><span class="line"><span class="comment">* delay = (r - l) * (e / (h - l)), r \in [l, h)</span></span><br><span class="line"><span class="comment">* delay = h + (r - h)((m - e)/(1 - h))</span></span><br><span class="line"><span class="comment">*/</span></span><br></pre></td></tr></table></figure>
+<p><strong>参考：</strong><br><a href="http://docs.ceph.com/docs/jewel/dev/osd_internals/osd_throttles/" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/dev/osd_internals/osd_throttles/</a><br><a href="http://blog.wjin.org/posts/ceph-dynamic-throttle.html" target="_blank" rel="noopener">http://blog.wjin.org/posts/ceph-dynamic-throttle.html</a><br><a href="https://github.com/ceph/ceph/blob/master/src/doc/dynamic-throttle.txt" target="_blank" rel="noopener">https://github.com/ceph/ceph/blob/master/src/doc/dynamic-throttle.txt</a><br><a href="Ceph-BackoffThrottle.md">Ceph BackoffThrottle分析</a></p>
+<h3 id="17，filestore-finisher-threads配置参数"><a href="#17，filestore-finisher-threads配置参数" class="headerlink" title="17，filestore finisher threads配置参数"></a>17，filestore finisher threads配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">filestore_ondisk_finisher_threads = 2   默认值 1</span><br><span class="line">filestore_apply_finisher_threads = 2   默认值 1</span><br></pre></td></tr></table></figure>
+<p>这两个参数定义filestore commit/apply的finisher处理线程数，默认都为1，任何IO commit/apply完成后，都需要经过对应的ondisk/apply finisher thread处理；</p>
+<p>在使用普通HDD时，磁盘性能是瓶颈，单个finisher thread就能处理好；<br>但在使用高速磁盘的时候，IO完成比较快，单个finisher thread不能处理这么多的IO commit/apply reply，它会成为瓶颈；所以在jewel版本里引入了finisher thread pool的配置，这里一般配置为2即可；</p>
+<h3 id="18，journal配置参数"><a href="#18，journal配置参数" class="headerlink" title="18，journal配置参数"></a>18，journal配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">journal_max_write_bytes=1048576000          默认值 10M    </span><br><span class="line">journal_max_write_entries=5000                默认值 100</span><br><span class="line"> </span><br><span class="line">journal_throttle_high_multiple = 2          默认值 0    /// Multiple over expected at high_threshhold. Defaults to 0 (disabled).</span><br><span class="line">journal_throttle_max_multiple = 10          默认值 0    /// Multiple over expected at max.  Defaults to 0 (disabled).</span><br><span class="line"></span><br><span class="line">/// Target range <span class="keyword">for</span> journal fullness</span><br><span class="line">OPTION(journal_throttle_low_threshhold, OPT_DOUBLE, 0.6)</span><br><span class="line">OPTION(journal_throttle_high_threshhold, OPT_DOUBLE, 0.9)</span><br></pre></td></tr></table></figure>
+<p><code>journal_max_write_bytes</code>和<code>journal_max_write_entries</code>是journal一次write的数据量和entries限制；<br>针对SSD分区做journal的情况，这两个值要增大，这样能增大journal的吞吐量；</p>
+<p><code>journal_throttle_high_multiple</code>和<code>journal_throttle_max_multiple</code>是<code>JournalThrottle</code>的配置参数，<code>JournalThrottle</code>是<code>BackoffThrottle</code>的封装类，所以<code>JournalThrottle</code>与我们在filestore throttle介绍的dynamic throttle工作原理一样；</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> FileJournal::set_throttle_params()</span><br><span class="line">&#123;</span><br><span class="line">    <span class="built_in">stringstream</span> ss;</span><br><span class="line">    <span class="keyword">bool</span> valid = throttle.set_params(</span><br><span class="line">                     g_conf-&gt;journal_throttle_low_threshhold,</span><br><span class="line">                     g_conf-&gt;journal_throttle_high_threshhold,</span><br><span class="line">                     g_conf-&gt;filestore_expected_throughput_bytes,</span><br><span class="line">                     g_conf-&gt;journal_throttle_high_multiple,</span><br><span class="line">                     g_conf-&gt;journal_throttle_max_multiple,</span><br><span class="line">                     header.max_size - get_top(),</span><br><span class="line">                     &amp;ss);</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从上述代码中看出相关的配置参数有：</p>
+<ul>
+<li><code>journal_throttle_low_threshhold</code></li>
+<li><code>journal_throttle_high_threshhold</code></li>
+<li><code>filestore_expected_throughput_bytes</code></li>
+</ul>
+<h3 id="19，rbd-cache配置参数"><a href="#19，rbd-cache配置参数" class="headerlink" title="19，rbd cache配置参数"></a>19，rbd cache配置参数</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[client]</span><br><span class="line">rbd_cache_size = 134217728                  默认值 32M // cache size <span class="keyword">in</span> bytes</span><br><span class="line">rbd_cache_max_dirty = 100663296             默认值 24M // dirty <span class="built_in">limit</span> <span class="keyword">in</span> bytes - <span class="built_in">set</span> to 0 <span class="keyword">for</span> write-through caching</span><br><span class="line">rbd_cache_target_dirty = 67108864           默认值 16M // target dirty <span class="built_in">limit</span> <span class="keyword">in</span> bytes</span><br><span class="line">rbd_cache_writethrough_until_flush = <span class="literal">true</span>   默认值 <span class="literal">true</span>    // whether to make writeback caching writethrough until flush is called, to be sure the user of librbd will send flushs so that writeback is safe</span><br><span class="line">rbd_cache_max_dirty_age = 5                 默认值 1.0     // seconds <span class="keyword">in</span> cache before writeback starts</span><br></pre></td></tr></table></figure>
+<p><code>rbd_cache_size</code>：client端每个rbd image的cache size，不需要太大，可以调整为64M，不然会比较占client端内存；<br>参照默认值，根据<code>rbd_cache_size</code>的大小调整<code>rbd_cache_max_dirty</code>和<code>rbd_cache_target_dirty</code>；</p>
+<ul>
+<li><code>rbd_cache_max_dirty</code>：在writeback模式下cache的最大bytes数，默认是24MB；当该值为0时，表示使用writethrough模式；</li>
+<li><code>rbd_cache_target_dirty</code>：在writeback模式下cache向ceph集群写入的bytes阀值，默认16MB；注意该值一定要小于<code>rbd_cache_max_dirty</code>值</li>
+</ul>
+<p><code>rbd_cache_writethrough_until_flush</code>：在内核触发flush cache到ceph集群前rbd cache一直是writethrough模式，直到flush后rbd cache变成writeback模式；<br><code>rbd_cache_max_dirty_age</code>：标记OSDC端ObjectCacher中entry在cache中的最长时间；</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://my.oschina.net/linuxhunter/blog/541997" target="_blank" rel="noopener">https://my.oschina.net/linuxhunter/blog/541997</a></p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/05/09/rgw-multi-region/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2986,196 +3262,6 @@ s3cmd --help
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2016/11/11/trove-lvm-thin-provision/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="ictfox">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/ictfox.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ictfox blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2016/11/11/trove-lvm-thin-provision/" itemprop="url">RDS配置使用Thin Provision LVM</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-11-11T18:31:17+08:00">
-                2016-11-11
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/openstack/" itemprop="url" rel="index">
-                    <span itemprop="name">openstack</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2016/11/11/trove-lvm-thin-provision/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2016/11/11/trove-lvm-thin-provision/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在RDS的存储中，我们使用LVM卷给Docker container使用，默认LVM是不使用thin的feature的；在LVM 的 2.02.89 版本后，引入了Thin Pool的概念，开始支持创建Thin Provision的volume；</p>
-<p>我们线上的LVM版本为：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">openstack@trove-server1:~$ sudo lvm version</span><br><span class="line">  LVM version:     2.02.98(2) (2012-10-15)</span><br><span class="line">  Library version: 1.02.77 (2012-10-15)</span><br><span class="line">  Driver version:  4.33.0</span><br></pre></td></tr></table></figure>
-<p>所以我们这里调整LVM的配置，来支持创建的volume为Thin Provision的volume，提高设备的资源使用率</p>
-<h2 id="LVM创建Thin-Provision-Volume"><a href="#LVM创建Thin-Provision-Volume" class="headerlink" title="LVM创建Thin Provision Volume"></a>LVM创建Thin Provision Volume</h2><h3 id="创建Thin-Pool"><a href="#创建Thin-Pool" class="headerlink" title="创建Thin Pool"></a>创建Thin Pool</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># vgs</span></span><br><span class="line">  VG                <span class="comment">#PV #LV #SN Attr   VSize VFree</span></span><br><span class="line">  volume-group-pcie   1   2   0 wz--n- 2.91t   2.61t</span><br><span class="line">  volume-group-sata   2   1   0 wz--n- 7.28t 372.44g</span><br><span class="line">  volume-group-ssd    3   1   0 wz--n- 1.85t  94.59g</span><br><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvcreate -L 7168G --thinpool vg-sata-thin-pool volume-group-sata</span></span><br><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvs</span></span><br><span class="line">  LV                                          VG                Attr      LSize   Pool                   Origin Data%  Move Log Copy%  Convert</span><br><span class="line">  vg-sata-thin-pool                           volume-group-sata twi<span class="_">-a</span>-tz-   7.00t                                0.00</span><br></pre></td></tr></table></figure>
-<h3 id="查看Thin-Pool"><a href="#查看Thin-Pool" class="headerlink" title="查看Thin Pool"></a>查看Thin Pool</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvdisplay volume-group-sata/vg-sata-thin-pool</span></span><br><span class="line">  --- Logical volume ---</span><br><span class="line">  LV Name                volume-group-sata-pool</span><br><span class="line">  VG Name                volume-group-sata</span><br><span class="line">  LV UUID                A3N8Bs-7mVk-VaAU-MwJp-J5RD-Dlfp-0pIHzK</span><br><span class="line">  LV Write Access        <span class="built_in">read</span>/write</span><br><span class="line">  LV Creation host, time trove-server1, 2016-11-01 14:11:12 +0800</span><br><span class="line">  LV Pool transaction ID 0</span><br><span class="line">  LV Pool metadata       volume-group-sata-pool_tmeta</span><br><span class="line">  LV Pool data           volume-group-sata-pool_tdata</span><br><span class="line">  LV Pool chunk size     4.00 MiB</span><br><span class="line">  LV Zero new blocks     yes</span><br><span class="line">  LV Status              available</span><br><span class="line">  <span class="comment"># open                 0</span></span><br><span class="line">  LV Size                7.00 TiB</span><br><span class="line">  Allocated pool data    0.00%</span><br><span class="line">  Allocated metadata     0.32%</span><br><span class="line">  Current LE             1812081</span><br><span class="line">  Segments               1</span><br><span class="line">  Allocation             inherit</span><br><span class="line">  Read ahead sectors     auto</span><br><span class="line">  - currently <span class="built_in">set</span> to     256</span><br><span class="line">  Block device           252:10</span><br></pre></td></tr></table></figure>
-<h3 id="创建Thin-Volume"><a href="#创建Thin-Volume" class="headerlink" title="创建Thin Volume"></a>创建Thin Volume</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvcreate -V 5G --thin -n thin_vol_test volume-group-sata/vg-sata-thin-pool</span></span><br><span class="line">  Logical volume <span class="string">"thin_vol_test"</span> created</span><br><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvs</span></span><br><span class="line">  LV                                          VG                Attr      LSize   Pool                   Origin Data%  Move Log Copy%  Convert</span><br><span class="line">  thin_vol_test                               volume-group-sata Vwi<span class="_">-a</span>-tz-   5.00g vg-sata-thin-pool               0.00</span><br><span class="line">  vg-sata-thin-pool                           volume-group-sata twi<span class="_">-a</span>-tz-   7.00t                                 0.00</span><br></pre></td></tr></table></figure>
-<p>从上述的Data%中可以看出，创建5.00G的volume，vg-sata-thin-pool的Data%为0.00；</p>
-<h3 id="删除Thin-Volume"><a href="#删除Thin-Volume" class="headerlink" title="删除Thin Volume"></a>删除Thin Volume</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvremove volume-group-sata/thin_vol_test</span></span><br><span class="line">Do you really want to remove and DISCARD active logical volume thin_vol_test? [y/n]: y</span><br><span class="line">  Logical volume <span class="string">"thin_vol_test"</span> successfully removed</span><br></pre></td></tr></table></figure>
-<h3 id="Thin-Volume创建时间"><a href="#Thin-Volume创建时间" class="headerlink" title="Thin Volume创建时间"></a>Thin Volume创建时间</h3><p>测试下Thin Volume的创建时间是否与volume size有关系</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">root@BJ-BGP03-001-001:/home/openstack/mikeyang<span class="comment"># time lvcreate -V 30G --thin -n volume-test volume-group-sata/volume-group-sata-pool</span></span><br><span class="line">  Logical volume <span class="string">"volume-test"</span> created</span><br><span class="line">real    0m0.378s</span><br><span class="line">user    0m0.008s</span><br><span class="line">sys 0m0.028s</span><br><span class="line"> </span><br><span class="line">root@BJ-BGP03-001-001:/home/openstack/mikeyang<span class="comment"># time lvcreate -V 300G --thin -n volume-test volume-group-sata/volume-group-sata-pool</span></span><br><span class="line">  Logical volume <span class="string">"volume-test"</span> created</span><br><span class="line">real    0m0.359s</span><br><span class="line">user    0m0.000s</span><br><span class="line">sys 0m0.036s</span><br><span class="line"> </span><br><span class="line">root@BJ-BGP03-001-001:/home/openstack/mikeyang<span class="comment"># time lvcreate -V 1000G --thin -n volume-test volume-group-sata/volume-group-sata-pool</span></span><br><span class="line">  Logical volume <span class="string">"volume-test"</span> created</span><br><span class="line">real    0m0.374s</span><br><span class="line">user    0m0.016s</span><br><span class="line">sys 0m0.024s</span><br></pre></td></tr></table></figure>
-<p>从上述测试中可以看出，Thin Volume的创建时间很短，不受volume size大小影响</p>
-<h3 id="扩容Thin-Pool"><a href="#扩容Thin-Pool" class="headerlink" title="扩容Thin Pool"></a>扩容Thin Pool</h3><p>因为Thin Pool对应的其实也是一个LVM volume，所以通过lvextend命令即可扩容</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># lvextend -L 2.5t volume-group-pcie/volume-group-pcie-pool</span></span><br><span class="line">Extending logical volume volume-group-pcie-pool to 2.50 TiB</span><br><span class="line">  Logical volume volume-group-pcie-pool successfully resized</span><br><span class="line"></span><br><span class="line">或者</span><br><span class="line"><span class="comment"># lvextend -L +1t volume-group-pcie/volume-group-pcie-pool</span></span><br><span class="line">  Extending logical volume volume-group-pcie-pool to 2.50 TiB</span><br><span class="line">  Logical volume volume-group-pcie-pool successfully resized</span><br></pre></td></tr></table></figure>
-<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="https://linux.cn/article-4288-1.html" target="_blank" rel="noopener">https://linux.cn/article-4288-1.html</a><br><a href="http://mathslinux.org/?p=379" target="_blank" rel="noopener">http://mathslinux.org/?p=379</a>  </p>
-<h2 id="Cinder支持创建Thin-Provision-volume"><a href="#Cinder支持创建Thin-Provision-volume" class="headerlink" title="Cinder支持创建Thin Provision volume"></a>Cinder支持创建Thin Provision volume</h2><h3 id="Cinder配置"><a href="#Cinder配置" class="headerlink" title="Cinder配置"></a>Cinder配置</h3><p>查询Cinder代码，发现cinder是支持thin的lvm格式的；</p>
-<p>需要在cinder中添加如下配置：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">/opt/etc/cinder/cinder.conf</span><br><span class="line">[lvm-sata]</span><br><span class="line">volume_group = volume-group-sata</span><br><span class="line">volume_driver=cinder.volume.drivers.lvm.LVMISCSIDriver</span><br><span class="line">volume_backend_name=LVM_SATA</span><br><span class="line">volume_clear = none</span><br><span class="line">lvm_type = thin</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
-<p>如上述配置，只需要添加：lvm_type = thin 即可；LVM会自动创建名称为<vgname>-pool的thin pool；</vgname></p>
-<h3 id="重启服务"><a href="#重启服务" class="headerlink" title="重启服务"></a>重启服务</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openstack@trove-server1:~$ service cinder-api restart; service cinder-backup restart; service cinder-scheduler restart; service cinder-volume restart;</span><br></pre></td></tr></table></figure>
-<p>重启cinder服务后，测试创建RDS实例即可；</p>
-<h2 id="原有volumes迁移"><a href="#原有volumes迁移" class="headerlink" title="原有volumes迁移"></a>原有volumes迁移</h2><p>修改为支持Thin Provision Volumes后，对之前创建的volume需要迁移到Thin Provision Volume上，这里给出迁移方案</p>
-<p>在RDS的两个docker container中，一端一端的做volume的迁移；</p>
-<h3 id="Umount-volume"><a href="#Umount-volume" class="headerlink" title="Umount volume"></a>Umount volume</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">openstack@trove-server1:~$ docker <span class="built_in">exec</span> -it 583e869197cd bash</span><br><span class="line">root@rds-vpie5bx2:/<span class="comment"># df</span></span><br><span class="line">Filesystem     1K-blocks    Used Available Use% Mounted on</span><br><span class="line">none           103081248 2906328  94915656   3% /</span><br><span class="line">tmpfs          198079304       0 198079304   0% /dev</span><br><span class="line">tmpfs          198079304       0 198079304   0% /sys/fs/cgroup</span><br><span class="line">/dev/rbd0       51475068   54156  48783088   1% /var/<span class="built_in">log</span>/mysql</span><br><span class="line">/dev/rbd1      103081248 2906328  94915656   3% /var/<span class="built_in">log</span>/rds/9709c88c-d392-4a52-8301-4135cadcdea6</span><br><span class="line">shm                65536       0     65536   0% /dev/shm</span><br><span class="line">/dev/vdb         5029504  118360   4649000   3% /var/lib/mysql</span><br><span class="line">root@rds-vpie5bx2:/<span class="comment"># umount /var/lib/mysql/</span></span><br></pre></td></tr></table></figure>
-<h3 id="停止Docker-Container"><a href="#停止Docker-Container" class="headerlink" title="停止Docker Container"></a>停止Docker Container</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openstack@trove-server1:~$ docker stop 583e869197cd</span><br></pre></td></tr></table></figure>
-<h3 id="rename原有volume"><a href="#rename原有volume" class="headerlink" title="rename原有volume"></a>rename原有volume</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvrename volume-group-pcie/volume-ca880d25-c95f-4d19-993c-ee7ccfbf8d1c volume-group-pcie/backup-volume</span></span><br></pre></td></tr></table></figure>
-<h3 id="创建新的Thin-Provision-Volume"><a href="#创建新的Thin-Provision-Volume" class="headerlink" title="创建新的Thin Provision Volume"></a>创建新的Thin Provision Volume</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># lvcreate -V 5G --thin -n volume-ca880d25-c95f-4d19-993c-ee7ccfbf8d1c volume-group-ssd/volume-group-ssd-pool</span></span><br></pre></td></tr></table></figure>
-<h3 id="格式化新的Thin-Provision-Volume"><a href="#格式化新的Thin-Provision-Volume" class="headerlink" title="格式化新的Thin Provision Volume"></a>格式化新的Thin Provision Volume</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># mkfs.ext3 /dev/volume-group-ssd/volume-ca880d25-c95f-4d19-993c-ee7ccfbf8d1c</span></span><br></pre></td></tr></table></figure>
-<h3 id="volume数据迁移"><a href="#volume数据迁移" class="headerlink" title="volume数据迁移"></a>volume数据迁移</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">root@trove-server1:/home/openstack<span class="comment"># mount /dev/volume-group-ssd/volume-ca880d25-c95f-4d19-993c-ee7ccfbf8d1c /mnt/destination/</span></span><br><span class="line">root@trove-server1:/home/openstack<span class="comment"># mount /dev/volume-group-pcie/backup-volume /mnt/source/</span></span><br><span class="line">root@trove-server1:/mnt/<span class="built_in">source</span><span class="comment"># cp -r -p * /mnt/destination/</span></span><br><span class="line">root@trove-server1:/mnt/<span class="built_in">source</span><span class="comment"># cd /home/openstack/</span></span><br><span class="line">root@trove-server1:/home/openstack<span class="comment"># umount /mnt/source/</span></span><br><span class="line">root@trove-server1:/home/openstack<span class="comment"># umount /mnt/destination/</span></span><br></pre></td></tr></table></figure>
-<h3 id="启动Docker-Container"><a href="#启动Docker-Container" class="headerlink" title="启动Docker Container"></a>启动Docker Container</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openstack@trove-server1:~$ nova reboot 9709c88c-d392-4a52-8301-4135cadcdea6</span><br></pre></td></tr></table></figure>
-<p>若报错，则先执行nova start <nova-id>，然后再执行 nova reboot <nova-id></nova-id></nova-id></p>
-<h3 id="检查trove实例状态"><a href="#检查trove实例状态" class="headerlink" title="检查trove实例状态"></a>检查trove实例状态</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">openstack@trove-server1:~$ docker <span class="built_in">exec</span> -it 583e869197cd bash</span><br><span class="line">root@rds-vpie5bx2:/<span class="comment"># df</span></span><br><span class="line">Filesystem     1K-blocks    Used Available Use% Mounted on</span><br><span class="line">none           103081248 2906328  94915656   3% /</span><br><span class="line">tmpfs          198079304       0 198079304   0% /dev</span><br><span class="line">tmpfs          198079304       0 198079304   0% /sys/fs/cgroup</span><br><span class="line">/dev/rbd0       51475068   54156  48783088   1% /var/<span class="built_in">log</span>/mysql</span><br><span class="line">/dev/rbd1      103081248 2906328  94915656   3% /var/<span class="built_in">log</span>/rds/9709c88c-d392-4a52-8301-4135cadcdea6</span><br><span class="line">shm                65536       0     65536   0% /dev/shm</span><br><span class="line">/dev/vdb         5029504  118360   4649000   3% /var/lib/mysql</span><br></pre></td></tr></table></figure>
-<p>若发现mysql没启动，可能是因为/var/lib/mysql/里的文件权限导致的，把/var/lib/mysql/的权限修改为mysql:mysql 即可；</p>
-<h3 id="注意事项"><a href="#注意事项" class="headerlink" title="注意事项"></a>注意事项</h3><ol>
-<li>最好先迁移floating ip不在的trove实例上的volume；然后切换floating ip后，再迁移另外一个trove实例的volume；</li>
-<li>最好在客户使用rds服务不频繁的时候做数据迁移；</li>
-<li>迁移完一端的trove实例后，需要等待mysql为active-active状态后再迁移另外一端；</li>
-</ol>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -3230,7 +3316,7 @@ s3cmd --help
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">76</span>
+                  <span class="site-state-item-count">77</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>

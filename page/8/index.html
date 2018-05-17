@@ -304,6 +304,172 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2015/10/15/ceph-client-rbd-cache-configuration/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2015/10/15/ceph-client-rbd-cache-configuration/" itemprop="url">ceph client rbd cahce配置</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2015-10-15T18:31:17+08:00">
+                2015-10-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2015/10/15/ceph-client-rbd-cache-configuration/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2015/10/15/ceph-client-rbd-cache-configuration/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="修改ceph-conf文件"><a href="#修改ceph-conf文件" class="headerlink" title="修改ceph.conf文件"></a>修改ceph.conf文件</h2><p>添加如下内容：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/ceph/ceph.conf</span><br><span class="line">...</span><br><span class="line">[client]</span><br><span class="line">    rbd cache = <span class="literal">true</span></span><br><span class="line">    rbd cache size = 268435456</span><br><span class="line">    rbd cache max dirty = 134217728</span><br><span class="line">    rbd cache max dirty age = 5</span><br><span class="line">    rbd cache writethrough until flush = <span class="literal">true</span></span><br><span class="line">    admin socket = /var/run/ceph/ceph-client/<span class="variable">$cluster</span>-<span class="variable">$type</span>.<span class="variable">$id</span>.<span class="variable">$pid</span>.asok</span><br></pre></td></tr></table></figure>
+<h2 id="修改libvirt-qemu文件"><a href="#修改libvirt-qemu文件" class="headerlink" title="修改libvirt-qemu文件"></a>修改libvirt-qemu文件</h2><p>添加如下内容：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/apparmor.d/abstractions/libvirt-qemu</span><br><span class="line">...</span><br><span class="line"><span class="comment"># for rbd</span></span><br><span class="line">/etc/ceph/ceph.conf r,</span><br><span class="line">capability mknod,</span><br><span class="line">/var/<span class="built_in">log</span>/ceph/* rw,</span><br><span class="line">/&#123;,var/&#125;run/ceph/** rw,</span><br></pre></td></tr></table></figure>
+<h2 id="重启相关服务"><a href="#重启相关服务" class="headerlink" title="重启相关服务"></a>重启相关服务</h2><p>重启<code>libvirt-bin</code>和<code>nova-compute</code>服务</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">service libvirt-bin restart</span><br><span class="line">service nova-compute restart</span><br></pre></td></tr></table></figure>
+<h2 id="重启nova-instances"><a href="#重启nova-instances" class="headerlink" title="重启nova instances"></a>重启nova instances</h2><p>重启Host上的所有nova instances</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nova reboot [--hard] [--poll] &lt;server&gt; [&lt;server&gt; ...]</span><br></pre></td></tr></table></figure>
+<h2 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h2><p>查看asok文件是否存在，并执行perf dump和config show命令</p>
+<p>在 /var/run/ceph/ceph-client/ 目录下会出现类似如下的文件：<br>ceph-client.volumes.824997.asok</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ceph --admin-daemon /var/run/ceph/ceph-client.volumes.824997.asok perf dump</span><br><span class="line">ceph --admin-daemon /var/run/ceph/ceph-client.volumes.824997.asok config show</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>[注]： /var/run/ceph的目录是root权限，需要在其下创建ceph-client目录，然后执行 chmod 777 ceph-client，使得libvirt-qemu用户有创建asok的权限。</p>
+</blockquote>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2015/08/06/ceph-osd-write-op-tracker-analysis/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1494,7 +1660,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">76</span>
+                  <span class="site-state-item-count">77</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>

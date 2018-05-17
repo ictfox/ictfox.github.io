@@ -304,6 +304,250 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/12/05/volume-dynamic-iotune-arch-design/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/12/05/volume-dynamic-iotune-arch-design/" itemprop="url">基于Cinder的云硬盘动态限速框架设计</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-12-05T21:41:17+08:00">
+                2017-12-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/openstack/" itemprop="url" rel="index">
+                    <span itemprop="name">openstack</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/12/05/volume-dynamic-iotune-arch-design/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/12/05/volume-dynamic-iotune-arch-design/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="当前状况"><a href="#当前状况" class="headerlink" title="当前状况"></a>当前状况</h2><p>当前我们仅仅通过<code>cinder</code>创建<code>type</code>，指定<code>type</code>的<code>IO限制</code>来限制不同类型的云硬盘的<code>IO值</code>。</p>
+<p>具体方案和调研，参考：<a href="http://www.yangguanjun.com/2017/11/28/volume-dynamic-iotune-invest/">云硬盘动态限速调研</a></p>
+<h2 id="目的"><a href="#目的" class="headerlink" title="目的"></a>目的</h2><ul>
+<li>充分利用系统的资源，在系统负载和<code>Ceph</code>负载小的情况下，动态调整云硬盘的<code>IO值</code>，给用户提供更好的体验。</li>
+<li>设计一个框架，能满足云硬盘动态限速的要求；以后也能方便的加入网络的动态限速；</li>
+</ul>
+<h2 id="框架设计"><a href="#框架设计" class="headerlink" title="框架设计"></a>框架设计</h2><h3 id="需求"><a href="#需求" class="headerlink" title="需求"></a>需求</h3><ul>
+<li>统一配置选项</li>
+<li>模块化设计，能方便添加别的动态限速需求</li>
+<li>统一调度，各物理节点独立运行模式</li>
+</ul>
+<h3 id="方案1"><a href="#方案1" class="headerlink" title="方案1"></a>方案1</h3><p>分散式架构设计，独立实现，各物理节点独立负责监控负载和动态限速；</p>
+<p><img src="/images/volume-dynamic-iotune-arch1" alt="arch1"></p>
+<p><strong>优点：</strong></p>
+<ul>
+<li>独立实现，比较简洁</li>
+<li>物理节点单独计算负载，通信量减少</li>
+<li><code>Master</code>只需要维护配置项，可在内存中维护该数据</li>
+</ul>
+<p><strong>缺点：</strong></p>
+<ul>
+<li>不能与现有监控系统结合</li>
+</ul>
+<h3 id="方案2"><a href="#方案2" class="headerlink" title="方案2"></a>方案2</h3><p>结合<code>Openstack</code>的设计，<code>Master</code>端集中维护系统负载，存入<code>DB</code>，<code>Master-Agent</code>通过<code>Rabbitmq</code>通信；</p>
+<p><img src="/images/volume-dynamic-iotune-arch2" alt="arch2"></p>
+<p><strong>优点：</strong></p>
+<ul>
+<li>结合<code>Openstack</code>的<code>DB</code>，<code>rabbitmq</code>，<code>rpc通信</code>，<code>wsgi等模块</code></li>
+<li>系统负载信息通过<code>DB</code>统一维护</li>
+<li>方便与现有监控系统集合</li>
+</ul>
+<p><strong>缺点：</strong></p>
+<ul>
+<li>结合<code>Openstack</code>的几个通用模块，代码量和工作量比较大</li>
+<li>系统负载信息集中保存到DB，当前看是没有必要性</li>
+</ul>
+<h3 id="方案选择"><a href="#方案选择" class="headerlink" title="方案选择"></a>方案选择</h3><p>个人倾向 方案1，不需要把<code>openstack</code>的各个模块引入进来，实现会相对简单，也满足我们项目的需求；</p>
+<h2 id="云硬盘限速部分设计"><a href="#云硬盘限速部分设计" class="headerlink" title="云硬盘限速部分设计"></a>云硬盘限速部分设计</h2><h3 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h3><p>前面在调研中指出，我们可以在<code>nova instance</code>具体的物理机上，通过<code>virsh</code>的命令调整虚拟机指定云硬盘的<code>io限制</code>。<br>所以具体执行动态限速的命令需要在<code>nova instance</code>的物理机上执行，也就是说每个运行<code>nova instance</code>的物理机需要跑一个限速的<code>agent</code>进程。</p>
+<p>我们期望云硬盘动态限速，会受到以下两个因素影响：</p>
+<ul>
+<li>物理机的负载</li>
+<li>云硬盘对应<code>Ceph Pool</code>的<code>IO</code>负载</li>
+</ul>
+<p><strong>所以比较简单的设计为：</strong></p>
+<p>每个<code>Agent</code>单独运行，负责本物理机上的<code>nova instances</code>的云硬盘IO动态调整。<code>Agent</code>可以获取本机的实时负载和<code>Ceph</code>对应<code>Pool</code>的IO负载。</p>
+<h3 id="考虑的因素"><a href="#考虑的因素" class="headerlink" title="考虑的因素"></a>考虑的因素</h3><ul>
+<li>通过配置可以关闭/开启动态限速</li>
+<li>支持白名单方式</li>
+<li>支持黑名单方式</li>
+<li>通过配置指定支持的云硬盘类型</li>
+<li>通过配置指定动态限速模式：<ul>
+<li>物理机负载 + <code>Ceph Pool</code>负载</li>
+<li>物理机负载</li>
+<li><code>Ceph Pool</code>负载</li>
+</ul>
+</li>
+<li>配置动态调整限速间隔</li>
+<li>配置指定类型云硬盘动态限速的范围: <code>[begin, end]</code></li>
+</ul>
+<h3 id="配置项示例"><a href="#配置项示例" class="headerlink" title="配置项示例"></a>配置项示例</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">[DEFAULT]</span><br><span class="line"><span class="comment"># Tune dynamic resource limitation to True/False</span></span><br><span class="line">dynamic_tune = True/False</span><br><span class="line"><span class="comment"># interval to check and reset dynamic tune, value in seconds</span></span><br><span class="line">interval = 60</span><br><span class="line"><span class="comment"># Tune modules which would do dynamic tune</span></span><br><span class="line"><span class="comment"># Keep pace with the below configurations</span></span><br><span class="line">tune_modules = iotune</span><br><span class="line"> </span><br><span class="line"><span class="comment">### io dynamic tune related</span></span><br><span class="line">[iotune]</span><br><span class="line"><span class="comment"># Which type of volumes supported, default means tune all volume types;</span></span><br><span class="line"><span class="comment"># Keep pace with the configuration of cinder type</span></span><br><span class="line"><span class="comment"># Example values: default/sata/ssd/sata, ssd</span></span><br><span class="line">volume_types = default</span><br><span class="line"><span class="comment"># Model to do tune, value maybe: default/local/ceph</span></span><br><span class="line"><span class="comment"># default model: local + ceph</span></span><br><span class="line"><span class="comment"># local: only check local load</span></span><br><span class="line"><span class="comment"># ceph: only check ceph load</span></span><br><span class="line">tune_model = default</span><br><span class="line"> </span><br><span class="line"><span class="comment"># Set the iotune range for specify volume type to [begin, end]</span></span><br><span class="line">iotune_bw_range = &#123;<span class="string">'sata'</span> : &#123;<span class="string">'read'</span> : [80, 200], <span class="string">'write'</span> : [50, 100]&#125;, <span class="string">'ssd'</span> : &#123;<span class="string">'read'</span> : [100, 300], <span class="string">'write'</span> : [80, 200]&#125;&#125;</span><br><span class="line">iotune_iops_range = &#123;<span class="string">'sata'</span> : &#123;<span class="string">'read'</span> : [100, 1000], <span class="string">'write'</span> : [100, 800]&#125;, <span class="string">'ssd'</span> : &#123;<span class="string">'read'</span> : [1000, 5000], <span class="string">'write'</span> : [600, 300]&#125;&#125;</span><br><span class="line"> </span><br><span class="line"><span class="comment"># Specify disks tune info</span></span><br><span class="line">iotune_range = &#123;<span class="string">'d-5pc4hq7y'</span> : &#123;<span class="string">'bw'</span> : &#123;<span class="string">'read'</span> : [80, 200], <span class="string">'write'</span> : [50, 100]&#125;, <span class="string">'iops'</span> : &#123;<span class="string">'read'</span> : [100, 1000], <span class="string">'write'</span> : [100, 800]&#125;&#125;,</span><br><span class="line">                <span class="string">'d-ymqagtez'</span> : &#123;<span class="string">'bw'</span> : &#123;<span class="string">'read'</span> : [100, 300], <span class="string">'write'</span> : [80, 200]&#125;, <span class="string">'iops'</span> : &#123;<span class="string">'read'</span> : [1000, 5000], <span class="string">'write'</span> : [600, 300]&#125;&#125; &#125;</span><br><span class="line"> </span><br><span class="line"><span class="comment"># Blacklist of nova instances which would not do dynamic iotune</span></span><br><span class="line"><span class="comment">#blacklist = nova-ins1, nova-ins2, ...</span></span><br><span class="line"><span class="comment"># Whitelist of nova instances which ONLY do dynamic iotune on them</span></span><br><span class="line"><span class="comment">#whitelist = nova-ins3, nova-ins4, ...</span></span><br><span class="line"> </span><br><span class="line"><span class="comment">### specify user tune info</span></span><br><span class="line">[usr-kndz857b]</span><br><span class="line">iotune_bw_range = &#123;<span class="string">'sata'</span> : &#123;<span class="string">'read'</span> : [80, 200], <span class="string">'write'</span> : [50, 100]&#125;, <span class="string">'ssd'</span> : &#123;<span class="string">'read'</span> : [100, 300], <span class="string">'write'</span> : [80, 200]&#125;&#125;</span><br><span class="line">iotune_iops_range = &#123;<span class="string">'sata'</span> : &#123;<span class="string">'read'</span> : [100, 1000], <span class="string">'write'</span> : [100, 800]&#125;, <span class="string">'ssd'</span> : &#123;<span class="string">'read'</span> : [1000, 5000], <span class="string">'write'</span> : [600, 300]&#125;&#125;</span><br></pre></td></tr></table></figure>
+<p>代码中读取上诉配置，在脚本中生成<code>conf</code>的字典信息；</p>
+<h3 id="涉及到的命令与解释"><a href="#涉及到的命令与解释" class="headerlink" title="涉及到的命令与解释"></a>涉及到的命令与解释</h3><h4 id="1-、获取系统cinder-volume的信息"><a href="#1-、获取系统cinder-volume的信息" class="headerlink" title="1)、获取系统cinder volume的信息"></a>1)、获取系统cinder volume的信息</h4><p><code>cinder list --all | grep &quot;in-use&quot; | awk &#39;{print $2,$4,$8,$12}&#39;</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">(.venv)openstack@Server-01-01:~$ cinder list --all | grep <span class="string">"in-use"</span> | awk <span class="string">'&#123;print $2,$4,$8,$12&#125;'</span></span><br><span class="line">...</span><br><span class="line">|               ID                  |            Tenant ID           |  Name    | Volume Type |</span><br><span class="line">04960b37-7a07-439d-9fd4-dc0664870245 a72514ab47524d00b0b43551466c7d67 d-6a3x2u8j sata</span><br><span class="line">06996e93-47ad-4003-acb4-b46aa185d479 f634c4182b634a7ca4a4c2ac72837cb7 d-ibvar57t sata</span><br><span class="line">0f45c78c-743b-4d42-b098-b2ee5f95df94 462dc39145324bb1bda7263368d176aa d-f8wkacjy ssd</span><br><span class="line">103a0e6d-382c-4caa-b313-63a95eeb351d 616eae54884147d786a3beb39ea6bcbb d-va5fe6bw sata</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h4 id="2-、找到配置文件中user对应的-Tenant-ID"><a href="#2-、找到配置文件中user对应的-Tenant-ID" class="headerlink" title="2)、找到配置文件中user对应的 Tenant ID"></a>2)、找到配置文件中user对应的 Tenant ID</h4><p><code>openstack project list | grep &quot;user-id&quot;</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">openstack@Server-01-01:~$ openstack user list | grep usr-kndz857b</span><br><span class="line">| 63719e972d7d4afe87b7127c9daa120f | usr-kndz857b |</span><br></pre></td></tr></table></figure>
+<h4 id="3-、列出本物理机上的virsh-instances"><a href="#3-、列出本物理机上的virsh-instances" class="headerlink" title="3)、列出本物理机上的virsh instances"></a>3)、列出本物理机上的virsh instances</h4><p><code>virsh list：list domains</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">openstack@Server-01-01:~$ virsh list</span><br><span class="line"> Id    Name                           State</span><br><span class="line">----------------------------------------------------</span><br><span class="line"> 40    instance-0000028d              running</span><br><span class="line"> 52    instance-0000033d              running</span><br><span class="line"> 122   instance-00000721              running</span><br><span class="line"> 140   instance-000007a5              running</span><br><span class="line"> 141   instance-000007a3              running</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h4 id="4-、列出指定virsh-instances的所有blocks"><a href="#4-、列出指定virsh-instances的所有blocks" class="headerlink" title="4)、列出指定virsh instances的所有blocks"></a>4)、列出指定virsh instances的所有blocks</h4><p><code>virsh domblklist &lt;domain&gt;：list all domain blocks</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">openstack@Server-01-01:~$ virsh domblklist instance-00000921</span><br><span class="line">Target     Source</span><br><span class="line">------------------------------------------------</span><br><span class="line">vda        /var/lib/nova/instances/7ef2900b-0653-443b-a2c0-3da7a5d7a10f/disk</span><br><span class="line">vdb        volumes/volume-7b94ccc5-6b14-4352-b4f3-74a71893f246</span><br></pre></td></tr></table></figure>
+<h4 id="5-、查看-修改block-device的iotune"><a href="#5-、查看-修改block-device的iotune" class="headerlink" title="5)、查看/修改block device的iotune"></a>5)、查看/修改block device的iotune</h4><p><code>virsh blkdeviotune &lt;domain&gt; &lt;device&gt;：Set or query a block device I/O tuning parameters</code></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">openstack@Server-01-01:~$ virsh blkdeviotune instance-00000921 vdb</span><br><span class="line">total_bytes_sec: 0</span><br><span class="line">read_bytes_sec : 104857600</span><br><span class="line">write_bytes_sec: 62914560</span><br><span class="line">total_iops_sec : 0</span><br><span class="line">read_iops_sec  : 1500</span><br><span class="line">write_iops_sec : 1000</span><br><span class="line">total_bytes_sec_max: 0</span><br><span class="line">read_bytes_sec_max: 10485760</span><br><span class="line">write_bytes_sec_max: 6291456</span><br><span class="line">total_iops_sec_max: 0</span><br><span class="line">read_iops_sec_max: 150</span><br><span class="line">write_iops_sec_max: 100</span><br><span class="line">size_iops_sec  : 0</span><br><span class="line">openstack@Server-01-01:~$ virsh blkdeviotune instance-00000921 vdb --read_iops_sec 5000 --write_iops_sec 3000</span><br></pre></td></tr></table></figure>
+<h3 id="Agent框架流程"><a href="#Agent框架流程" class="headerlink" title="Agent框架流程"></a>Agent框架流程</h3><p><img src="/images/volume-dynamic-iotune-agent" alt="agent"></p>
+<h3 id="获取负载信息"><a href="#获取负载信息" class="headerlink" title="获取负载信息"></a>获取负载信息</h3><h4 id="1-、本机负载信息"><a href="#1-、本机负载信息" class="headerlink" title="1)、本机负载信息"></a>1)、本机负载信息</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ uptime</span><br><span class="line"> 14:35:25 up 32 days, 14:54,  5 users,  load average: 2.53, 2.82, 2.80</span><br></pre></td></tr></table></figure>
+<p>获取最近1,5,15分钟负载分别为：2.53, 2.82, 2.80</p>
+<h4 id="2-、Ceph负载信息"><a href="#2-、Ceph负载信息" class="headerlink" title="2)、Ceph负载信息"></a>2)、Ceph负载信息</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">$ ceph osd tree</span><br><span class="line">ID  WEIGHT    TYPE NAME                    UP/DOWN REWEIGHT PRIMARY-AFFINITY</span><br><span class="line">-10   3.41998 root hp-default</span><br><span class="line"> -7   1.70999     host hp-Server-01-02</span><br><span class="line"> 33   0.64999         osd.33                    up  1.00000          1.00000</span><br><span class="line"> 32   0.67000         osd.32                    up  1.00000          1.00000</span><br><span class="line"> 31   0.39000         osd.31                    up  1.00000          1.00000</span><br><span class="line"> -9   1.70999     host hp-Server-02-02</span><br><span class="line"> 38   0.67000         osd.38                    up  1.00000          1.00000</span><br><span class="line"> 39   0.64999         osd.39                    up  1.00000          1.00000</span><br><span class="line"> 37   0.39000         osd.37                    up  1.00000          1.00000</span><br><span class="line"> -1 101.91998 root default</span><br><span class="line"> -2  25.48000     host Server-01-01</span><br><span class="line">  6   3.64000         osd.6                     up  1.00000          1.00000</span><br><span class="line">  5   3.64000         osd.5                     up  1.00000          1.00000</span><br><span class="line">  4   3.64000         osd.4                     up  1.00000          1.00000</span><br><span class="line">  3   3.64000         osd.3                     up  1.00000          1.00000</span><br><span class="line">  2   3.64000         osd.2                     up  1.00000          1.00000</span><br><span class="line">  1   3.64000         osd.1                     up  1.00000          1.00000</span><br><span class="line">  0   3.64000         osd.0                     up  1.00000          1.00000</span><br><span class="line"> -3  25.48000     host Server-01-02</span><br><span class="line"> 13   3.64000         osd.13                    up  1.00000          1.00000</span><br><span class="line"> 12   3.64000         osd.12                    up  1.00000          1.00000</span><br><span class="line"> 11   3.64000         osd.11                    up  1.00000          1.00000</span><br><span class="line"> 10   3.64000         osd.10                    up  1.00000          1.00000</span><br><span class="line">  9   3.64000         osd.9                     up  1.00000          1.00000</span><br><span class="line">  8   3.64000         osd.8                     up  1.00000          1.00000</span><br><span class="line">  7   3.64000         osd.7                     up  1.00000          1.00000</span><br><span class="line"> -4  25.48000     host Server-02-01</span><br><span class="line"> 20   3.64000         osd.20                    up  1.00000          1.00000</span><br><span class="line"> 19   3.64000         osd.19                    up  1.00000          1.00000</span><br><span class="line"> 18   3.64000         osd.18                    up  1.00000          1.00000</span><br><span class="line"> 17   3.64000         osd.17                    up  1.00000          1.00000</span><br><span class="line"> 16   3.64000         osd.16                    up  1.00000          1.00000</span><br><span class="line"> 15   3.64000         osd.15                    up  1.00000          1.00000</span><br><span class="line"> 14   3.64000         osd.14                    up  1.00000          1.00000</span><br><span class="line"> -5  25.48000     host Server-02-02</span><br><span class="line"> 27   3.64000         osd.27                    up  1.00000          1.00000</span><br><span class="line"> 26   3.64000         osd.26                    up  1.00000          1.00000</span><br><span class="line"> 25   3.64000         osd.25                    up  1.00000          1.00000</span><br><span class="line"> 24   3.64000         osd.24                    up  1.00000          1.00000</span><br><span class="line"> 23   3.64000         osd.23                    up  1.00000          1.00000</span><br><span class="line"> 22   3.64000         osd.22                    up  1.00000          1.00000</span><br><span class="line"> 21   3.64000         osd.21                    up  1.00000          1.00000</span><br></pre></td></tr></table></figure>
+<p>从上述输出中获取不同性质磁盘对应的<code>OSD</code>如下信息：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&#123;<span class="string">"sata"</span> : (0,1,2,3,4,5,6,7,...,26,27)&#125;</span><br><span class="line">&#123;<span class="string">"ssd"</span>: (31,32,33,37,38,39)&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>【注：这个信息是固定的，只需要获取一次即可】</p>
+</blockquote>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">$ ceph osd perf</span><br><span class="line">osd fs_commit_latency(ms) fs_apply_latency(ms)</span><br><span class="line">  0                     0                    1</span><br><span class="line">  1                     0                    1</span><br><span class="line">  2                     0                    1</span><br><span class="line">  3                     0                    1</span><br><span class="line">  4                     0                    1</span><br><span class="line">  5                     0                    1</span><br><span class="line">  6                     0                    1</span><br><span class="line">  7                     2                    4</span><br><span class="line">  8                     0                    1</span><br><span class="line">  9                     0                    0</span><br><span class="line"> 10                     0                    1</span><br><span class="line"> 11                     0                    1</span><br><span class="line"> 12                     0                    1</span><br><span class="line"> 13                     0                    0</span><br><span class="line"> 14                     0                    1</span><br><span class="line"> 15                     0                    1</span><br><span class="line"> 16                     0                    1</span><br><span class="line"> 17                     0                    1</span><br><span class="line"> 18                     0                    1</span><br><span class="line"> 19                     0                    1</span><br><span class="line"> 20                     0                    1</span><br><span class="line"> 21                     0                    1</span><br><span class="line"> 22                     0                    0</span><br><span class="line"> 23                     0                    0</span><br><span class="line"> 24                     0                    0</span><br><span class="line"> 25                     0                    1</span><br><span class="line"> 26                     0                    0</span><br><span class="line"> 27                     0                    1</span><br><span class="line"> 31                     1                    2</span><br><span class="line"> 32                     0                    7</span><br><span class="line"> 33                     0                    6</span><br><span class="line"> 37                     0                    6</span><br><span class="line"> 38                     0                    8</span><br><span class="line"> 39                     0                    3</span><br></pre></td></tr></table></figure>
+<p>分别获取SATA和SSD磁盘组内的平均负载信息：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;<span class="string">"sata"</span> : [1, 2], <span class="string">"ssd"</span> : [1, 6]&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>【注：这个信息需要周期性获取】</p>
+</blockquote>
+<h3 id="动态调整IO限速"><a href="#动态调整IO限速" class="headerlink" title="动态调整IO限速"></a>动态调整IO限速</h3><p>公式：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">sys_load_throttle = 20</span><br><span class="line">cepy_load_throttle1 = 10</span><br><span class="line">cepy_load_throttle2 = 20</span><br><span class="line"> </span><br><span class="line">系统负载，从uptime输出获取，sys_load: [2.53, 2.82, 2.80]</span><br><span class="line">ceph负载，从ceph osd perf输出获取，ceph_load: &#123;<span class="string">"sata"</span> : [1, 2], <span class="string">"ssd"</span> : [1, 6]&#125;</span><br><span class="line">根据volume_type，获取ceph对应磁盘组的负载信息: cload</span><br><span class="line">根据sys_load和cload的值决定增加还是减少bw和iops</span><br><span class="line"><span class="keyword">if</span> (cload[0] &lt; <span class="variable">$cepy_load_throttle1</span>) &amp;&amp; (cload[1] &lt; <span class="variable">$cepy_load_throttle1</span>):</span><br><span class="line">    <span class="keyword">if</span> (sys_load[0] &lt; <span class="variable">$sys_load_throttle</span>) &amp;&amp; (sys_load[1] &lt; <span class="variable">$sys_load_throttle</span>):</span><br><span class="line">        <span class="comment">#增大</span></span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="comment">#保持不变</span></span><br><span class="line"><span class="keyword">elif</span> (<span class="variable">$cepy_load_throttle2</span> &gt;= cload[0] &gt;= <span class="variable">$cepy_load_throttle1</span>) &amp;&amp; (<span class="variable">$cepy_load_throttle2</span> &gt;= cload[1] &gt;= <span class="variable">$cepy_load_throttle1</span>):</span><br><span class="line">    <span class="keyword">if</span> (sys_load[0] &gt; <span class="variable">$sys_load_throttle</span>) || (sys_load[1] &gt; <span class="variable">$sys_load_throttle</span>):</span><br><span class="line">        <span class="comment">#减少</span></span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="comment">#保持不变</span></span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">    <span class="comment">#减少</span></span><br><span class="line"></span><br><span class="line">根据ceph和sys的负载信息，可以计算出SATA/SSD磁盘的iotune是增加，减少，还是保持不变；</span><br></pre></td></tr></table></figure>
+<p>loop每个instance，针对volume类型是需要增加/减少的volume，设置volume新的iotune值：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">根据conf配置信息获取volume对应的bw_range和iops_range，然后调用下面的函数执行iotune调整。</span><br><span class="line"> </span><br><span class="line">set_volume_dynamic_iotune()</span><br><span class="line">输入：volume target - 卷的盘符，示例：vdb</span><br><span class="line">     bw_range      - 带宽范围，从配置文件获取，示例：&#123;<span class="string">'read'</span> : [80, 200], <span class="string">'write'</span> : [50, 100]&#125; <span class="comment">#单位：MB</span></span><br><span class="line">     iops_range    - iops范围，从配置文件获取，示例：&#123;<span class="string">'read'</span> : [100, 300], <span class="string">'write'</span> : [80, 200]&#125;</span><br><span class="line">     iotune        - iotune的趋势，0: 保持不变；&gt;0: 增加；&lt;0: 减少</span><br><span class="line"> </span><br><span class="line">1、获取volume现在对应的bw和iops值</span><br><span class="line">2、根据输入计算volume新的bw和iops值</span><br><span class="line">3、判断新的bw和iops值是不是在bw_range, iops_range范围内？是的话设置对应值为新值，否则保留旧值；</span><br><span class="line">4、通过virsh blkdeviotune命令设置read_bytes_sec，write_bytes_sec，read_iops_sec，write_iops_sec</span><br><span class="line"> </span><br><span class="line">注释：read_bytes_sec  - 每秒读bytes</span><br><span class="line">     write_bytes_sec - 每秒写bytes</span><br><span class="line">     read_iops_sec   - 每秒读iops</span><br><span class="line">     write_iops_sec  - 每秒写iops</span><br><span class="line"> </span><br><span class="line">bw: 增大减少幅度10MB (10485760 bytes)</span><br><span class="line">iops: 增大减少幅度100</span><br></pre></td></tr></table></figure>
+<h3 id="云硬盘默认限速"><a href="#云硬盘默认限速" class="headerlink" title="云硬盘默认限速"></a>云硬盘默认限速</h3><p>在动态限速程序退出前，需要调整相关云硬盘到默认限速值，具体的默认值如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">(.venv)openstack@Server-01-01:~$ cinder qos-list</span><br><span class="line">+--------------------------------------+--------------+-----------+----------------------------------------------------------------------------------------------------------------------------+</span><br><span class="line">|                  ID                  |     Name     |  Consumer |                                                           specs                                                            |</span><br><span class="line">+--------------------------------------+--------------+-----------+----------------------------------------------------------------------------------------------------------------------------+</span><br><span class="line">| 06661a25-27d4-4f64-93d4-8b74e3fda218 |   sata-qos   | front-end | &#123;u<span class="string">'read_bytes_sec'</span>: u<span class="string">'104857600'</span>, u<span class="string">'write_iops_sec'</span>: u<span class="string">'1000'</span>, u<span class="string">'write_bytes_sec'</span>: u<span class="string">'62914560'</span>, u<span class="string">'read_iops_sec'</span>: u<span class="string">'1500'</span>&#125;  |</span><br><span class="line">...</span><br><span class="line">| d560db69-e8f3-4a5f-a80c-fff41140f48c |   ssd-qos    | front-end | &#123;u<span class="string">'read_bytes_sec'</span>: u<span class="string">'157286400'</span>, u<span class="string">'write_iops_sec'</span>: u<span class="string">'3000'</span>, u<span class="string">'write_bytes_sec'</span>: u<span class="string">'104857600'</span>, u<span class="string">'read_iops_sec'</span>: u<span class="string">'5000'</span>&#125; |</span><br><span class="line">+--------------------------------------+--------------+-----------+----------------------------------------------------------------------------------------------------------------------------+</span><br></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/11/28/volume-dynamic-iotune-invest/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2922,339 +3166,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2017/08/30/cephfs-knowledge-share-part1/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="ictfox">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/ictfox.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="ictfox blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2017/08/30/cephfs-knowledge-share-part1/" itemprop="url">cephfs架构解读与测试分析-part1 </a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-08-30T20:41:17+08:00">
-                2017-08-30
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/ceph/" itemprop="url" rel="index">
-                    <span itemprop="name">ceph</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2017/08/30/cephfs-knowledge-share-part1/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2017/08/30/cephfs-knowledge-share-part1/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>前几天有幸在日知录社区里分享了自己对CephFS的理解与CephFS的测试分析，然后把内容整理如下，因为内容比较多，保持与日知录社区的文章一致，这里先贴出第一部分。</p>
-<p>若对我的分享比较感兴趣，可以访问链接：<a href="https://m.qlchat.com/topic/details?topicId=240000540003989" target="_blank" rel="noopener">日知录 - CephFS架构解读与测试分析</a></p>
-<h2 id="CephFS架构解读"><a href="#CephFS架构解读" class="headerlink" title="CephFS架构解读"></a>CephFS架构解读</h2><h3 id="cephFS简介"><a href="#cephFS简介" class="headerlink" title="cephFS简介"></a>cephFS简介</h3><p>CephFS是Ceph提供的兼容Posix协议的文件系统 ，对比RBD和RGW，它是最晚满足Production ready的一个功能。CephFS的底层还是使用rados存储数据，用MDS管理filesystem的元数据。</p>
-<p>在Jewel版本里，CephFS的基本功能已经ready，但是很多feature还是experimental的，并不建议在生成环境打开这些feature。</p>
-<h4 id="CephFS特性"><a href="#CephFS特性" class="headerlink" title="CephFS特性"></a>CephFS特性</h4><ol>
-<li><p>可扩展性</p>
-<p> CephFS的client端是直接读写OSDs的，所以OSDs的扩展性也体现在CephFS中</p>
-</li>
-<li><p>共享文件系统</p>
-<p> CephFS是一个共享的文件系统，支持多个clients同时读写文件系统的一个file</p>
-</li>
-<li><p>高可用性</p>
-<p> CephFS支持配置元数据服务器集群，也可以配置为Active-Standby的主从服务器，提高可用性</p>
-</li>
-<li><p>文件/目录Layout配置</p>
-<p> CephFS支持配置任一文件/目录的Layout，文件/目录若不单独配置，默认继承父目录的Layout属性</p>
-</li>
-<li><p>POSIX ACLs支持</p>
-<p> CephFS支持POSIX的ACLs，在CephFS支持的两个client中，kernel client默认支持，FUSE client需要修改配置来支持</p>
-</li>
-<li><p>Quotas支持</p>
-<p> CephFS在后端没有实现Quota的功能，它的Quota是在CephFS FUSE client端实现的，而kernel client里还没有添加</p>
-</li>
-</ol>
-<h4 id="CephFS架构"><a href="#CephFS架构" class="headerlink" title="CephFS架构"></a>CephFS架构</h4><p>如下图所示：</p>
-<p><img src="/images/cephfs-arch.jpg" alt="architecture"></p>
-<p>最底层还是基础的OSDs和Monitors，添加了MDSs，上层是支持客户端的CephFS kernel object，CephFS FUSE，CephFS Library等。</p>
-<h4 id="CephFS组件间通信"><a href="#CephFS组件间通信" class="headerlink" title="CephFS组件间通信"></a>CephFS组件间通信</h4><p><img src="/images/cephfs-component-communication.jpg" alt="component communication"></p>
-<p>如上图所示，CephFS各个组件间通信如下：</p>
-<ol>
-<li><p>Client &lt;–&gt; MDS</p>
-<p> 元数据操作和capalities</p>
-</li>
-<li><p>Client &lt;–&gt; OSD</p>
-<p> 数据IO</p>
-</li>
-<li><p>Client &lt;–&gt; Monitor</p>
-<p> 认证，集群map信息等</p>
-</li>
-<li><p>MDS &lt;–&gt; Monitor</p>
-<p> 心跳，集群map信息等</p>
-</li>
-<li><p>MDS &lt;–&gt; OSD</p>
-<p> 元数据IO</p>
-</li>
-<li><p>Monitor &lt;–&gt; OSD</p>
-<p> 心跳，集群map信息等</p>
-</li>
-</ol>
-<h4 id="CephFS-MDS组件"><a href="#CephFS-MDS组件" class="headerlink" title="CephFS MDS组件"></a>CephFS MDS组件</h4><p>Ceph MDS设计的比较强大，作为一个能存储PB级数据的文件系统，它充分考虑了对元数据服务器的要求，设计了MDS集群。另外也引入了MDS的动态子树迁移，MDS的热度负载均衡。</p>
-<p>但也正是这么超前的设计，使得MDS集群很难做到稳定，所以目前Jewel版本里默认还是单MDS实例，用户可配置主从MDS实例，提高可用性。 但在未来，MDS集群的这些属性都将稳定下来，为我们提供超强的元数据管理性能。</p>
-<p><img src="/images/cephfs-mds-dynamic-subtree.jpg" alt="mds dynamic subtree"></p>
-<p>上图描述了CephFS的Dynamic subtree partition功能，它支持目录分片在多个MDS之间服务，并支持基于MDS负载均衡的动态迁移。</p>
-<p>Client跟MDS通信后，会缓存对应的“目录-MDS”映射关系，这样Client任何时候都知道从哪个MDS上获取对应的元数据信息。</p>
-<p><strong>MDS自身的元数据有：</strong></p>
-<ul>
-<li><p>per-MDS journal</p>
-<p>  每个MDS都有一个对应的journal文件，支持大到几百兆字节的size，保证元数据的一致性和顺序提交的性能，它也是直接存储到OSD cluster里的</p>
-</li>
-<li><p>CephFS MetaData</p>
-<p>  MDS管理的CephFS的元数据也以文件格式存储到OSD cluster上，有些元数据信息会存到object的OMAP里</p>
-</li>
-</ul>
-<h3 id="CephFS使用方式"><a href="#CephFS使用方式" class="headerlink" title="CephFS使用方式"></a>CephFS使用方式</h3><p>与通常的网络文件系统一样，要访问cephfs，需要有对应的client端。cephfs现在支持两种client端：</p>
-<ul>
-<li>CephFS kernel client<ul>
-<li>since 2.6.34 </li>
-</ul>
-</li>
-<li>CephFS FUSE</li>
-</ul>
-<p><img src="/images/cephfs-client-access-mode.jpg" alt="client access mode"></p>
-<p>Client端访问CepFS的步骤如下：</p>
-<ol>
-<li>client端与MDS节点通讯，获取metadata信息（metadata也存在osd上）</li>
-<li>client直接写数据到OSD</li>
-</ol>
-<h4 id="Client端访问CephFS示例"><a href="#Client端访问CephFS示例" class="headerlink" title="Client端访问CephFS示例"></a>Client端访问CephFS示例</h4><ol>
-<li>Client发送open file请求给MDS </li>
-<li>MDS返回file inode，file size，capability和stripe信息 </li>
-<li>Client直接Read/Write数据到OSDs </li>
-<li>MDS管理file的capability </li>
-<li>Client发送close file请求给MDS，释放file的capability，更新file详细信息 </li>
-</ol>
-<blockquote>
-<p>这里cephfs并没有像其他分布式文件系统设计的那样，有分布式文件锁来保障数据一致性<br>它是通过文件的capability来保证的</p>
-</blockquote>
-<h4 id="CephFS相关命令"><a href="#CephFS相关命令" class="headerlink" title="CephFS相关命令"></a>CephFS相关命令</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">创建MDS Daemon</span><br><span class="line"><span class="comment"># ceph-deploy mds create &lt;…&gt;</span></span><br><span class="line">创建CephFS Data Pool</span><br><span class="line"><span class="comment"># ceph osd pool create &lt;…&gt;</span></span><br><span class="line">创建CephFS Metadata Pool</span><br><span class="line"><span class="comment"># ceph osd pool create &lt;…&gt;</span></span><br><span class="line">创建CephFS</span><br><span class="line"><span class="comment"># ceph fs new &lt;…&gt;</span></span><br><span class="line">查看CephFS</span><br><span class="line"><span class="comment"># ceph fs ls </span></span><br><span class="line">	name: tstfs, metadata pool: cephfs_metadata, data pools: [cephfs_data ]</span><br><span class="line">删除CephFS</span><br><span class="line"><span class="comment"># ceph fs rm &lt;fs-name&gt; --yes-i-really-mean-it</span></span><br></pre></td></tr></table></figure>
-<p>查看MDS状态</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph mds stat</span></span><br><span class="line">	e8: tstfs-1/1/1 up tstfs2-0/0/1 up &#123;[tstfs:0]=mds-daemon-1=up:active&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li>e8 <ul>
-<li>e表示epoch</li>
-<li>8是epoch号</li>
-</ul>
-</li>
-<li>tstfs-1/1/1 up<ul>
-<li>tstfs是cephfs名字</li>
-<li>三个1分别是 mds_map.in/mds_map.up/mds_map.max_mds</li>
-<li>up是cephfs状态</li>
-</ul>
-</li>
-<li>{[tstfs:0]=mds-daemon-1=up:active} <ul>
-<li>[tstfs:0]指tstfs的rank 0</li>
-<li>mds-daemon-1是服务tstfs的mds daemon name</li>
-<li>up:active是cephfs的状态为 up &amp; active</li>
-</ul>
-</li>
-</ul>
-<h4 id="mount使用CephFS"><a href="#mount使用CephFS" class="headerlink" title="mount使用CephFS"></a>mount使用CephFS</h4><ol>
-<li>CephFS kernel client</li>
-</ol>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph &lt;monitor ip&gt;:6789 /mntdir</span></span><br><span class="line"><span class="comment"># umount /mntdir</span></span><br></pre></td></tr></table></figure>
-<ol>
-<li>CephFS FUSE</li>
-</ol>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">安装ceph-fuse pkg</span><br><span class="line"><span class="comment"># yum install -y ceph-fuse</span></span><br><span class="line"><span class="comment"># ceph-fuse -m &lt;monitor ip&gt;:6789 /mntdir </span></span><br><span class="line"><span class="comment"># fusermount -u /mntdir</span></span><br><span class="line">centos7里没有fusermount命令，可以用umount替代</span><br></pre></td></tr></table></figure>
-<p>FUSE的IO Path较长，会先从用户态调用到内核态，再返回到用户态使用CephFS FUSE模块访问Ceph集群，如下图所示：</p>
-<p><img src="/images/cephfs-fuse-arch.jpg" alt="fuse arch"></p>
-<p><strong>对比</strong></p>
-<ul>
-<li>性能：Kernel client &gt; ceph-fuse</li>
-<li>Quota支持：只有ceph-fuse(client-side quotas)</li>
-</ul>
-<blockquote>
-<p>Quota不是在CephFS后端实现的，而是在client-side实现的。若某些应用中要求使用Quota，这时就必须考虑使用CephFS FUSE了</p>
-</blockquote>
-<h3 id="CephFS-Layout"><a href="#CephFS-Layout" class="headerlink" title="CephFS Layout"></a>CephFS Layout</h3><p>Cephfs支持配置目录、文件的layout和stripe，这些元数据信息保存在目录和文件的xattr中。</p>
-<ul>
-<li>目录的layout xattrs为：ceph.dir.layout</li>
-<li>文件的layout xattrs为：ceph.file.layout</li>
-</ul>
-<p>CephFS支持的layout配置项有：</p>
-<ul>
-<li>pool<br>  数据存储到指定pool</li>
-<li>namespace<br>  数据存储到指定namespace，比pool更细的粒度(rbd/rgw/cephfs都还不支持)</li>
-<li>stripe_unit<br>  条带大小，单位Byte</li>
-<li>stripe_count<br>  条带个数</li>
-</ul>
-<p><strong>默认文件/目录继承父目录的layout和striping</strong></p>
-<p><strong>示例：</strong> 配置一个目录的Layout</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># setfattr -n ceph.dir.layout -v "stripe_unit=524288 stripe_count=8 object_size=4194304 pool=cephfs_data2" /mnt/mike512K/</span></span><br></pre></td></tr></table></figure>
-<p>目录中一个9MB的文件的layout分布图为：<br><img src="/images/cephfs-layout-example.jpg" alt="layout example"></p>
-<h3 id="CephFS认证"><a href="#CephFS认证" class="headerlink" title="CephFS认证"></a>CephFS认证</h3><p>有时候可能应用有这样的需求，不同的用户访问不同的CephFS目录，这时候就需要开启CephFS的认证。</p>
-<p>不过首先需要开启的是Ceph集群的认证，然后就可以创建CephFS认证的client端了，指定client对mon，mds，osd的访问权限。</p>
-<h4 id="开启Ceph集群认证"><a href="#开启Ceph集群认证" class="headerlink" title="开启Ceph集群认证"></a>开启Ceph集群认证</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">配置ceph.conf</span><br><span class="line"><span class="comment"># vim /etc/ceph/ceph.conf</span></span><br><span class="line">auth_cluster_required = cephx</span><br><span class="line">auth_service_required = cephx</span><br><span class="line">auth_client_required = cephx</span><br></pre></td></tr></table></figure>
-<h4 id="创建CephFS认证的client"><a href="#创建CephFS认证的client" class="headerlink" title="创建CephFS认证的client"></a>创建CephFS认证的client</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph auth get-or-create client.*client_name* \</span></span><br><span class="line">		mon <span class="string">'allow r'</span> \</span><br><span class="line">		mds <span class="string">'allow r, allow rw path=/*specified_directory*'</span> \</span><br><span class="line">		osd <span class="string">'allow rw pool=&lt;data pool&gt;’</span></span><br></pre></td></tr></table></figure>
-<p><strong>示例与解释：</strong></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph auth get-or-create client.tst1 mon ‘allow r’ mds ‘allow r, allow rw path=/tst1’ osd ‘allow rw pool=cephfs_data'</span></span><br></pre></td></tr></table></figure>
-<ul>
-<li><p>mon ‘allow r’</p>
-<p>  允许client从monitor读取数据；必须配置</p>
-</li>
-<li><p>mds ‘allow r, allow rw path=/tst1’</p>
-<p>  允许client从MDS读取数据，允许client对目录/tst1读写；<br>  其中‘ allow r’必须配置，不然client不能从mds读取数据，mount会报permission error；</p>
-</li>
-<li><p>osd ‘allow rw pool=cephfs_data’</p>
-<p>  允许client从osd pool=cephfs_data 上读写数据；<br>  若不配置，client只能从mds上获取FS的元数据信息，没法查看各个文件的数据</p>
-</li>
-</ul>
-<blockquote>
-<p>对osd的权限也是必须配置的，不然client只能从mds上获取fs的元数据信息，没法查看文件的数据</p>
-</blockquote>
-<h4 id="检查ceph-auth"><a href="#检查ceph-auth" class="headerlink" title="检查ceph auth"></a>检查ceph auth</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph auth get client.tst1 </span></span><br><span class="line">exported keyring <span class="keyword">for</span> client.tst1 </span><br><span class="line">[client.tst] </span><br><span class="line">    key = AQCd+UBZxpi4EBAAUNyBDGdZbPgfd4oUb+u41A== </span><br><span class="line">    caps mds = allow r, allow rw path=/tst1<span class="string">" </span></span><br><span class="line"><span class="string">    caps mon = "</span>allow r<span class="string">"</span></span><br><span class="line"><span class="string">    caps osd = "</span>allow rw pool=cephfs_data<span class="string">"</span></span><br></pre></td></tr></table></figure>
-<h4 id="mount测试"><a href="#mount测试" class="headerlink" title="mount测试"></a>mount测试</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph &lt;ip&gt;:6789:/tst1 /mnt -o name=tst1,secret=AQCd+UBZxpi4EBAAUNyBDGdZbPgfd4oUb+u41A==</span></span><br></pre></td></tr></table></figure>
-<h4 id="认证机制不完善"><a href="#认证机制不完善" class="headerlink" title="认证机制不完善"></a>认证机制不完善</h4><p>CephFS的认证机制还不完善，上述client.tst1可以mount整个CephFS目录，能看到并读取整个CephFS的文件</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph &lt;ip&gt;:6789:/ /mnt -o name=tst1,secret=AQCd+UBZxpi4EBAAUNyBDGdZbPgfd4oUb+u41A==</span></span><br></pre></td></tr></table></figure>
-<p>另外没找到能支持readonly访问某一目录的方法。</p>
-<blockquote>
-<p>只验证了cephfs kernel client，没试过ceph-fuse的认证</p>
-</blockquote>
-<h3 id="CephFS的-FSCK-amp-Repair"><a href="#CephFS的-FSCK-amp-Repair" class="headerlink" title="CephFS的 FSCK &amp; Repair"></a>CephFS的 FSCK &amp; Repair</h3><p>FS的fsck和repair对一个文件系统是非常重要的，如果这个没搞定，一个文件系统是不会有人敢用的。</p>
-<p>Ceph在Jewel版本里提供了Ready的CephFS的scrub和repair工具，它哪能处理大部分的元数据损坏。<br>但在使用中请记住两点：</p>
-<ol>
-<li>修复命令==慎重执行==，需要专业人士操作</li>
-<li>若命令支持，修复前请先备份元数据</li>
-</ol>
-<h4 id="cephfs-journal工具"><a href="#cephfs-journal工具" class="headerlink" title="cephfs journal工具"></a>cephfs journal工具</h4><p>cephfs-journal-tool，用来修复损坏的MDS journal，它支持的命令有下面几类，详细的介绍看下help就明白了。</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">cephfs-journal-tool：</span><br><span class="line">	- inspect/import/<span class="built_in">export</span>/reset </span><br><span class="line">	- header get/<span class="built_in">set</span></span><br><span class="line">	- event get/apply/recover_dentries/splice</span><br></pre></td></tr></table></figure>
-<h4 id="cephfs-online-check-scrub"><a href="#cephfs-online-check-scrub" class="headerlink" title="cephfs online check/scrub"></a>cephfs online check/scrub</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">ceph tell mds.&lt;id&gt; damage ls </span><br><span class="line">ceph tell mds.&lt;id&gt; damage rm &lt;int&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># scrub an inode and output results</span></span><br><span class="line">ceph mds mds.&lt;id&gt; scrub_path &lt;path&gt; &#123;force|recursive|repair [force|recursive|repair...]&#125;</span><br></pre></td></tr></table></figure>
-<h4 id="cephfs-offline-repair"><a href="#cephfs-offline-repair" class="headerlink" title="cephfs offline repair"></a>cephfs offline repair</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">cephfs-data-scan init [--force-init] </span><br><span class="line">cephfs-data-scan scan_extents [--force-pool] &lt;data pool name&gt; </span><br><span class="line">cephfs-data-scan scan_inodes [--force-pool] [--force-corrupt] &lt;data pool name&gt;</span><br><span class="line">cephfs-data-scan scan_frags [--force-corrupt]</span><br><span class="line">cephfs-data-scan tmap_upgrade &lt;metadata_pool&gt;</span><br></pre></td></tr></table></figure>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -3309,7 +3220,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">76</span>
+                  <span class="site-state-item-count">77</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
