@@ -408,189 +408,17 @@
       
         
           
-            <p>前几天有幸在日知录社区里分享了自己对CephFS的理解与CephFS的测试分析，然后把内容整理如下，因为内容比较多，保持与日知录社区的文章一致，这里先贴出第一部分。</p>
-<p>若对我的分享比较感兴趣，可以访问链接：<a href="https://m.qlchat.com/topic/details?topicId=240000540003989" target="_blank" rel="noopener">日知录 - CephFS架构解读与测试分析</a></p>
-<h2 id="CephFS架构解读"><a href="#CephFS架构解读" class="headerlink" title="CephFS架构解读"></a>CephFS架构解读</h2><h3 id="cephFS简介"><a href="#cephFS简介" class="headerlink" title="cephFS简介"></a>cephFS简介</h3><p>CephFS是Ceph提供的兼容Posix协议的文件系统 ，对比RBD和RGW，它是最晚满足Production ready的一个功能。CephFS的底层还是使用rados存储数据，用MDS管理filesystem的元数据。</p>
-<p>在Jewel版本里，CephFS的基本功能已经ready，但是很多feature还是experimental的，并不建议在生成环境打开这些feature。</p>
-<h4 id="CephFS特性"><a href="#CephFS特性" class="headerlink" title="CephFS特性"></a>CephFS特性</h4><ol>
-<li><p>可扩展性</p>
-<p> CephFS的client端是直接读写OSDs的，所以OSDs的扩展性也体现在CephFS中</p>
-</li>
-<li><p>共享文件系统</p>
-<p> CephFS是一个共享的文件系统，支持多个clients同时读写文件系统的一个file</p>
-</li>
-<li><p>高可用性</p>
-<p> CephFS支持配置元数据服务器集群，也可以配置为Active-Standby的主从服务器，提高可用性</p>
-</li>
-<li><p>文件/目录Layout配置</p>
-<p> CephFS支持配置任一文件/目录的Layout，文件/目录若不单独配置，默认继承父目录的Layout属性</p>
-</li>
-<li><p>POSIX ACLs支持</p>
-<p> CephFS支持POSIX的ACLs，在CephFS支持的两个client中，kernel client默认支持，FUSE client需要修改配置来支持</p>
-</li>
-<li><p>Quotas支持</p>
-<p> CephFS在后端没有实现Quota的功能，它的Quota是在CephFS FUSE client端实现的，而kernel client里还没有添加</p>
-</li>
-</ol>
-<h4 id="CephFS架构"><a href="#CephFS架构" class="headerlink" title="CephFS架构"></a>CephFS架构</h4><p>如下图所示：</p>
-<p><img src="/images/cephfs-arch.jpg" alt="architecture"></p>
-<p>最底层还是基础的OSDs和Monitors，添加了MDSs，上层是支持客户端的CephFS kernel object，CephFS FUSE，CephFS Library等。</p>
-<h4 id="CephFS组件间通信"><a href="#CephFS组件间通信" class="headerlink" title="CephFS组件间通信"></a>CephFS组件间通信</h4><p><img src="/images/cephfs-component-communication.jpg" alt="component communication"></p>
-<p>如上图所示，CephFS各个组件间通信如下：</p>
-<ol>
-<li><p>Client &lt;–&gt; MDS</p>
-<p> 元数据操作和capalities</p>
-</li>
-<li><p>Client &lt;–&gt; OSD</p>
-<p> 数据IO</p>
-</li>
-<li><p>Client &lt;–&gt; Monitor</p>
-<p> 认证，集群map信息等</p>
-</li>
-<li><p>MDS &lt;–&gt; Monitor</p>
-<p> 心跳，集群map信息等</p>
-</li>
-<li><p>MDS &lt;–&gt; OSD</p>
-<p> 元数据IO</p>
-</li>
-<li><p>Monitor &lt;–&gt; OSD</p>
-<p> 心跳，集群map信息等</p>
-</li>
-</ol>
-<h4 id="CephFS-MDS组件"><a href="#CephFS-MDS组件" class="headerlink" title="CephFS MDS组件"></a>CephFS MDS组件</h4><p>Ceph MDS设计的比较强大，作为一个能存储PB级数据的文件系统，它充分考虑了对元数据服务器的要求，设计了MDS集群。另外也引入了MDS的动态子树迁移，MDS的热度负载均衡。</p>
-<p>但也正是这么超前的设计，使得MDS集群很难做到稳定，所以目前Jewel版本里默认还是单MDS实例，用户可配置主从MDS实例，提高可用性。 但在未来，MDS集群的这些属性都将稳定下来，为我们提供超强的元数据管理性能。</p>
-<p><img src="/images/cephfs-mds-dynamic-subtree.jpg" alt="mds dynamic subtree"></p>
-<p>上图描述了CephFS的Dynamic subtree partition功能，它支持目录分片在多个MDS之间服务，并支持基于MDS负载均衡的动态迁移。</p>
-<p>Client跟MDS通信后，会缓存对应的“目录-MDS”映射关系，这样Client任何时候都知道从哪个MDS上获取对应的元数据信息。</p>
-<p><strong>MDS自身的元数据有：</strong></p>
-<ul>
-<li><p>per-MDS journal</p>
-<p>  每个MDS都有一个对应的journal文件，支持大到几百兆字节的size，保证元数据的一致性和顺序提交的性能，它也是直接存储到OSD cluster里的</p>
-</li>
-<li><p>CephFS MetaData</p>
-<p>  MDS管理的CephFS的元数据也以文件格式存储到OSD cluster上，有些元数据信息会存到object的OMAP里</p>
-</li>
-</ul>
-<h3 id="CephFS使用方式"><a href="#CephFS使用方式" class="headerlink" title="CephFS使用方式"></a>CephFS使用方式</h3><p>与通常的网络文件系统一样，要访问cephfs，需要有对应的client端。cephfs现在支持两种client端：</p>
-<ul>
-<li>CephFS kernel client<ul>
-<li>since 2.6.34 </li>
-</ul>
-</li>
-<li>CephFS FUSE</li>
-</ul>
-<p><img src="/images/cephfs-client-access-mode.jpg" alt="client access mode"></p>
-<p>Client端访问CepFS的步骤如下：</p>
-<ol>
-<li>client端与MDS节点通讯，获取metadata信息（metadata也存在osd上）</li>
-<li>client直接写数据到OSD</li>
-</ol>
-<h4 id="Client端访问CephFS示例"><a href="#Client端访问CephFS示例" class="headerlink" title="Client端访问CephFS示例"></a>Client端访问CephFS示例</h4><ol>
-<li>Client发送open file请求给MDS </li>
-<li>MDS返回file inode，file size，capability和stripe信息 </li>
-<li>Client直接Read/Write数据到OSDs </li>
-<li>MDS管理file的capability </li>
-<li>Client发送close file请求给MDS，释放file的capability，更新file详细信息 </li>
-</ol>
-<blockquote>
-<p>这里cephfs并没有像其他分布式文件系统设计的那样，有分布式文件锁来保障数据一致性<br>它是通过文件的capability来保证的</p>
-</blockquote>
-<h4 id="CephFS相关命令"><a href="#CephFS相关命令" class="headerlink" title="CephFS相关命令"></a>CephFS相关命令</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">创建MDS Daemon</span><br><span class="line"><span class="comment"># ceph-deploy mds create &lt;…&gt;</span></span><br><span class="line">创建CephFS Data Pool</span><br><span class="line"><span class="comment"># ceph osd pool create &lt;…&gt;</span></span><br><span class="line">创建CephFS Metadata Pool</span><br><span class="line"><span class="comment"># ceph osd pool create &lt;…&gt;</span></span><br><span class="line">创建CephFS</span><br><span class="line"><span class="comment"># ceph fs new &lt;…&gt;</span></span><br><span class="line">查看CephFS</span><br><span class="line"><span class="comment"># ceph fs ls </span></span><br><span class="line">	name: tstfs, metadata pool: cephfs_metadata, data pools: [cephfs_data ]</span><br><span class="line">删除CephFS</span><br><span class="line"><span class="comment"># ceph fs rm &lt;fs-name&gt; --yes-i-really-mean-it</span></span><br></pre></td></tr></table></figure>
-<p>查看MDS状态</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph mds stat</span></span><br><span class="line">	e8: tstfs-1/1/1 up tstfs2-0/0/1 up &#123;[tstfs:0]=mds-daemon-1=up:active&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li>e8 <ul>
-<li>e表示epoch</li>
-<li>8是epoch号</li>
-</ul>
-</li>
-<li>tstfs-1/1/1 up<ul>
-<li>tstfs是cephfs名字</li>
-<li>三个1分别是 mds_map.in/mds_map.up/mds_map.max_mds</li>
-<li>up是cephfs状态</li>
-</ul>
-</li>
-<li>{[tstfs:0]=mds-daemon-1=up:active} <ul>
-<li>[tstfs:0]指tstfs的rank 0</li>
-<li>mds-daemon-1是服务tstfs的mds daemon name</li>
-<li>up:active是cephfs的状态为 up &amp; active</li>
-</ul>
-</li>
-</ul>
-<h4 id="mount使用CephFS"><a href="#mount使用CephFS" class="headerlink" title="mount使用CephFS"></a>mount使用CephFS</h4><ol>
-<li>CephFS kernel client</li>
-</ol>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph &lt;monitor ip&gt;:6789 /mntdir</span></span><br><span class="line"><span class="comment"># umount /mntdir</span></span><br></pre></td></tr></table></figure>
-<ol>
-<li>CephFS FUSE</li>
-</ol>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">安装ceph-fuse pkg</span><br><span class="line"><span class="comment"># yum install -y ceph-fuse</span></span><br><span class="line"><span class="comment"># ceph-fuse -m &lt;monitor ip&gt;:6789 /mntdir </span></span><br><span class="line"><span class="comment"># fusermount -u /mntdir</span></span><br><span class="line">centos7里没有fusermount命令，可以用umount替代</span><br></pre></td></tr></table></figure>
-<p>FUSE的IO Path较长，会先从用户态调用到内核态，再返回到用户态使用CephFS FUSE模块访问Ceph集群，如下图所示：</p>
-<p><img src="/images/cephfs-fuse-arch.jpg" alt="fuse arch"></p>
-<p><strong>对比</strong></p>
-<ul>
-<li>性能：Kernel client &gt; ceph-fuse</li>
-<li>Quota支持：只有ceph-fuse(client-side quotas)</li>
-</ul>
-<blockquote>
-<p>Quota不是在CephFS后端实现的，而是在client-side实现的。若某些应用中要求使用Quota，这时就必须考虑使用CephFS FUSE了</p>
-</blockquote>
-<h3 id="CephFS-Layout"><a href="#CephFS-Layout" class="headerlink" title="CephFS Layout"></a>CephFS Layout</h3><p>Cephfs支持配置目录、文件的layout和stripe，这些元数据信息保存在目录和文件的xattr中。</p>
-<ul>
-<li>目录的layout xattrs为：ceph.dir.layout</li>
-<li>文件的layout xattrs为：ceph.file.layout</li>
-</ul>
-<p>CephFS支持的layout配置项有：</p>
-<ul>
-<li>pool<br>  数据存储到指定pool</li>
-<li>namespace<br>  数据存储到指定namespace，比pool更细的粒度(rbd/rgw/cephfs都还不支持)</li>
-<li>stripe_unit<br>  条带大小，单位Byte</li>
-<li>stripe_count<br>  条带个数</li>
-</ul>
-<p><strong>默认文件/目录继承父目录的layout和striping</strong></p>
-<p><strong>示例：</strong> 配置一个目录的Layout</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># setfattr -n ceph.dir.layout -v "stripe_unit=524288 stripe_count=8 object_size=4194304 pool=cephfs_data2" /mnt/mike512K/</span></span><br></pre></td></tr></table></figure>
-<p>目录中一个9MB的文件的layout分布图为：<br><img src="/images/cephfs-layout-example.jpg" alt="layout example"></p>
-<h3 id="CephFS认证"><a href="#CephFS认证" class="headerlink" title="CephFS认证"></a>CephFS认证</h3><p>有时候可能应用有这样的需求，不同的用户访问不同的CephFS目录，这时候就需要开启CephFS的认证。</p>
-<p>不过首先需要开启的是Ceph集群的认证，然后就可以创建CephFS认证的client端了，指定client对mon，mds，osd的访问权限。</p>
-<h4 id="开启Ceph集群认证"><a href="#开启Ceph集群认证" class="headerlink" title="开启Ceph集群认证"></a>开启Ceph集群认证</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">配置ceph.conf</span><br><span class="line"><span class="comment"># vim /etc/ceph/ceph.conf</span></span><br><span class="line">auth_cluster_required = cephx</span><br><span class="line">auth_service_required = cephx</span><br><span class="line">auth_client_required = cephx</span><br></pre></td></tr></table></figure>
-<h4 id="创建CephFS认证的client"><a href="#创建CephFS认证的client" class="headerlink" title="创建CephFS认证的client"></a>创建CephFS认证的client</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph auth get-or-create client.*client_name* \</span></span><br><span class="line">		mon <span class="string">'allow r'</span> \</span><br><span class="line">		mds <span class="string">'allow r, allow rw path=/*specified_directory*'</span> \</span><br><span class="line">		osd <span class="string">'allow rw pool=&lt;data pool&gt;’</span></span><br></pre></td></tr></table></figure>
-<p><strong>示例与解释：</strong></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph auth get-or-create client.tst1 mon ‘allow r’ mds ‘allow r, allow rw path=/tst1’ osd ‘allow rw pool=cephfs_data'</span></span><br></pre></td></tr></table></figure>
-<ul>
-<li><p>mon ‘allow r’</p>
-<p>  允许client从monitor读取数据；必须配置</p>
-</li>
-<li><p>mds ‘allow r, allow rw path=/tst1’</p>
-<p>  允许client从MDS读取数据，允许client对目录/tst1读写；<br>  其中‘ allow r’必须配置，不然client不能从mds读取数据，mount会报permission error；</p>
-</li>
-<li><p>osd ‘allow rw pool=cephfs_data’</p>
-<p>  允许client从osd pool=cephfs_data 上读写数据；<br>  若不配置，client只能从mds上获取FS的元数据信息，没法查看各个文件的数据</p>
-</li>
-</ul>
-<blockquote>
-<p>对osd的权限也是必须配置的，不然client只能从mds上获取fs的元数据信息，没法查看文件的数据</p>
-</blockquote>
-<h4 id="检查ceph-auth"><a href="#检查ceph-auth" class="headerlink" title="检查ceph auth"></a>检查ceph auth</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph auth get client.tst1 </span></span><br><span class="line">exported keyring <span class="keyword">for</span> client.tst1 </span><br><span class="line">[client.tst] </span><br><span class="line">    key = AQCd+UBZxpi4EBAAUNyBDGdZbPgfd4oUb+u41A== </span><br><span class="line">    caps mds = allow r, allow rw path=/tst1<span class="string">" </span></span><br><span class="line"><span class="string">    caps mon = "</span>allow r<span class="string">"</span></span><br><span class="line"><span class="string">    caps osd = "</span>allow rw pool=cephfs_data<span class="string">"</span></span><br></pre></td></tr></table></figure>
-<h4 id="mount测试"><a href="#mount测试" class="headerlink" title="mount测试"></a>mount测试</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph &lt;ip&gt;:6789:/tst1 /mnt -o name=tst1,secret=AQCd+UBZxpi4EBAAUNyBDGdZbPgfd4oUb+u41A==</span></span><br></pre></td></tr></table></figure>
-<h4 id="认证机制不完善"><a href="#认证机制不完善" class="headerlink" title="认证机制不完善"></a>认证机制不完善</h4><p>CephFS的认证机制还不完善，上述client.tst1可以mount整个CephFS目录，能看到并读取整个CephFS的文件</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph &lt;ip&gt;:6789:/ /mnt -o name=tst1,secret=AQCd+UBZxpi4EBAAUNyBDGdZbPgfd4oUb+u41A==</span></span><br></pre></td></tr></table></figure>
-<p>另外没找到能支持readonly访问某一目录的方法。</p>
-<blockquote>
-<p>只验证了cephfs kernel client，没试过ceph-fuse的认证</p>
-</blockquote>
-<h3 id="CephFS的-FSCK-amp-Repair"><a href="#CephFS的-FSCK-amp-Repair" class="headerlink" title="CephFS的 FSCK &amp; Repair"></a>CephFS的 FSCK &amp; Repair</h3><p>FS的fsck和repair对一个文件系统是非常重要的，如果这个没搞定，一个文件系统是不会有人敢用的。</p>
-<p>Ceph在Jewel版本里提供了Ready的CephFS的scrub和repair工具，它哪能处理大部分的元数据损坏。<br>但在使用中请记住两点：</p>
-<ol>
-<li>修复命令==慎重执行==，需要专业人士操作</li>
-<li>若命令支持，修复前请先备份元数据</li>
-</ol>
-<h4 id="cephfs-journal工具"><a href="#cephfs-journal工具" class="headerlink" title="cephfs journal工具"></a>cephfs journal工具</h4><p>cephfs-journal-tool，用来修复损坏的MDS journal，它支持的命令有下面几类，详细的介绍看下help就明白了。</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">cephfs-journal-tool：</span><br><span class="line">	- inspect/import/<span class="built_in">export</span>/reset </span><br><span class="line">	- header get/<span class="built_in">set</span></span><br><span class="line">	- event get/apply/recover_dentries/splice</span><br></pre></td></tr></table></figure>
-<h4 id="cephfs-online-check-scrub"><a href="#cephfs-online-check-scrub" class="headerlink" title="cephfs online check/scrub"></a>cephfs online check/scrub</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">ceph tell mds.&lt;id&gt; damage ls </span><br><span class="line">ceph tell mds.&lt;id&gt; damage rm &lt;int&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># scrub an inode and output results</span></span><br><span class="line">ceph mds mds.&lt;id&gt; scrub_path &lt;path&gt; &#123;force|recursive|repair [force|recursive|repair...]&#125;</span><br></pre></td></tr></table></figure>
-<h4 id="cephfs-offline-repair"><a href="#cephfs-offline-repair" class="headerlink" title="cephfs offline repair"></a>cephfs offline repair</h4><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">cephfs-data-scan init [--force-init] </span><br><span class="line">cephfs-data-scan scan_extents [--force-pool] &lt;data pool name&gt; </span><br><span class="line">cephfs-data-scan scan_inodes [--force-pool] [--force-corrupt] &lt;data pool name&gt;</span><br><span class="line">cephfs-data-scan scan_frags [--force-corrupt]</span><br><span class="line">cephfs-data-scan tmap_upgrade &lt;metadata_pool&gt;</span><br></pre></td></tr></table></figure>
-
-          
+          前几天有幸在日知录社区里分享了自己对CephFS的理解与CephFS的测试分析，然后把内容整理如下，因为内容比较多，保持与日知录社区的文章一致，这里先贴出第一部分。
+若对我的分享比较感兴趣，可以访问链接：日知录 - CephFS架构解读与测试分析
+CephFS架构解读cephFS简介CephFS是C
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/08/30/cephfs-knowledge-share-part1/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -741,181 +569,33 @@
       
         
           
-            <p>整理之前的文章时候，发现了这个，仅仅是一些存储系统的简单罗列，但对想熟悉开源存储系统的人来说也有些帮助。</p>
-<blockquote>
-<p>理解有限，若有不对的地方，欢迎指正！</p>
-</blockquote>
-<h2 id="分布式文件系统"><a href="#分布式文件系统" class="headerlink" title="分布式文件系统"></a>分布式文件系统</h2><table>
-<thead>
-<tr>
-<th>名称</th>
-<th>描述</th>
-<th>存储功能</th>
-<th>语言</th>
-<th>官网 / WIKI</th>
-<th>源码</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Ceph</td>
-<td>基于RADOS提供高扩展性、高可靠性、高性能的分布式文件系统</td>
-<td>对象存储，块存储，文件存储</td>
-<td>C++</td>
-<td><a href="http://ceph.com/" target="_blank" rel="noopener">http://ceph.com/</a></td>
-<td><a href="https://github.com/ceph/ceph" target="_blank" rel="noopener">https://github.com/ceph/ceph</a></td>
-</tr>
-<tr>
-<td>Swift</td>
-<td>Openstack官方的对象存储系统</td>
-<td>对象存储</td>
-<td>Python</td>
-<td><a href="https://wiki.openstack.org/wiki/Swift" target="_blank" rel="noopener">https://wiki.openstack.org/wiki/Swift</a></td>
-<td><a href="https://github.com/openstack/swift" target="_blank" rel="noopener">https://github.com/openstack/swift</a></td>
-</tr>
-<tr>
-<td>Cinder</td>
-<td>Openstack官方的块存储系统</td>
-<td>块存储</td>
-<td>Python</td>
-<td><a href="https://wiki.openstack.org/wiki/Cinder" target="_blank" rel="noopener">https://wiki.openstack.org/wiki/Cinder</a></td>
-<td><a href="https://github.com/openstack/cinder" target="_blank" rel="noopener">https://github.com/openstack/cinder</a></td>
-</tr>
-<tr>
-<td>GlusterFS</td>
-<td>分布式文件系统，弹性扩容 <br> 无metadata服务器</td>
-<td>文件存储</td>
-<td>C</td>
-<td><a href="https://www.gluster.org/" target="_blank" rel="noopener">https://www.gluster.org/</a></td>
-<td><a href="https://github.com/gluster/glusterfs" target="_blank" rel="noopener">https://github.com/gluster/glusterfs</a></td>
-</tr>
-<tr>
-<td>Lustre</td>
-<td>一个大规模的、安全可靠的，具备高可用性的集群文件系统</td>
-<td>文件存储</td>
-<td>C</td>
-<td><a href="http://lustre.org/" target="_blank" rel="noopener">http://lustre.org/</a></td>
-<td>git clone git://git.hpdd.intel.com/fs/lustre-release.git</td>
-</tr>
-<tr>
-<td>Sheepdog</td>
-<td>分布式块存储系统</td>
-<td>块存储</td>
-<td>C</td>
-<td><a href="http://www.sheepdog-project.org/" target="_blank" rel="noopener">http://www.sheepdog-project.org/</a></td>
-<td><a href="https://github.com/sheepdog/sheepdog" target="_blank" rel="noopener">https://github.com/sheepdog/sheepdog</a></td>
-</tr>
-<tr>
-<td>TFS</td>
-<td>淘宝针对海量非结构化数据存储设计的分布式系统</td>
-<td>文件存储</td>
-<td>C++</td>
-<td><a href="http://tfs.taobao.org/" target="_blank" rel="noopener">http://tfs.taobao.org/</a></td>
-<td><a href="https://github.com/alibaba/tfs" target="_blank" rel="noopener">https://github.com/alibaba/tfs</a></td>
-</tr>
-<tr>
-<td>HDFS</td>
-<td>基于GFS原理实现的java版的GFS</td>
-<td>文件存储</td>
-<td>Java</td>
-<td><a href="https://wiki.apache.org/hadoop/HDFS" target="_blank" rel="noopener">https://wiki.apache.org/hadoop/HDFS</a></td>
-<td><a href="https://github.com/apache/hadoop" target="_blank" rel="noopener">https://github.com/apache/hadoop</a></td>
-</tr>
-<tr>
-<td>MooseFS</td>
-<td>一个高容错性的分布式文件系统</td>
-<td>文件存储</td>
-<td>C</td>
-<td><a href="http://moosefs.org/" target="_blank" rel="noopener">http://moosefs.org/</a></td>
-<td><a href="https://github.com/moosefs/moosefs" target="_blank" rel="noopener">https://github.com/moosefs/moosefs</a></td>
-</tr>
-</tbody>
-</table>
-<p>参考：<a href="http://blog.csdn.net/metaxen/article/details/7108958" target="_blank" rel="noopener">http://blog.csdn.net/metaxen/article/details/7108958</a></p>
-<h2 id="数据库"><a href="#数据库" class="headerlink" title="数据库"></a>数据库</h2><table>
-<thead>
-<tr>
-<th>名称</th>
-<th>描述</th>
-<th>语言</th>
-<th>官网 / WIKI</th>
-<th>源码</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>LevelDB</td>
-<td>Google开发的，一个速度非常块的KV存储库</td>
-<td>C++</td>
-<td><a href="http://leveldb.org/" target="_blank" rel="noopener">http://leveldb.org/</a></td>
-<td><a href="https://github.com/google/leveldb" target="_blank" rel="noopener">https://github.com/google/leveldb</a></td>
-</tr>
-<tr>
-<td>RocksDB</td>
-<td>Facebook 的可嵌入式的支持持久化的key-value 存储系统</td>
-<td>C++</td>
-<td><a href="http://rocksdb.org" target="_blank" rel="noopener">http://rocksdb.org</a></td>
-<td><a href="https://github.com/facebook/rocksdb" target="_blank" rel="noopener">https://github.com/facebook/rocksdb</a></td>
-</tr>
-<tr>
-<td>Redis</td>
-<td>开源的，支持网络、基于内存亦可持久化的日志型键－值仓储</td>
-<td>C</td>
-<td><a href="http://redis.io/" target="_blank" rel="noopener">http://redis.io/</a></td>
-<td><a href="https://github.com/antirez/redis" target="_blank" rel="noopener">https://github.com/antirez/redis</a></td>
-</tr>
-<tr>
-<td>MongoDB</td>
-<td>一个高性能，开源，无模式的文档型数据库 <br> 在许多场景下可用于替代传统的关系型数据库或键/值存储方式</td>
-<td>C++</td>
-<td><a href="https://www.mongodb.com/" target="_blank" rel="noopener">https://www.mongodb.com/</a></td>
-<td><a href="https://github.com/mongodb/mongo" target="_blank" rel="noopener">https://github.com/mongodb/mongo</a></td>
-</tr>
-<tr>
-<td>Cassandra</td>
-<td>开源分布式NoSQL数据库系统 <br> 最大的特点就是完全去中心化</td>
-<td>Go</td>
-<td><a href="http://cassandra.apache.org/" target="_blank" rel="noopener">http://cassandra.apache.org/</a></td>
-<td><a href="https://github.com/apache/cassandra" target="_blank" rel="noopener">https://github.com/apache/cassandra</a></td>
-</tr>
-<tr>
-<td>HBase</td>
-<td>运行在hadoop上的数据库 <br> 一个分布式的，扩展性高的，存储大数据的数据库</td>
-<td>Jave</td>
-<td><a href="https://hbase.apache.org/" target="_blank" rel="noopener">https://hbase.apache.org/</a></td>
-<td><a href="https://github.com/apache/hbase" target="_blank" rel="noopener">https://github.com/apache/hbase</a></td>
-</tr>
-</tbody>
-</table>
-<h2 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h2><table>
-<thead>
-<tr>
-<th>名称</th>
-<th>描述</th>
-<th>语言</th>
-<th>官网 / WIKI</th>
-<th>源码</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Alluxio</td>
-<td>一个开源内存级虚拟大数据存储系统 <br> 它是架构在底层分布式文件系统和上层分布式计算框架之间的一个中间件 <br> 主要职责是以文件形式在内存或其它存储设施中提供数据的存取服务</td>
-<td>Java</td>
-<td><a href="http://www.alluxio.org/" target="_blank" rel="noopener">http://www.alluxio.org/</a></td>
-<td><a href="https://github.com/Alluxio/alluxio" target="_blank" rel="noopener">https://github.com/Alluxio/alluxio</a></td>
-</tr>
-<tr>
-<td>TiDB</td>
-<td>基于Google Spanner，F1文章实现的开源版的NewSQL <br> 类似于国外Google工程师出来创建的Startup公司 CockroachDB</td>
-<td>Go</td>
-<td><a href="http://www.pingcap.com/" target="_blank" rel="noopener">http://www.pingcap.com/</a></td>
-<td><a href="https://github.com/pingcap/tidb" target="_blank" rel="noopener">https://github.com/pingcap/tidb</a></td>
-</tr>
-</tbody>
-</table>
+          整理之前的文章时候，发现了这个，仅仅是一些存储系统的简单罗列，但对想熟悉开源存储系统的人来说也有些帮助。
 
-          
+理解有限，若有不对的地方，欢迎指正！
+
+分布式文件系统
+
+
+名称
+描述
+存储功能
+语言
+官网 / WIKI
+源码
+
+
+
+
+Ceph
+基于RADOS提供高扩展性、高可靠性、高性能的分布式文件系统
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/08/28/storage-system-summary/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -1066,327 +746,17 @@
       
         
           
-            <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><h3 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h3><p>一种混合云解决方案，连接私有云/内部IT设施和公有云的Gateway，旨在帮助企业或个人实现本地存储与公有云存储的无缝衔接。<br>提供本地数据远端存储到OSS上，即可以保持本地盘的性能，又可以拥有云上的大容量。</p>
-<h3 id="友商"><a href="#友商" class="headerlink" title="友商"></a>友商</h3><p>提供服务的友商有： AWS，阿里云，腾讯云，百度云</p>
-<h3 id="产品架构"><a href="#产品架构" class="headerlink" title="产品架构"></a>产品架构</h3><p>存储网关的大致架构如下：<br><img src="/images/cloud-storage-gateway.jpg" alt="storage gateway"></p>
-<h3 id="产品功能"><a href="#产品功能" class="headerlink" title="产品功能"></a>产品功能</h3><ol>
-<li>本地/云端部署</li>
-<li>数据加密</li>
-<li>数据压缩</li>
-<li>缓存算法，优化本地访问性能</li>
-<li>支持NFS/CIFS文件协议</li>
-<li>支持ISCSI协议</li>
-<li>带宽管理功能</li>
-<li>日志功能</li>
-<li>提供包含存储网关服务的虚拟机镜像</li>
-</ol>
-<h2 id="友商实现"><a href="#友商实现" class="headerlink" title="友商实现"></a>友商实现</h2><h3 id="AWS"><a href="#AWS" class="headerlink" title="AWS"></a>AWS</h3><h4 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h4><p>AWS Storage Gateway 是一种混合存储服务，您的内部应用程序可以借助它来无缝地使用 AWS 云中的存储。您可以使用该服务进行备份、存档、灾难恢复、云突增、存储分层和迁移。您的应用程序可以使用 NFS、iSCSI 等标准存储协议通过网关设备连接到该服务。网关会连接到 Amazon S3、Amazon Glacier、Amazon EBS 等 AWS 存储服务，这些服务为 AWS 中的文件、卷和虚拟磁带提供存储。该服务包含高度优化的数据传输机制，能够进行带宽管理、自动实现网络弹性、高效传输数据，并为活动数据的低延迟内部访问提供本地缓存。</p>
-<p>链接：<a href="https://amazonaws-china.com/cn/storagegateway/" target="_blank" rel="noopener">https://amazonaws-china.com/cn/storagegateway/</a></p>
-<h4 id="使用场景"><a href="#使用场景" class="headerlink" title="使用场景"></a>使用场景</h4><ol>
-<li><p>作为文件存储连接</p>
-<p> File Gateway 配置通过 NFS 连接为本地服务器和应用程序提供网络文件共享。文件数据将缓存在 File Gateway 上以实现本地性能，并转换为对象存储在 Amazon S3 中。您可以通过本机 AWS 工具 (比如生命周期策略、版本控制和跨区域复制) 保护和归档对象。<br> <img src="/images/cloud-storage-gw-aws-file.jpg" alt="aws gw file"></p>
-</li>
-<li><p>作为块设备连接</p>
-<p> Volume Gateway 配置将使用 iSCSI 作为本地磁盘连接到本地服务器和应用程序。这些卷中的数据可以传输到 Amazon S3 云存储中，并通过 Volume Gateway 进行访问。将数据存储在本地以获得最高性能 (同时将快照备份到云中)，或者通过将常用数据存储在本地并将不常用的数据存储在云中 (同时创建快照和克隆以实现保护)，平衡延迟和规模。  </p>
-</li>
-<li><p>作为虚拟磁带库连接</p>
-<p> Tape Gateway 已配置为用本地磁盘和云存储取代备份磁带和磁带自动化设备。现有的备份和恢复软件可将原生备份任务写入存储在 Tape Gateway 上的虚拟磁带中。虚拟磁带可迁移到 Amazon S3 中，最终存档到 Amazon Glacier 中，以便实现最低成本。数据通过您的备份应用程序进行访问，而且备份目录中仍然可以看到所有备份任务和磁带。<br> <img src="/images/cloud-storage-gw-aws-vtl.jpg" alt="aws gw volume"></p>
-</li>
-<li><p>将数据传入传出AWS云</p>
-<p> Storage Gateway 会自动缓存本地数据，并将其高效移入 (和移出) 云存储服务。这可以降低在您的办公地点和 AWS 云之间转移数据所需的时间和成本。分段管理、增量传输、带宽限制和带宽计划等优化功能是所有接口的标准功能。</p>
-</li>
-</ol>
-<h4 id="特性"><a href="#特性" class="headerlink" title="特性"></a>特性</h4><ol>
-<li>支持多个客户端类型：file、volume、虚拟磁带库等</li>
-<li>虚拟设备既可以运行于本地，也能运行在 AWS 中</li>
-<li>内置压缩、加密和带宽管理功能</li>
-<li>支持数据存档到AWS Glacier中</li>
-</ol>
-<h4 id="使用步骤"><a href="#使用步骤" class="headerlink" title="使用步骤"></a>使用步骤</h4><ol>
-<li>从 AWS 管理控制台下载 AWS Storage Gateway 虚拟机 (VM) 映像</li>
-<li>在所选的虚拟机监控程序下安装虚拟机：VMware ESXi 或 Microsoft Hyper-V</li>
-<li>配置网关，从以下三种配置中进行选择：网关缓存卷、网关存储卷或网关虚拟磁带库 (VTL)</li>
-<li>从直连式存储 (DAS)、网络附加存储 (NAS) 或网络区域存储 (SAN) 向已安装的本地网关分配本地存储。在网关缓存配置中，本地存储用于存储您经常访问的数据。在网关存储配置中，它将用于存储您的原始数据。在网关-VTL 配置中，此本地存储用于持久缓存上传到 AWS 的数据以及缓存最近读取的虚拟磁带数据</li>
-<li>使用 AWS 管理控制台激活本地网关，方法是将网关的 IP 地址与 AWS 账户关联起来，并为网关选择 AWS 地区用于存储上传数据</li>
-<li>对于网关缓存和网关存储配置，将会创建卷，并将这些卷作为 iSCSI 设备连接到您的本地应用程序服务器。对于网关-VTL，将虚拟磁带驱动器和虚拟介质更换器安装到备份服务器上，并让备份软件能够发现虚拟磁带库和虚拟磁带</li>
-</ol>
-<h3 id="阿里云"><a href="#阿里云" class="headerlink" title="阿里云"></a>阿里云</h3><h4 id="介绍-1"><a href="#介绍-1" class="headerlink" title="介绍"></a>介绍</h4><p>云存储网关是一款可在线下和云上部署的软网关，以阿里云上的OSS作为后端存储，可在企业的内部IT环境和基于云的存储基础设施之间提供无缝、安全的集成。支持行业标准的文件存储协议，并通过在本地缓存经常访问的数据来提供低延迟性能， 您可以安全地将数据存储在阿里云OSS中。</p>
-<p>链接：<a href="https://www.aliyun.com/product/hcs" target="_blank" rel="noopener">https://www.aliyun.com/product/hcs</a></p>
-<h4 id="产品架构-1"><a href="#产品架构-1" class="headerlink" title="产品架构"></a>产品架构</h4><p><img src="/images/cloud-storage-gw-aliyun-arch.jpg" alt="aliyun arch"></p>
-<h4 id="特性-1"><a href="#特性-1" class="headerlink" title="特性"></a>特性</h4><ol>
-<li>支持本地数据中心/云端ECS部署</li>
-<li>基于OSS对象存储，提供NFS/CIFS文件协议</li>
-<li>缓存算法支持缓存模式和写透模式</li>
-<li>异步多线程上传，自动MD5校验</li>
-<li>提供存储网关端的操作日志和云端OSS的访问日志</li>
-</ol>
-<h4 id="使用步骤-1"><a href="#使用步骤-1" class="headerlink" title="使用步骤"></a>使用步骤</h4><p><strong>本地数据中心部署步骤</strong></p>
-<p>1, 本地安装网关VM</p>
-<p>不同的Hypervisor支持的安装方式和使用的安装文件都不相同，安装文件如下表所示：</p>
-<table>
-<thead>
-<tr>
-<th>Hypervisor</th>
-<th>支持的安装方式</th>
-<th>安装文件格式</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>KVM</td>
-<td>使用VM Manager的方式通过qcow2安装存储网关</td>
-<td>qcow2</td>
-</tr>
-<tr>
-<td>VMware</td>
-<td>使用VM创建向导通过vmdk安装存储网关</td>
-<td>vmdk</td>
-</tr>
-<tr>
-<td>VMware</td>
-<td>使用OVF导入方式安装存储网关</td>
-<td>ovf</td>
-</tr>
-<tr>
-<td>Xen</td>
-<td>使用Xen的安装命令进行安装</td>
-<td>raw</td>
-</tr>
-</tbody>
-</table>
-<p>2, 登录网关VM并配置网络<br>3, 配置远端OSS<br>4, 激活存储网关<br>4, 配置NFS/CIFS服务<br>5, 开启缓存服务，设置缓存参数</p>
-<p><strong>云上部署步骤</strong></p>
-<ol>
-<li><p>用云存储网关镜像启动一ECS实例</p>
-<p> ECS实例的最低要求是:</p>
-<ul>
-<li>2核2GB内存</li>
-<li>40GB系统盘</li>
-<li>一个公网IP</li>
-<li>安全组设置需要允许控制台连接</li>
-<li>任意Linux操作系统</li>
-</ul>
-</li>
-<li><p>配置安全组</p>
-</li>
-<li>配置OSS</li>
-<li>激活存储网关</li>
-</ol>
-<h3 id="腾讯云"><a href="#腾讯云" class="headerlink" title="腾讯云"></a>腾讯云</h3><h4 id="介绍-2"><a href="#介绍-2" class="headerlink" title="介绍"></a>介绍</h4><p>存储网关（Cloud Storage Gateway）是一种混合云存储方案，旨在帮助企业或个人实现本地存储与公有云存储的无缝衔接。您无需关心多协议本地存储设备与云存储的兼容性，只需要在本地安装云存储网关即可实现混合云部署，并拥有媲美本地性能的海量云端存储。</p>
-<p>链接：<a href="https://www.qcloud.com/product/csg" target="_blank" rel="noopener">https://www.qcloud.com/product/csg</a></p>
-<h4 id="产品架构-2"><a href="#产品架构-2" class="headerlink" title="产品架构"></a>产品架构</h4><ol>
-<li><p>缓存卷网关（iscsi）</p>
-<p> 把腾讯云上volume通过存储网关映射到本地使用呢，提升本地访问腾讯云上volume的性能。<br> <img src="/images/cloud-storage-gw-qcloud-vcache.jpg" alt="qcloud cache volume"></p>
-</li>
-<li><p>存储卷网关（iscsi）</p>
-<p> 把本地volume的备份通过存储网关备份到腾讯云上。<br> <img src="/images/cloud-storage-gw-qcloud-svolume.jpg" alt="qcloud storage volume"></p>
-</li>
-<li><p>文件网关（NFS）</p>
-<p> 把本地NFS存储通过存储网关扩展到腾讯云上。<br> <img src="/images/cloud-storage-gw-qcloud-file.jpg" alt="qcloud file gw"></p>
-</li>
-</ol>
-<h4 id="特性-2"><a href="#特性-2" class="headerlink" title="特性"></a>特性</h4><ol>
-<li>支持在本地安装存储网关</li>
-<li>支持volume的映射扩展</li>
-<li>仅支持本地NFS文件协议</li>
-<li>本地缓存机制实现冷热数据分离</li>
-<li>数据在本地加密压缩后传到云端</li>
-</ol>
-<h4 id="使用步骤-2"><a href="#使用步骤-2" class="headerlink" title="使用步骤"></a>使用步骤</h4><ol>
-<li>控制台创建存储网关，选择地区</li>
-<li>选择存储网关类型：卷网关/文件网关</li>
-<li>选择网关运行的平台：本地VMware VM上/腾讯云CVM上<ul>
-<li>VMware上部署：下载镜像文件到本地，部署到VMware虚拟机</li>
-<li>CVM上部署：选择CVM地域和机型，选择存储网关镜像部署</li>
-</ul>
-</li>
-<li>连接到存储网关</li>
-<li>激活存储网关</li>
-<li>配置本地缓存磁盘</li>
-</ol>
-<h3 id="百度云"><a href="#百度云" class="headerlink" title="百度云"></a>百度云</h3><h4 id="介绍-3"><a href="#介绍-3" class="headerlink" title="介绍"></a>介绍</h4><p>存储网关是一种混合云存储方案，可以无缝衔接本地和云端存储。存储网关基于对象存储BOS提供NFS和CIFS协议的文件存储服务，您从此无需担心本地应用与云存储间的协议兼容性。此外，存储网关也可以部署在云端，实现云主机间的文件共享。</p>
-<p>链接：<a href="https://cloud.baidu.com/product/bsg.html" target="_blank" rel="noopener">https://cloud.baidu.com/product/bsg.html</a></p>
-<h4 id="产品架构-3"><a href="#产品架构-3" class="headerlink" title="产品架构"></a>产品架构</h4><ol>
-<li><p>混合云下存储扩展</p>
-<p> 本地IDC的存储空间往往是有限，通过使用存储网关，您可以像读写本地磁盘一样无缝使用云端的海量存储资源。存储网关可以部署在本地或者云端的虚拟机、物理机上。<br> <img src="/images/cloud-storage-gw-baiduyun-hybrid.jpg" alt="baiduyun hybrid"></p>
-</li>
-<li><p>云主机间文件共享</p>
-<p> 多台云主机间通常有文件共享的需求，例如应用服务器将日志存放在共享文件存储上以方便后续的日志集中处理和分析，负载均衡的后端云主机也可以将应用数据放在共享存储上从而实现云主机自身的无状态，方便搭建高可用业务架构。<br> <img src="/images/cloud-storage-gw-baiduyun-fileshare.jpg" alt="baiduyun share"></p>
-</li>
-</ol>
-<h4 id="特性-3"><a href="#特性-3" class="headerlink" title="特性"></a>特性</h4><ol>
-<li>支持部署在本地或云端的虚拟机、物理机上</li>
-<li>部署在云端，提供云主机间文件共享功能</li>
-<li>内置本地高速缓存</li>
-<li>提供NFS和CIFS协议的文件存储服务，数据持久化存储在BOS</li>
-</ol>
-<h4 id="使用步骤-3"><a href="#使用步骤-3" class="headerlink" title="使用步骤"></a>使用步骤</h4><ol>
-<li><p>创建存储网关：可以通过API/bgs.py脚本创建</p>
-<blockquote>
-<p>当前存储网关还只能创建在默认VPC内，后续会支持指定VPC进行创建<br>也既是只能在云主机上部署存储网关，还不支持本地部署</p>
-</blockquote>
-</li>
-<li><p>创建共享目标</p>
-<p> 一个存储网关上可以创建多个共享目标。一个共享目标对应一个BOS bucket</p>
-</li>
-<li>设置访问权限</li>
-<li>使用存储网关：NFS/Samba挂载</li>
-</ol>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>作为本地存储到公有云的一种扩展，存储网关是混合云中很重要的一部分，在各大公有云厂商中都有提供。<br>在提供存储网关的基本功能外，各个公有云厂商的存储网关功能会有些差异，详细参考下一节的功能对比。</p>
-<h3 id="功能对比"><a href="#功能对比" class="headerlink" title="功能对比"></a>功能对比</h3><p>对比友商的存储网关功能，列表如下：</p>
-<table>
-<thead>
-<tr>
-<th>对比项</th>
-<th>AWS</th>
-<th>阿里云</th>
-<th>腾讯云</th>
-<th>百度云</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>NFS</td>
-<td>√</td>
-<td>√</td>
-<td>√</td>
-<td>√</td>
-<td></td>
-</tr>
-<tr>
-<td>CIFS</td>
-<td>x</td>
-<td>√</td>
-<td>x</td>
-<td>√</td>
-<td></td>
-</tr>
-<tr>
-<td>ISCSI</td>
-<td>√</td>
-<td>x</td>
-<td>√</td>
-<td>x</td>
-<td></td>
-</tr>
-<tr>
-<td>虚拟磁带库</td>
-<td>√</td>
-<td>x</td>
-<td>√</td>
-<td>x</td>
-<td></td>
-</tr>
-<tr>
-<td>缓存算法</td>
-<td>缓存</td>
-<td>缓存/写透</td>
-<td>缓存</td>
-<td>缓存</td>
-<td></td>
-</tr>
-<tr>
-<td>本地部署</td>
-<td>√</td>
-<td>√</td>
-<td>√</td>
-<td>√</td>
-<td></td>
-</tr>
-<tr>
-<td>云端部署</td>
-<td>x</td>
-<td>√</td>
-<td>√</td>
-<td>√</td>
-<td></td>
-</tr>
-<tr>
-<td>后端存储</td>
-<td>OSS/Glacier</td>
-<td>OSS</td>
-<td>OSS</td>
-<td>OSS</td>
-<td></td>
-</tr>
-<tr>
-<td>数据加密</td>
-<td>√</td>
-<td>x(OSS传输加密)</td>
-<td>√</td>
-<td>x(OSS传输加密)</td>
-<td></td>
-</tr>
-<tr>
-<td>数据压缩</td>
-<td>√</td>
-<td>x</td>
-<td>√</td>
-<td>x</td>
-<td></td>
-</tr>
-<tr>
-<td>操作日志</td>
-<td>x</td>
-<td>√</td>
-<td>x</td>
-<td>x</td>
-<td></td>
-</tr>
-<tr>
-<td>带宽管理</td>
-<td>√</td>
-<td>x</td>
-<td>√</td>
-<td>x</td>
-<td></td>
-</tr>
-<tr>
-<td>自研</td>
-<td>√</td>
-<td>x(数梦工场)</td>
-<td>√</td>
-<td>√</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<h3 id="存储网关基本功能"><a href="#存储网关基本功能" class="headerlink" title="存储网关基本功能"></a>存储网关基本功能</h3><p>参考存储网关的定义和上一节中的各个厂商存储网关的功能对比，我们可以总结出存储网关的基本功能如下，可作为我们实现存储网关的参考。</p>
-<ol>
-<li>制作存储网关VM镜像</li>
-<li>支持部署在本地</li>
-<li>支持NFS文件协议</li>
-<li>缓存算法</li>
-<li>后端使用OSS存储</li>
-</ol>
-<h4 id="难点"><a href="#难点" class="headerlink" title="难点"></a>难点</h4><ul>
-<li><p>NFS文件协议<br>  支持完善的NFS文件协议，是个比较繁琐和困难的功能</p>
-</li>
-<li><p>缓存算法<br>  如何实现效率高、缓存效果好的缓存算法是上述功能的难点<br>  但实现第一版基础的缓存算法，还是有很多现成的算法可以参考的</p>
-</li>
-</ul>
-<blockquote>
-<p>考虑不完善，需要继续细化</p>
-</blockquote>
-<h3 id="存储网关附加功能"><a href="#存储网关附加功能" class="headerlink" title="存储网关附加功能"></a>存储网关附加功能</h3><p>在存储网关基本功能之上，可以考虑添加的附加功能有：</p>
-<ol>
-<li>部署在云端虚拟机上</li>
-<li>支持CIFS文件协议</li>
-<li>支持数据加密、数据压缩</li>
-<li>支持ISCSI</li>
-<li>带宽管理</li>
-<li>数据预取算法</li>
-</ol>
-<h4 id="难点-1"><a href="#难点-1" class="headerlink" title="难点"></a>难点</h4><ul>
-<li><p>CIFS文件协议<br>  支持完善的CIFS文件协议，是个比较繁琐和困难的功能</p>
-</li>
-<li><p>ISCSI卷映射<br>  ISCSI卷的映射管理，快照功能都需要很多开发量</p>
-</li>
-<li><p>数据预取算法<br>  实现高效、准确的数据预取算法对存储网关也是个难点，做好了也会是一个亮点</p>
-</li>
-</ul>
-
-          
+          概述定义一种混合云解决方案，连接私有云/内部IT设施和公有云的Gateway，旨在帮助企业或个人实现本地存储与公有云存储的无缝衔接。提供本地数据远端存储到OSS上，即可以保持本地盘的性能，又可以拥有云上的大容量。
+友商提供服务的友商有： AWS，阿里云，腾讯云，百度云
+产品架构存储网关的大致架构如下
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/08/25/cloud-storage-gateway/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -1537,87 +907,17 @@
       
         
           
-            <h2 id="数据加密"><a href="#数据加密" class="headerlink" title="数据加密"></a>数据加密</h2><p>数据加密，是一门历史悠久的技术，指通过加密算法和加密密钥将明文转变为密文，而解密则是通过解密算法和解密密钥将密文恢复为明文。它的核心是密码学。</p>
-<p>数据加密目前仍是计算机系统对信息进行保护的一种最可靠的办法。它利用密码技术对信息进行加密，实现信息隐蔽，从而起到保护信息的安全的作用。</p>
-<p>==算法==：属性函数<br>==秘钥==：可变参数（加密秘钥、解密秘钥）</p>
-<p>加密系统中，算法是相对稳定的，而秘钥是可以改变的。</p>
-<h2 id="数据加密分类"><a href="#数据加密分类" class="headerlink" title="数据加密分类"></a>数据加密分类</h2><ol>
-<li><p>对称加密</p>
-<p> 对称加密采用了对称密码编码技术，它的特点是文件加密和解密使用相同的密钥，即加密密钥也可以用作解密密钥<br> <img src="/images/data-encryption1.jpg" alt="duicheng"></p>
-</li>
-<li><p>非对称加密</p>
-<p> 非对称加密需要两个密钥：公开密钥（publickey）和私有密 （privatekey）。公开密钥与私有密钥是一对，如果用公开密钥对数据进行加密，只有用对应的私有密钥才能解密；如果用私有密钥对数据进行加密，那么只有用对应的公开密钥才能解密<br> <img src="/images/data-encryption2.jpg" alt="duicheng"></p>
-</li>
-<li><p>混合加密</p>
-<p> 对称加密 + 非对称加密<br> <img src="/images/data-encryption3.jpg" alt="duicheng"></p>
-</li>
-</ol>
-<h2 id="数据加密算法"><a href="#数据加密算法" class="headerlink" title="数据加密算法"></a>数据加密算法</h2><h3 id="对称加密算法"><a href="#对称加密算法" class="headerlink" title="对称加密算法"></a>对称加密算法</h3><h4 id="常用算法"><a href="#常用算法" class="headerlink" title="常用算法"></a>常用算法</h4><ol>
-<li><p>DES(Data Encryption Standard)</p>
-<p> 一种对称加密标准，是目前使用最广泛的密钥系统，特别是在保护金融数据的安全中。曾是美国联邦政府的加密标准，但现已被AES所替代<br> <img src="/images/data-encryption4.jpg" alt="rsa"></p>
-</li>
-<li><p>3DES(Triple DES)</p>
-<p> 基于DES，对一块数据用三个不同的密钥进行三次加密，强度更高  </p>
-</li>
-<li><p>AES(Advanced Encryption Standard)</p>
-<p> 又称Rijndael加密法，是美国联邦政府采用的一种区块加密标准，有AES-128, AES-192或AES-256算法<br> <img src="/images/data-encryption4.jpg" alt="rsa"></p>
-</li>
-<li><p>PBE(Password Base Encryption)</p>
-<p> 一种基于口令的加密算法，特点在于口令由用户自己掌握，采用随机数（我们这里叫做<code>盐</code>）杂凑多重加密等方法保证数据的安全性<br> <img src="/images/data-encryption4.jpg" alt="rsa"></p>
-</li>
-</ol>
-<h4 id="对称加密算法的优点"><a href="#对称加密算法的优点" class="headerlink" title="对称加密算法的优点"></a>对称加密算法的优点</h4><ul>
-<li>算法公开</li>
-<li>计算量小</li>
-<li>加密速度快，加密效率高</li>
-</ul>
-<h4 id="对称加密算法的缺点"><a href="#对称加密算法的缺点" class="headerlink" title="对称加密算法的缺点"></a>对称加密算法的缺点</h4><ul>
-<li>加解密双方需要使用相同的秘钥</li>
-<li>秘钥管理很不方便，如果用户很多，那么秘钥的管理成几何性增长</li>
-<li>任何一方秘钥泄露，数据都不安全</li>
-</ul>
-<h3 id="非对称加密算法"><a href="#非对称加密算法" class="headerlink" title="非对称加密算法"></a>非对称加密算法</h3><h4 id="常用算法-1"><a href="#常用算法-1" class="headerlink" title="常用算法"></a>常用算法</h4><ol>
-<li><p>RSA</p>
-<p> RSA是目前最有影响力和最常用的公钥加密算法，它能够抵抗到目前为止已知的绝大多数密码攻击，已被ISO推荐为公钥数据加密标准<br> <img src="/images/data-encryption7.jpg" alt="rsa"></p>
-</li>
-<li><p>Elgamal</p>
-<p> 基于离散对数问题的加密算法，只能单向加解密，能用于数据加密和数字签名<br> <img src="/images/data-encryption8.jpg" alt="elgamal"></p>
-</li>
-<li><p>D-H</p>
-<p> 基于计算离散对数的难度的秘钥交换算法，它使得通信的双方能在非安全的信道中安全的交换密钥，用于加密后续的通信消息，不用于消息的加解密<br> <img src="/images/data-encryption9.jpg" alt="dh"></p>
-</li>
-<li><p>ECC</p>
-<p> Elliptic Curve Cryptography，基于椭圆曲线的一种加密算法<br> 与RSA算法对比，它的安全性更高，处理速度更快，但由于它的数学理论非常深奥和复杂，在工程应用中比较难于实现</p>
-</li>
-</ol>
-<h4 id="非对称加密算法的优点"><a href="#非对称加密算法的优点" class="headerlink" title="非对称加密算法的优点"></a>非对称加密算法的优点</h4><ul>
-<li>一对公私钥，安全性更高</li>
-<li>秘钥管理很方便</li>
-</ul>
-<h4 id="非对称加密算法的缺点"><a href="#非对称加密算法的缺点" class="headerlink" title="非对称加密算法的缺点"></a>非对称加密算法的缺点</h4><ul>
-<li>计算量大</li>
-<li>加密速度慢，比对称加密算法慢1000倍左右</li>
-<li>不适合大数据量加密</li>
-</ul>
-<h2 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h2><h3 id="使用分类"><a href="#使用分类" class="headerlink" title="使用分类"></a>使用分类</h3><p>在实践中，结合对称加密和非对称加密算法的优缺点，可分为如下两种情况：</p>
-<ol>
-<li><p>小数据量</p>
-<p> 直接使用非对称加密算法</p>
-</li>
-<li><p>大数据量</p>
-<p> 使用对称加密算法对数据加密，使用非对称加密算法加密对称加密算法中的秘钥</p>
-</li>
-</ol>
-<h3 id="算法推荐"><a href="#算法推荐" class="headerlink" title="算法推荐"></a>算法推荐</h3><ul>
-<li>对称加密算法，推荐使用<code>AES</code></li>
-<li>非对称加密算法，推荐使用<code>RSA</code>和<code>DH</code></li>
-</ul>
-<blockquote>
-<p>秘钥长度根据需求决定</p>
-</blockquote>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://ch-tseng.blogspot.jp/" target="_blank" rel="noopener">http://ch-tseng.blogspot.jp/</a><br><a href="http://liaoph.com/encrytion-and-openssl/" target="_blank" rel="noopener">http://liaoph.com/encrytion-and-openssl/</a><br><a href="http://deshui.wang/%E6%8A%80%E6%9C%AF/2016/01/10/security-3" target="_blank" rel="noopener">http://deshui.wang/%E6%8A%80%E6%9C%AF/2016/01/10/security-3</a><br><a href="http://blog.csdn.net/zhengchao1991/article/details/53483357" target="_blank" rel="noopener">http://blog.csdn.net/zhengchao1991/article/details/53483357</a><br><a href="http://blog.csdn.net/zuozhiyoulaisam/article/details/54929661" target="_blank" rel="noopener">http://blog.csdn.net/zuozhiyoulaisam/article/details/54929661</a><br><a href="http://blog.csdn.net/zuozhiyoulaisam/article/details/54947402" target="_blank" rel="noopener">http://blog.csdn.net/zuozhiyoulaisam/article/details/54947402</a></p>
-
-          
+          数据加密数据加密，是一门历史悠久的技术，指通过加密算法和加密密钥将明文转变为密文，而解密则是通过解密算法和解密密钥将密文恢复为明文。它的核心是密码学。
+数据加密目前仍是计算机系统对信息进行保护的一种最可靠的办法。它利用密码技术对信息进行加密，实现信息隐蔽，从而起到保护信息的安全的作用。
+==算法==
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/08/15/data-encryption-algorithm/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -1768,12 +1068,18 @@
       
         
           
-            <h2 id="Ceph知识树"><a href="#Ceph知识树" class="headerlink" title="Ceph知识树"></a>Ceph知识树</h2><p>很久之前看到过的一个ceph知识树，感觉不错，这里分享一下，很多都是存储相关的，也是自己的一个努力方向！</p>
-<p>另外因为ceph跟openstack结合紧密，融入了openstack的一些知识点，也值得所有做ceph的去了解熟悉下。</p>
-<p><img src="/images/ceph-knowledges-tree.jpg" alt="ceph knowledges tree"></p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://blog.csdn.net/scaleqiao/article/details/50243149" target="_blank" rel="noopener">http://blog.csdn.net/scaleqiao/article/details/50243149</a></p>
+          Ceph知识树很久之前看到过的一个ceph知识树，感觉不错，这里分享一下，很多都是存储相关的，也是自己的一个努力方向！
+另外因为ceph跟openstack结合紧密，融入了openstack的一些知识点，也值得所有做ceph的去了解熟悉下。
 
-          
+参考http://blog.csdn.net/scale
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/08/08/ceph-knowledges-tree/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -1924,39 +1230,16 @@
       
         
           
-            <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在我们的应用中，发现数据库上跑rbd的性能比较差，为此我对比测试了mysql的benchmark在本地 sata，ssd和rbd上的性能，并进行了分析比较。</p>
-<h2 id="测试工具sysbench"><a href="#测试工具sysbench" class="headerlink" title="测试工具sysbench"></a>测试工具sysbench</h2><p>sysbench是一个模块化的、跨平台、多线程基准测试工具，主要用于评估测试各种不同系统参数下的数据库负载情况。关于这个项目的详细介绍请看：<a href="https://github.com/akopytov/sysbench" target="_blank" rel="noopener">https://github.com/akopytov/sysbench</a></p>
-<p>sysbench的数据库OLTP测试支持MySQL、PostgreSQL、Oracle，目前主要用于Linux操作系统，开源社区已经将sysbench移植到了Windows，并支持SQL Server的基准测试。</p>
-<p>所以这里选用sysbench测试mysql性能，mysql table engine选择innodb。</p>
-<h2 id="sysbench安装"><a href="#sysbench安装" class="headerlink" title="sysbench安装"></a>sysbench安装</h2><p>从 <a href="https://github.com/akopytov/sysbench" target="_blank" rel="noopener">https://github.com/akopytov/sysbench</a> 上下载sysbench源码，然后编译安装即可。</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yum install -y gcc gcc-c++ automake make  libtool mysql-devel</span></span><br><span class="line"><span class="comment"># ./autogen.sh</span></span><br><span class="line"><span class="comment"># ./configure</span></span><br><span class="line"><span class="comment"># make</span></span><br><span class="line"><span class="comment"># make install</span></span><br></pre></td></tr></table></figure>
-<h2 id="对比测试"><a href="#对比测试" class="headerlink" title="对比测试"></a>对比测试</h2><p>测试命令</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"></span><br><span class="line">host=<span class="variable">$1</span></span><br><span class="line">port=3306</span><br><span class="line">user=<span class="variable">$2</span></span><br><span class="line">passwd=<span class="variable">$3</span></span><br><span class="line"><span class="keyword">if</span> [ <span class="variable">$#</span> -eq 5 ]; <span class="keyword">then</span></span><br><span class="line">    port=<span class="variable">$5</span></span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line">db_name=sbtest</span><br><span class="line">db_size=5000000</span><br><span class="line">thread_count=32</span><br><span class="line">duration=600</span><br><span class="line"></span><br><span class="line"><span class="comment">#print a log and then exit</span></span><br><span class="line"><span class="keyword">function</span> <span class="function"><span class="title">EXIT</span></span>() &#123;</span><br><span class="line">    [ <span class="variable">$#</span> -ne 0 ] &amp;&amp; [ <span class="string">"<span class="variable">$1</span>"</span> != <span class="string">""</span> ] &amp;&amp; <span class="built_in">printf</span> <span class="string">"<span class="variable">$1</span>\n"</span></span><br><span class="line">    <span class="built_in">exit</span> 1</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">#create database</span></span><br><span class="line">mysql -u<span class="variable">$user</span> -p<span class="variable">$passwd</span> -h <span class="variable">$host</span> -P <span class="variable">$port</span> -e <span class="string">"create database if not exists <span class="variable">$db_name</span>;"</span></span><br><span class="line">[ $? -eq 0 ] || EXIT <span class="string">"Create database FAILED!"</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># prepare data</span></span><br><span class="line">time sysbench --oltp-table-size=<span class="variable">$db_size</span> --<span class="built_in">test</span>=/root/mike/sysbench-master/tests/include/oltp_legacy/oltp.lua --mysql-table-engine=innodb --mysql-host=<span class="variable">$host</span> --mysql-port=<span class="variable">$port</span> --mysql-user=<span class="variable">$user</span> --mysql-password=<span class="variable">$passwd</span> --mysql-db=<span class="variable">$db_name</span> prepare</span><br><span class="line">[ $? -eq 0 ] || EXIT <span class="string">"Prepare data FAILED!"</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># start benchmark</span></span><br><span class="line"><span class="keyword">if</span> [ <span class="string">"<span class="variable">$4</span>"</span> == <span class="string">"ro"</span> ]; <span class="keyword">then</span></span><br><span class="line">    time sysbench --max-time=<span class="variable">$duration</span> --max-requests=0 --num-threads=<span class="variable">$thread_count</span> --oltp-table-size=<span class="variable">$db_size</span> --<span class="built_in">test</span>=/root/mike/sysbench-master/tests/include/oltp_legacy/oltp.lua --mysql-table-engine=innodb --mysql-host=<span class="variable">$host</span> --mysql-port=<span class="variable">$port</span> --mysql-user=<span class="variable">$user</span> --mysql-password=<span class="variable">$passwd</span> --mysql-db=<span class="variable">$db_name</span> --oltp-read-only=on run</span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">    time sysbench --max-time=<span class="variable">$duration</span> --max-requests=0 --num-threads=<span class="variable">$thread_count</span> --oltp-table-size=<span class="variable">$db_size</span> --<span class="built_in">test</span>=/root/mike/sysbench-master/tests/include/oltp_legacy/oltp.lua --mysql-table-engine=innodb --mysql-host=<span class="variable">$host</span> --mysql-port=<span class="variable">$port</span> --mysql-user=<span class="variable">$user</span> --mysql-password=<span class="variable">$passwd</span> --mysql-db=<span class="variable">$db_name</span> run</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line">[ $? -eq 0 ] || EXIT <span class="string">"Start benchmark FAILED!"</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># cleanup environment</span></span><br><span class="line">sysbench --num-threads=<span class="variable">$thread_count</span> --oltp-table-size=<span class="variable">$db_size</span> --<span class="built_in">test</span>=/root/mike/sysbench-master/tests/include/oltp_legacy/oltp.lua --mysql-table-engine=innodb --mysql-host=<span class="variable">$host</span> --mysql-port=<span class="variable">$port</span> --mysql-user=<span class="variable">$user</span> --mysql-password=<span class="variable">$passwd</span> --mysql-db=<span class="variable">$db_name</span> cleanup</span><br><span class="line">[ $? -eq 0 ] || EXIT <span class="string">"Cleanup FAILED!"</span></span><br></pre></td></tr></table></figure>
-<h3 id="本地磁盘"><a href="#本地磁盘" class="headerlink" title="本地磁盘"></a>本地磁盘</h3><p>sata盘和ssd盘上的性能类似，结果如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">SQL statistics:</span><br><span class="line">    queries performed:</span><br><span class="line">        <span class="built_in">read</span>:                            40007562</span><br><span class="line">        write:                           11430732</span><br><span class="line">        other:                           5715366</span><br><span class="line">        total:                           57153660</span><br><span class="line">    transactions:                        2857683 (4762.67 per sec.)</span><br><span class="line">    queries:                             57153660 (95253.36 per sec.)</span><br><span class="line">    ignored errors:                      0      (0.00 per sec.)</span><br><span class="line">    reconnects:                          0      (0.00 per sec.)</span><br><span class="line"></span><br><span class="line">General statistics:</span><br><span class="line">    total time:                          600.0172s</span><br><span class="line">    total number of events:              2857683</span><br><span class="line"></span><br><span class="line">Latency (ms):</span><br><span class="line">         min:                                  1.37</span><br><span class="line">         avg:                                  6.72</span><br><span class="line">         max:                                100.65</span><br><span class="line">         95th percentile:                     17.01</span><br><span class="line">         sum:                            19193736.29</span><br><span class="line"></span><br><span class="line">Threads fairness:</span><br><span class="line">    events (avg/stddev):           89302.5938/256.06</span><br><span class="line">    execution time (avg/stddev):   599.8043/0.00</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">real	10m0.030s</span><br><span class="line">user	11m12.564s</span><br><span class="line">sys	9m3.083s</span><br></pre></td></tr></table></figure>
-<h3 id="rbd设备"><a href="#rbd设备" class="headerlink" title="rbd设备"></a>rbd设备</h3><p>准备rbd设备命令：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rbd create -p tstpool foxvol --size 30720 --image-format 1</span></span><br><span class="line"><span class="comment"># rbd map tstpool/foxvol</span></span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>针对应用这里选择的image format为1，后来测试了image format为2的volume，性能一样</p>
-</blockquote>
-<p>在设备/dev/rbd0上测试结果如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">SQL statistics:</span><br><span class="line">    queries performed:</span><br><span class="line">        <span class="built_in">read</span>:                            14509516</span><br><span class="line">        write:                           4145576</span><br><span class="line">        other:                           2072788</span><br><span class="line">        total:                           20727880</span><br><span class="line">    transactions:                        1036394 (1727.28 per sec.)</span><br><span class="line">    queries:                             20727880 (34545.51 per sec.)</span><br><span class="line">    ignored errors:                      0      (0.00 per sec.)</span><br><span class="line">    reconnects:                          0      (0.00 per sec.)</span><br><span class="line"></span><br><span class="line">General statistics:</span><br><span class="line">    total time:                          600.0166s</span><br><span class="line">    total number of events:              1036394</span><br><span class="line"></span><br><span class="line">Latency (ms):</span><br><span class="line">         min:                                  2.02</span><br><span class="line">         avg:                                 18.52</span><br><span class="line">         max:                                460.01</span><br><span class="line">         95th percentile:                     63.32</span><br><span class="line">         sum:                            19197876.44</span><br><span class="line"></span><br><span class="line">Threads fairness:</span><br><span class="line">    events (avg/stddev):           32387.3125/109.50</span><br><span class="line">    execution time (avg/stddev):   599.9336/0.01</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">real	10m0.028s</span><br><span class="line">user	3m52.788s</span><br><span class="line">sys	3m17.306s</span><br></pre></td></tr></table></figure>
-<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><h3 id="raid卡"><a href="#raid卡" class="headerlink" title="raid卡"></a>raid卡</h3><p>查看本地盘的配置，本地盘的raid卡配置的写是writeback模式，缓存有2G大小。<br>测试机器上总共有两种raid卡：</p>
-<p>raid卡1</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># hpssacli ctrl all show config detail</span></span><br><span class="line">...</span><br><span class="line">Cache Board Present: True</span><br><span class="line">Cache Status: OK</span><br><span class="line">Cache Ratio: 10% Read / 90% Write</span><br><span class="line">Drive Write Cache: Disabled</span><br><span class="line">Total Cache Size: 2.0 GB</span><br><span class="line">Total Cache Memory Available: 1.8 GB</span><br><span class="line">No-Battery Write Cache: Disabled</span><br><span class="line">SSD Caching RAID5 WriteBack Enabled: True</span><br><span class="line">SSD Caching Version: 2</span><br></pre></td></tr></table></figure>
-<p>raid卡2</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /opt/MegaRAID/MegaCli/MegaCli64 -cfgdsply -aALL</span></span><br><span class="line"> </span><br><span class="line">==============================================================================</span><br><span class="line">Adapter: 0</span><br><span class="line">Product Name: PERC H730P Mini</span><br><span class="line">Memory: 2048MB</span><br><span class="line">BBU: Present</span><br><span class="line">Serial No: 57E00PQ</span><br><span class="line">==============================================================================</span><br><span class="line">...</span><br><span class="line">Default Cache Policy: WriteBack, ReadAhead, Direct, No Write Cache <span class="keyword">if</span> Bad BBU</span><br><span class="line">Current Cache Policy: WriteBack, ReadAhead, Direct, No Write Cache <span class="keyword">if</span> Bad BBU</span><br><span class="line">Default Access Policy: Read/Write</span><br><span class="line">Current Access Policy: Read/Write</span><br><span class="line">Disk Cache Policy   : Disk<span class="string">'s Default</span></span><br></pre></td></tr></table></figure>
-<h2 id="性能测试写IOPS"><a href="#性能测试写IOPS" class="headerlink" title="性能测试写IOPS"></a>性能测试写IOPS</h2><p>dd命令测试写IOPS性能</p>
-<p>测试本地sata盘，发现raid卡能提升本地盘的IOPS到 20000 多；</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># dd if=/dev/zero of=tstfile bs=4k count=1024000 oflag=direct &amp;</span></span><br><span class="line"><span class="comment"># iostat -kx 2 sdk</span></span><br><span class="line">...</span><br><span class="line">avg-cpu:  %user   %nice %system %iowait  %steal   %idle</span><br><span class="line">           0.16    0.00    0.71    2.37    0.00   96.77</span><br><span class="line"> </span><br><span class="line">Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util</span><br><span class="line">sdk               0.00     0.00    0.00 26587.00     0.00 106348.00     8.00     0.85    0.03    0.00    0.03   0.03  85.35</span><br><span class="line"> </span><br><span class="line">avg-cpu:  %user   %nice %system %iowait  %steal   %idle</span><br><span class="line">           0.14    0.00    0.72    2.37    0.00   96.77</span><br><span class="line"> </span><br><span class="line">Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util</span><br><span class="line">sdk               0.00     0.00    0.00 26706.50     0.00 106826.00     8.00     0.84    0.03    0.00    0.03   0.03  84.35</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
-<p>测试rbd设备，IOPS只有1000多点；</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># dd if=/dev/zero of=/dev/rbd1 bs=4k count=1024000 oflag=direct &amp;</span></span><br><span class="line"><span class="comment">#iostat -kx 2 rbd1</span></span><br><span class="line">...</span><br><span class="line">avg-cpu:  %user   %nice %system %iowait  %steal   %idle</span><br><span class="line">           0.19    0.00    0.50    2.94    0.00   96.37</span><br><span class="line"> </span><br><span class="line">Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util</span><br><span class="line">rbd1              0.00     0.00    0.00 1135.50     0.00  4542.00     8.00     0.97    0.86    0.00    0.86   0.86  97.45</span><br><span class="line"> </span><br><span class="line">avg-cpu:  %user   %nice %system %iowait  %steal   %idle</span><br><span class="line">           0.86    0.00    0.63    2.93    0.00   95.58</span><br><span class="line"> </span><br><span class="line">Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util</span><br><span class="line">rbd1              0.00     0.00    0.00 1193.50     0.00  4774.00     8.00     0.98    0.82    0.00    0.82   0.82  97.85</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
-<p>分析：<br>rbd设备的所有IO是要走网络和ceph IO栈的，IO的平均时延都是ms级别的，所以每秒的IOPS也就1000多点。。。 </p>
-<p>查看网络时延</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[root@tstserver yangguanjun]<span class="comment"># ping 10.10.1.5</span></span><br><span class="line">PING 10.10.1.5 (10.10.1.5) 56(84) bytes of data.</span><br><span class="line">64 bytes from 10.10.1.5: icmp_seq=1 ttl=63 time=0.191 ms</span><br><span class="line">64 bytes from 10.10.1.5: icmp_seq=2 ttl=63 time=0.157 ms</span><br><span class="line">64 bytes from 10.10.1.5: icmp_seq=3 ttl=63 time=0.151 ms</span><br><span class="line">64 bytes from 10.10.1.5: icmp_seq=4 ttl=63 time=0.147 ms</span><br><span class="line">64 bytes from 10.10.1.5: icmp_seq=5 ttl=63 time=0.164 ms</span><br></pre></td></tr></table></figure>
-<p>网络的时延也是ms级别的，就算没有ceph io的时延，这个iops也只能是5k多，所以针对mysql这样的应用，rbd的性能会比较低；</p>
-
-          
+          概述在我们的应用中，发现数据库上跑rbd的性能比较差，为此我对比测试了mysql的benchmark在本地 sata，ssd和rbd上的性能，并进行了分析比较。
+测试工具sysbenchsysbench是一个模块化的、跨平台、多线程基准测试工具，主要用于评估测试各种不同系统参数下的数据库负载情况。关
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/07/27/compare-mysql-on-localdisk-rbddisk/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -2107,56 +1390,16 @@
       
         
           
-            <h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>为了测试cephfs的可用性，我们对cephfs进行了几组stripe的测试，在跑自动化测试时，发现fio总是会跑一部分后hang住，而此时ceph -s输出显示read值太大，但实际环境中查看并没这么大的流量。</p>
-<h2 id="ceph输出"><a href="#ceph输出" class="headerlink" title="ceph输出"></a>ceph输出</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph -w</span></span><br><span class="line">    cluster 16f59233-16da-4864-8c5a-1fec71d119ad</span><br><span class="line">     health HEALTH_OK</span><br><span class="line">     monmap e1: 3 mons at &#123;cephcluster-server1=10.10.1.6:6789/0,cephcluster-server2=10.10.1.7:6789/0,cephcluster-server3=10.10.1.8:6789/0&#125;</span><br><span class="line">            election epoch 12, quorum 0,1,2 cephcluster-server1,cephcluster-server2,cephcluster-server3</span><br><span class="line">      fsmap e17: 1/1/1 up &#123;0=mds-daemon-38=up:active&#125;, 1 up:standby</span><br><span class="line">     osdmap e180: 30 osds: 30 up, 30 <span class="keyword">in</span></span><br><span class="line">            flags sortbitwise,require_jewel_osds</span><br><span class="line">      pgmap v55504: 1088 pgs, 3 pools, 81924 MB data, 10910 objects</span><br><span class="line">            241 GB used, 108 TB / 109 TB avail</span><br><span class="line">                1088 active+clean</span><br><span class="line">  client io 68228 MB/s rd, 1066 op/s rd, 0 op/s wr</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>分析：cephfs client io显示的信息是正确的。从后面的分析得知cephfs client一直loop着尝试read object，单次read就有64MB，object数据缓存在osd的内存里，所以ceph统计的read速率很大。</p>
-</blockquote>
-<h2 id="查看网络"><a href="#查看网络" class="headerlink" title="查看网络"></a>查看网络</h2><p>用iftop看网络的流量只有10MB/s</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># iftop -B -i eth4</span></span><br><span class="line">                           25.5MB                    50.9MB                    76.4MB                    102MB                    127MB</span><br><span class="line">└──────────────────────────┴─────────────────────────┴─────────────────────────┴─────────────────────────┴──────────────────────────</span><br><span class="line">cephcluster-server2.****.com                     =&gt; 10.10.1.18                                              4.46MB  4.51MB  4.52MB</span><br><span class="line">                                                 &lt;=                                                         220KB   221KB   222KB</span><br></pre></td></tr></table></figure>
-<h2 id="对比几个stripe"><a href="#对比几个stripe" class="headerlink" title="对比几个stripe"></a>对比几个stripe</h2><p>发现对64MB的无条带化的object读时，会触发这个bug：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># getfattr -n ceph.file.layout dir4/tstfile</span></span><br><span class="line"><span class="comment"># file: dir4/tstfile</span></span><br><span class="line">ceph.file.layout=<span class="string">"stripe_unit=67108864 stripe_count=1 object_size=67108864 pool=cephfs_data”</span></span><br></pre></td></tr></table></figure>
-<p>bs=64M的fio hang住</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># fio -filename=/home/yangguanjun/cephfs/dir4/tstfile -size=20G -thread -group_reporting -direct=1 -ioengine=libaio -bs=64M -rw=read -iodepth=64 -iodepth_batch_submit=8 -iodepth_batch_complete=8 -name=write_64k_64q</span></span><br><span class="line">write_64k_64q: (g=0): rw=<span class="built_in">read</span>, bs=64M-64M/64M-64M/64M-64M, ioengine=libaio, iodepth=64</span><br><span class="line">fio-2.2.8</span><br><span class="line">Starting 1 thread</span><br><span class="line">^Cbs: 1 (f=1): [R(1)] [inf% <span class="keyword">done</span>] [0KB/0KB/0KB /s] [0/0/0 iops] [eta 1158050441d:06h:59m:55s]</span><br><span class="line">fio: terminating on signal 2</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
-<p>bs=32M的fio hang住</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># fio -filename=/home/yangguanjun/cephfs/dir4/tstfile -size=20G -thread -group_reporting -direct=1 -ioengine=libaio -bs=32M -rw=read -iodepth=64 -iodepth_batch_submit=8 -iodepth_batch_complete=8 -name=write_64k_64q</span></span><br><span class="line">write_64k_64q: (g=0): rw=<span class="built_in">read</span>, bs=32M-32M/32M-32M/32M-32M, ioengine=libaio, iodepth=64</span><br><span class="line">fio-2.2.8</span><br><span class="line">Starting 1 thread</span><br><span class="line">^Cbs: 1 (f=1): [R(1)] [inf% <span class="keyword">done</span>] [0KB/0KB/0KB /s] [0/0/0 iops] [eta 1158050441d:07h:00m:09s]</span><br></pre></td></tr></table></figure>
-<p>bs=16M的dd hang住</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># dd if=tstfile of=/dev/null bs=16M count=200</span></span><br><span class="line"></span><br><span class="line">root     12763  0.0  0.0 124344   664 pts/0    D+   14:29   0:00 dd <span class="keyword">if</span>=tstfile of=/dev/null bs=16M count=200</span><br></pre></td></tr></table></figure>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph -w</span></span><br><span class="line">    cluster 16f59233-16da-4864-8c5a-1fec71d119ad</span><br><span class="line">     health HEALTH_OK</span><br><span class="line">     monmap e1: 3 mons at &#123;cephcluster-server1=10.10.1.6:6789/0,cephcluster-server2=10.10.1.7:6789/0,cephcluster-server3=10.10.1.8:6789/0&#125;</span><br><span class="line">            election epoch 12, quorum 0,1,2 cephcluster-server1,cephcluster-server2,cephcluster-server3</span><br><span class="line">      fsmap e23: 1/1/1 up &#123;0=mds-daemon-37=up:active&#125;</span><br><span class="line">     osdmap e183: 30 osds: 30 up, 30 <span class="keyword">in</span></span><br><span class="line">            flags sortbitwise,require_jewel_osds</span><br><span class="line">      pgmap v63806: 1088 pgs, 3 pools, 93200 MB data, 13729 objects</span><br><span class="line">            274 GB used, 108 TB / 109 TB avail</span><br><span class="line">                1088 active+clean</span><br><span class="line">  client io 1330 MB/s rd, 41 op/s rd, 0 op/s wr</span><br><span class="line"></span><br><span class="line">2017-07-05 14:30:11.483974 mon.0 [INF] pgmap v63806: 1088 pgs: 1088 active+clean; 93200 MB data, 274 GB used, 108 TB / 109 TB avail; 1330 MB/s rd, 41 op/s</span><br><span class="line">2017-07-05 14:30:16.484856 mon.0 [INF] pgmap v63807: 1088 pgs: 1088 active+clean; 93200 MB data, 274 GB used, 108 TB / 109 TB avail; 1212 MB/s rd, 37 op/s</span><br><span class="line">2017-07-05 14:30:21.485295 mon.0 [INF] pgmap v63808: 1088 pgs: 1088 active+clean; 93200 MB data, 274 GB used, 108 TB / 109 TB avail; 1206 MB/s rd, 37 op/s</span><br><span class="line">2017-07-05 14:30:26.485953 mon.0 [INF] pgmap v63809: 1088 pgs: 1088 active+clean; 93200 MB data, 274 GB used, 108 TB / 109 TB avail; 1212 MB/s rd, 37 op/s</span><br></pre></td></tr></table></figure>
-<h2 id="ceph-cluster节点信息"><a href="#ceph-cluster节点信息" class="headerlink" title="ceph cluster节点信息"></a>ceph cluster节点信息</h2><p>在ceph cluster的一个节点上看到测试节点有读数据请求</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># iftop -n -i eth4</span></span><br><span class="line">10.10.1.7               =&gt; 10.10.1.18                       12.3Mb  11.6Mb  11.6Mb</span><br><span class="line">                        &lt;=                                  285Kb   284Kb   284Kb</span><br><span class="line"></span><br><span class="line">打开<span class="built_in">source</span> port后</span><br><span class="line">10.10.1.7:6810          =&gt; 10.10.1.18                       12.5Mb  11.5Mb  11.5Mb</span><br><span class="line">                        &lt;=                                  278Kb   255Kb   255Kb</span><br><span class="line"></span><br><span class="line"><span class="comment"># netstat -nap | grep 6810</span></span><br><span class="line">tcp        0      0 10.10.1.7:6810      0.0.0.0:*           LISTEN      79360/ceph-osd</span><br><span class="line">tcp        0      0 10.10.1.7:6810      0.0.0.0:*           LISTEN      79360/ceph-osd</span><br><span class="line">tcp        0      0 10.10.1.7:6810      10.10.1.7:57266     ESTABLISHED 79360/ceph-osd</span><br><span class="line"></span><br><span class="line"><span class="comment"># ps aux | grep -w 79360</span></span><br><span class="line">ceph       79360 85.9  0.5 4338588 709312 ?      Ssl  Jul04 1556:54 /usr/bin/ceph-osd -f --cluster ceph --id 15 --setuser ceph --setgroup ceph</span><br><span class="line"></span><br><span class="line"><span class="comment"># df</span></span><br><span class="line">/dev/sdg1      3905070088  9079428 3895990660   1% /var/lib/ceph/osd/ceph-15</span><br></pre></td></tr></table></figure>
-<p>查看sdg没有io</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># iostat -kx 2 sdg</span></span><br><span class="line">Linux 3.10.0-514.10.2.el7.x86_64 (cephcluster-server2.****.com)     07/05/2017     _x86_64_    (32 CPU)</span><br><span class="line"></span><br><span class="line">avg-cpu:  %user   %nice %system %iowait  %steal   %idle</span><br><span class="line">          12.47    0.00    1.64    0.03    0.00   85.86</span><br><span class="line"></span><br><span class="line">Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util</span><br><span class="line">sdg               0.01     0.07    2.48    2.01    95.78   140.98   105.44     0.08   17.79    9.69   27.79   3.44   1.54</span><br><span class="line"></span><br><span class="line">avg-cpu:  %user   %nice %system %iowait  %steal   %idle</span><br><span class="line">           0.80    0.00    2.96    0.02    0.00   96.22</span><br><span class="line"></span><br><span class="line">Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util</span><br><span class="line">sdg               0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00</span><br><span class="line"></span><br><span class="line">avg-cpu:  %user   %nice %system %iowait  %steal   %idle</span><br><span class="line">           0.86    0.00    2.99    0.00    0.00   96.15</span><br><span class="line"></span><br><span class="line">Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util</span><br><span class="line">sdg               0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00    0.00    0.00   0.00   0.00</span><br></pre></td></tr></table></figure>
-<h2 id="查看文件location"><a href="#查看文件location" class="headerlink" title="查看文件location"></a>查看文件location</h2><p>测试文件的location信息，正好第一块数据就在osd 15上</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cephfs tstfile show_location</span></span><br><span class="line">WARNING: This tool is deprecated.  Use the layout.* xattrs to query and modify layouts.</span><br><span class="line">location.file_offset:  0</span><br><span class="line">location.object_offset:0</span><br><span class="line">location.object_no:    0</span><br><span class="line">location.object_size:  67108864</span><br><span class="line">location.object_name:  10000000805.00000000</span><br><span class="line">location.block_offset: 0</span><br><span class="line">location.block_size:   67108864</span><br><span class="line">location.osd:          15</span><br><span class="line"></span><br><span class="line"><span class="comment"># ceph osd map cephfs_data 10000000805.00000000</span></span><br><span class="line">osdmap e188 pool <span class="string">'cephfs_data'</span> (1) object <span class="string">'10000000805.00000000'</span> -&gt; pg 1.12d00fd5 (1.1d5) -&gt; up ([15,0,26], p15) acting ([15,0,26], p15)</span><br></pre></td></tr></table></figure>
-<p>停止ceph osd 15</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># systemctl stop ceph-osd@15.service</span></span><br></pre></td></tr></table></figure>
-<p>过一会查看osd 15所在节点没有与测试节点的数据流量了<br>这时在ceph osd 0节点，出现了与测试节点的数据流量，查看发现正好是osd 0与测试节点的数据通信<br>查看此时测试文件第一个object的map信息如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph osd map cephfs_data 10000000805.00000000</span></span><br><span class="line">osdmap e185 pool <span class="string">'cephfs_data'</span> (1) object <span class="string">'10000000805.00000000'</span> -&gt; pg 1.12d00fd5 (1.1d5) -&gt; up ([0,26], p0) acting ([0,26], p0)</span><br></pre></td></tr></table></figure>
-<h2 id="问题明确"><a href="#问题明确" class="headerlink" title="问题明确"></a>问题明确</h2><p>现在这个问题很好重现了</p>
-<ul>
-<li>创建一个 <code>stripe_unit=67108864 stripe_count=1 object_size=67108864</code> 的文件</li>
-<li>dd if=/dev/zero of=foxfile bs=64M count=1 写成功</li>
-<li>dd if=foxfile of=/dev/null bs=64M count=1 读就会hang住</li>
-<li>查看测试节点与对应的object所在的osd有数据流量</li>
-</ul>
-<p>通过<code>strace</code>命令查看dd读数据时确实hang在read函数：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># strace dd if=foxfile of=/dev/null bs=64M count=1</span></span><br><span class="line">...</span><br><span class="line">open(<span class="string">"foxfile"</span>, O_RDONLY) = 3</span><br><span class="line">dup2(3, 0) = 0</span><br><span class="line">close(3) = 0</span><br><span class="line">lseek(0, 0, SEEK_CUR) = 0</span><br><span class="line">open(<span class="string">"/dev/null"</span>, O_WRONLY|O_CREAT|O_TRUNC, 0666) = 3</span><br><span class="line">dup2(3, 1) = 1</span><br><span class="line">close(3) = 0</span><br><span class="line">mmap(NULL, 67121152, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f01712d8000</span><br><span class="line"><span class="built_in">read</span>(0,</span><br></pre></td></tr></table></figure>
-<h2 id="收集client-log"><a href="#收集client-log" class="headerlink" title="收集client log"></a>收集client log</h2><p>参考文章 <a href="http://www.yangguanjun.com/2017/06/08/cephfs-client-debug/">cephfs kernel client debug</a></p>
-<h2 id="收集osd-log"><a href="#收集osd-log" class="headerlink" title="收集osd log"></a>收集osd log</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph daemon /var/run/ceph/ceph-osd.&lt;osdid&gt;.asok config set debug_osd "20/20"</span></span><br></pre></td></tr></table></figure>
-<h2 id="分析log"><a href="#分析log" class="headerlink" title="分析log"></a>分析log</h2><p>在cephfs client的log中能循环发现如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231008] ceph_sock_data_ready on ffff88202c987030 state = 5, queueing work</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231012] get_osd ffff88202c987000 3 -&gt; 4</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231015] queue_con_delay ffff88202c987030 0</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231034] try_read start on ffff88202c987030 state 5</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231035] try_read tag 1 in_base_pos 0</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231036] try_read got tag 8</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231036] prepare_read_ack ffff88202c987030</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231041] ceph_sock_data_ready on ffff88202c987030 state = 5, queueing work</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231041] get_osd ffff88202c987000 4 -&gt; 5</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231053] queue_con_delay ffff88202c987030 0</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231062] got ack <span class="keyword">for</span> seq 1 <span class="built_in">type</span> 42 at ffff881008668100</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231066] ceph_msg_put ffff881008668100 (was 2)</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231081] prepare_read_tag ffff88202c987030</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231083] try_read start on ffff88202c987030 state 5</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231086] try_read tag 1 in_base_pos 0</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231088] try_read got tag 7</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231088] prepare_read_message ffff88202c987030</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231089] read_partial_message con ffff88202c987030 msg           (null)</span><br><span class="line">Jul  6 11:30:29 cephfs-client kernel: [ 2010.231090] try_read <span class="keyword">done</span> on ffff88202c987030 ret -5</span><br></pre></td></tr></table></figure>
-<p>证明cephfs client一直在尝试读取osd数据，但收到数据后却认为msg为<code>null</code></p>
-<p>在ceph osd的log中能循环发现如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">2017-07-06 11:30:29.185056 7f1788eb2700  1 osd.20 188 ms_handle_reset con 0x7f1748c39d80 session 0x7f170f4f31c0</span><br><span class="line">2017-07-06 11:30:29.185683 7f17719fc700 10 osd.20 188  new session 0x7f174d435380 con=0x7f1748c39f00 addr=10.10.1.18:0/144324133</span><br><span class="line">2017-07-06 11:30:29.185839 7f17719fc700 20 osd.20 188 should_share_map client.24357 10.10.1.18:0/144324133 188</span><br><span class="line">2017-07-06 11:30:29.185854 7f17719fc700 15 osd.20 188 enqueue_op 0x7f174d42f100 prio 127 cost 0 latency 0.000047 osd_op(client.24357.1:3 1.1bdf9243 1000000095b.00000000 [<span class="built_in">read</span> 0~67108864 [1@-1]] snapc 0=[] RETRY=6 ondisk+retry+<span class="built_in">read</span>+known_if_redirected e188) v4</span><br><span class="line">2017-07-06 11:30:29.185891 7f1777bff700 10 osd.20 188 dequeue_op 0x7f174d42f100 prio 127 cost 0 latency 0.000085 osd_op(client.24357.1:3 1.1bdf9243 1000000095b.00000000 [<span class="built_in">read</span> 0~67108864 [1@-1]] snapc 0=[] RETRY=6 ondisk+retry+<span class="built_in">read</span>+known_if_redirected e188) v4 pg pg[1.43( v 188<span class="string">'6597 (180'</span>3500,188<span class="string">'6597] local-les=157 n=10 ec=136 les/c/f 157/157/0 151/156/136) [20,10,7] r=0 lpr=156 crt=188'</span>6595 lcod 188<span class="string">'6596 mlcod 188'</span>6596 active+clean]</span><br><span class="line">2017-07-06 11:30:29.185937 7f1777bff700 10 osd.20 pg_epoch: 188 pg[1.43( v 188<span class="string">'6597 (180'</span>3500,188<span class="string">'6597] local-les=157 n=10 ec=136 les/c/f 157/157/0 151/156/136) [20,10,7] r=0 lpr=156 crt=188'</span>6595 lcod 188<span class="string">'6596 mlcod 188'</span>6596 active+clean] handle_message: 0x7f174d42f100</span><br><span class="line">2017-07-06 11:30:29.185951 7f1777bff700 20 osd.20 pg_epoch: 188 pg[1.43( v 188<span class="string">'6597 (180'</span>3500,188<span class="string">'6597] local-les=157 n=10 ec=136 les/c/f 157/157/0 151/156/136) [20,10,7] r=0 lpr=156 crt=188'</span>6595 lcod 188<span class="string">'6596 mlcod 188'</span>6596 active+clean] op_has_sufficient_caps pool=1 (cephfs_data ) owner=0 need_read_cap=1 need_write_cap=0 need_class_read_cap=0 need_class_write_cap=0 -&gt; yes</span><br><span class="line">2017-07-06 11:30:29.185970 7f1777bff700 10 osd.20 pg_epoch: 188 pg[1.43( v 188<span class="string">'6597 (180'</span>3500,188<span class="string">'6597] local-les=157 n=10 ec=136 les/c/f 157/157/0 151/156/136) [20,10,7] r=0 lpr=156 crt=188'</span>6595 lcod 188<span class="string">'6596 mlcod 188'</span>6596 active+clean] do_op osd_op(client.24357.1:3 1.1bdf9243 1000000095b.00000000 [<span class="built_in">read</span> 0~67108864 [1@-1]] snapc 0=[] RETRY=6 ondisk+retry+<span class="built_in">read</span>+known_if_redirected e188) v4 may_read -&gt; <span class="built_in">read</span>-ordered flags ondisk+retry+<span class="built_in">read</span>+known_if_redirected</span><br><span class="line">2017-07-06 11:30:29.185990 7f1777bff700 10 osd.20 pg_epoch: 188 pg[1.43( v 188<span class="string">'6597 (180'</span>3500,188<span class="string">'6597] local-les=157 n=10 ec=136 les/c/f 157/157/0 151/156/136) [20,10,7] r=0 lpr=156 crt=188'</span>6595 lcod 188<span class="string">'6596 mlcod 188'</span>6596 active+clean] get_object_context: found obc <span class="keyword">in</span> cache: 0x7f171e423180</span><br><span class="line">2017-07-06 11:30:29.185997 7f1777bff700 10 osd.20 pg_epoch: 188 pg[1.43( v 188<span class="string">'6597 (180'</span>3500,188<span class="string">'6597] local-les=157 n=10 ec=136 les/c/f 157/157/0 151/156/136) [20,10,7] r=0 lpr=156 crt=188'</span>6595 lcod 188<span class="string">'6596 mlcod 188'</span>6596 active+clean] get_object_context: 0x7f171e423180 1:c249fbd8:::1000000095b.00000000:head rwstate(none n=0 w=0) oi: 1:c249fbd8:::1000000095b.00000000:head(188<span class="string">'4499 mds.0.20:66259 dirty|data_digest|omap_digest s 67108864 uv 4499 dd cdba94a2 od ffffffff) ssc: 0x7f172dcfce40 snapset: 1=[]:[]+head</span></span><br><span class="line"><span class="string">2017-07-06 11:30:29.186010 7f1777bff700 10 osd.20 pg_epoch: 188 pg[1.43( v 188'</span>6597 (180<span class="string">'3500,188'</span>6597] <span class="built_in">local</span>-les=157 n=10 ec=136 les/c/f 157/157/0 151/156/136) [20,10,7] r=0 lpr=156 crt=188<span class="string">'6595 lcod 188'</span>6596 mlcod 188<span class="string">'6596 active+clean] find_object_context 1:c249fbd8:::1000000095b.00000000:head @head oi=1:c249fbd8:::1000000095b.00000000:head(188'</span>4499 mds.0.20:66259 dirty|data_digest|omap_digest s 67108864 uv 4499 dd cdba94a2 od ffffffff)</span><br><span class="line">2017-07-06 11:30:29.186026 7f1777bff700 10 osd.20 pg_epoch: 188 pg[1.43( v 188<span class="string">'6597 (180'</span>3500,188<span class="string">'6597] local-les=157 n=10 ec=136 les/c/f 157/157/0 151/156/136) [20,10,7] r=0 lpr=156 crt=188'</span>6595 lcod 188<span class="string">'6596 mlcod 188'</span>6596 active+clean] execute_ctx 0x7f1776beed00</span><br><span class="line">2017-07-06 11:30:29.186035 7f1777bff700 10 osd.20 pg_epoch: 188 pg[1.43( v 188<span class="string">'6597 (180'</span>3500,188<span class="string">'6597] local-les=157 n=10 ec=136 les/c/f 157/157/0 151/156/136) [20,10,7] r=0 lpr=156 crt=188'</span>6595 lcod 188<span class="string">'6596 mlcod 188'</span>6596 active+clean] do_op 1:c249fbd8:::1000000095b.00000000:head [<span class="built_in">read</span> 0~67108864 [1@-1]] ov 188<span class="string">'4499</span></span><br><span class="line"><span class="string">2017-07-06 11:30:29.186041 7f1777bff700 10 osd.20 pg_epoch: 188 pg[1.43( v 188'</span>6597 (180<span class="string">'3500,188'</span>6597] <span class="built_in">local</span>-les=157 n=10 ec=136 les/c/f 157/157/0 151/156/136) [20,10,7] r=0 lpr=156 crt=188<span class="string">'6595 lcod 188'</span>6596 mlcod 188<span class="string">'6596 active+clean]  taking ondisk_read_lock</span></span><br><span class="line"><span class="string">2017-07-06 11:30:29.186047 7f1777bff700 10 osd.20 pg_epoch: 188 pg[1.43( v 188'</span>6597 (180<span class="string">'3500,188'</span>6597] <span class="built_in">local</span>-les=157 n=10 ec=136 les/c/f 157/157/0 151/156/136) [20,10,7] r=0 lpr=156 crt=188<span class="string">'6595 lcod 188'</span>6596 mlcod 188<span class="string">'6596 active+clean] do_osd_op 1:c249fbd8:::1000000095b.00000000:head [read 0~67108864 [1@-1]]</span></span><br><span class="line"><span class="string">2017-07-06 11:30:29.186056 7f1777bff700 10 osd.20 pg_epoch: 188 pg[1.43( v 188'</span>6597 (180<span class="string">'3500,188'</span>6597] <span class="built_in">local</span>-les=157 n=10 ec=136 les/c/f 157/157/0 151/156/136) [20,10,7] r=0 lpr=156 crt=188<span class="string">'6595 lcod 188'</span>6596 mlcod 188<span class="string">'6596 active+clean] do_osd_op  read 0~67108864 [1@-1]</span></span><br></pre></td></tr></table></figure>
-<p>分析看出cephfs client发送read 64MB的request，ceph osd读64M数据return，但是cephfs client认为msg为null，然后重试<br>一直重复上面的请求，所以cephfs client的IO就hang住了</p>
-<h2 id="提交bug"><a href="#提交bug" class="headerlink" title="提交bug"></a>提交bug</h2><p>提交该bug到ceph社区：<br><a href="http://tracker.ceph.com/issues/20528" target="_blank" rel="noopener">http://tracker.ceph.com/issues/20528</a></p>
-<p>cephfs client端的配置限制了read message的最大size为16M。</p>
-<p>in net/ceph/messenger.c</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">static int read_partial_message(struct ceph_connection *con)</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">        front_len = le32_to_cpu(con-&gt;in_hdr.front_len);</span><br><span class="line">        <span class="keyword">if</span> (front_len &gt; CEPH_MSG_MAX_FRONT_LEN)</span><br><span class="line">                <span class="built_in">return</span> -EIO;</span><br><span class="line">        middle_len = le32_to_cpu(con-&gt;in_hdr.middle_len);</span><br><span class="line">        <span class="keyword">if</span> (middle_len &gt; CEPH_MSG_MAX_MIDDLE_LEN)</span><br><span class="line">                <span class="built_in">return</span> -EIO;</span><br><span class="line">        data_len = le32_to_cpu(con-&gt;in_hdr.data_len);</span><br><span class="line">        <span class="keyword">if</span> (data_len &gt; CEPH_MSG_MAX_DATA_LEN)</span><br><span class="line">                <span class="built_in">return</span> -EIO;</span><br></pre></td></tr></table></figure>
-<p>所以我们使用cephfs中，不能配置文件的<code>stripe_unit</code>大于16M。</p>
-
-          
+          问题为了测试cephfs的可用性，我们对cephfs进行了几组stripe的测试，在跑自动化测试时，发现fio总是会跑一部分后hang住，而此时ceph -s输出显示read值太大，但实际环境中查看并没这么大的流量。
+ceph输出123456789101112# ceph -w    cluster
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/07/18/cephfs-io-hang-analysis/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -2307,308 +1550,19 @@
       
         
           
-            <h2 id="cephfs简介"><a href="#cephfs简介" class="headerlink" title="cephfs简介"></a>cephfs简介</h2><p>cephfs是ceph提供的兼容POSIX协议的文件系统，对比rbd和rgw功能，这个是ceph里最晚满足production ready的一个功能，它底层还是使用rados存储数据</p>
-<h3 id="cephfs的架构"><a href="#cephfs的架构" class="headerlink" title="cephfs的架构"></a>cephfs的架构</h3><p><img src="/images/cephfs-intro-fun1.jpg" alt="cephfs arch"></p>
-<h3 id="使用cephfs的两种方式"><a href="#使用cephfs的两种方式" class="headerlink" title="使用cephfs的两种方式"></a>使用cephfs的两种方式</h3><ol>
-<li>cephfs kernel module</li>
-<li>cephfs-fuse</li>
-</ol>
-<p>从上面的架构可以看出，cephfs-fuse的IO path比较长，性能会比cephfs kernel module的方式差一些；</p>
-<h3 id="client端访问cephfs的流程"><a href="#client端访问cephfs的流程" class="headerlink" title="client端访问cephfs的流程"></a>client端访问cephfs的流程</h3><p><img src="/images/ceph-used-in-cloudin7.jpg" alt="mds work"></p>
-<ol>
-<li>client端与mds节点通讯，获取metadata信息（metadata也存在osd上）</li>
-<li>client直接写数据到osd</li>
-</ol>
-<h2 id="cephfs测试环境"><a href="#cephfs测试环境" class="headerlink" title="cephfs测试环境"></a>cephfs测试环境</h2><p>三台物理机搭建了ceph集群，配置了Active-Standby的MDS，作为测试cephfs的cluster，详细配置如下：</p>
-<table>
-<thead>
-<tr>
-<th>模块</th>
-<th>版本</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Ceph Version</td>
-<td>Jewel 10.2.7</td>
-</tr>
-<tr>
-<td>Ceph Cluster OS</td>
-<td>CentOS Linux release 7.2.1511 (Core)</td>
-</tr>
-<tr>
-<td>Ceph Cluster kernel version</td>
-<td>3.10.0-327.el7.x86_64</td>
-</tr>
-<tr>
-<td>Cephfs Client OS</td>
-<td>CentOS Linux release 7.2.1511 (Core)  </td>
-</tr>
-<tr>
-<td>Cephfs kernel version</td>
-<td>4.11.3-1.el7.elrepo.x86_64</td>
-</tr>
-</tbody>
-</table>
-<p>三台物理机上，每个上面有10个4T 7200RPM SATA盘，两个480GB的SATA SSD盘做journal设备，每个SSD盘分出5个20GB的分区做5个OSD的journal。<br>三个物理机上部署了三个monitor，其中两台部署了两个MDS。</p>
-<p><img src="/images/cephfs-tstenv-structure.jpg" alt="mds work"></p>
-<p>Ceph默认配置replica=3，所以三台物理机组成的Ceph Cluster的整体写性能约等于一台物理机上的硬件的性能。</p>
-<p>每个物理机上，2个SSD做10个OSD的journal，其整体性能约为：<code>2 * (单个ssd盘的性能)</code> 或 <code>10 * (单个sata盘的性能)</code></p>
-<p>使用的SSD盘型号为：Intel S3500系列，其性能指标为：</p>
-<table>
-<thead>
-<tr>
-<th>参数</th>
-<th>性能</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>容量</td>
-<td>480GB</td>
-</tr>
-<tr>
-<td>顺序读取(最高)</td>
-<td>500 MB/s</td>
-</tr>
-<tr>
-<td>顺序写入(最高)</td>
-<td>410 MB/s</td>
-</tr>
-<tr>
-<td>随机读取(100% 跨度)</td>
-<td>75000 IOPS</td>
-</tr>
-<tr>
-<td>随机写入(100% 跨度)</td>
-<td>11000 IOPS</td>
-</tr>
-</tbody>
-</table>
-<h2 id="创建mds"><a href="#创建mds" class="headerlink" title="创建mds"></a>创建mds</h2><p>使用ceph-deploy部署ceph mds很方便，只需要简单的一条命令就搞定，不过它依赖之前ceph-deploy时候生成的一些配置和keyring文件；<br>在之前部署ceph集群的节点目录，执行ceph-deploy mds create：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy --overwrite-conf mds create cephfs-host2:mds-daemon-37</span></span><br><span class="line"><span class="comment"># ceph-deploy --overwrite-conf mds create cephfs-host3:mds-daemon-38</span></span><br><span class="line">// 去节点检查下daemon</span><br><span class="line">[root@cephfs-host2 yangguanjun]<span class="comment"># ps ax | grep ceph-mds</span></span><br><span class="line"> 283564 ?        Ssl    0:38 /usr/bin/ceph-mds -f --cluster ceph --id mds-daemon-37 --setuser ceph --setgroup ceph</span><br></pre></td></tr></table></figure>
-<h2 id="创建测试cephfs"><a href="#创建测试cephfs" class="headerlink" title="创建测试cephfs"></a>创建测试cephfs</h2><p>在上述的测试集群里搭建cephfs，因为都是内部使用，测试集群没有打开ceph的认证。</p>
-<p>创建cephfs的步骤如下</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph osd pool create cephfs_data 512 512 // 创建data pool</span></span><br><span class="line">pool <span class="string">'cephfs_data'</span> created</span><br><span class="line"><span class="comment"># ceph osd pool create cephfs_metadata 512 512 // 创建metadata pool</span></span><br><span class="line">pool <span class="string">'cephfs_metadata'</span> created</span><br><span class="line"><span class="comment"># ceph fs new tstfs cephfs_metadata cephfs_data // 创建cephfs</span></span><br><span class="line">new fs with metadata pool 1 and data pool 2</span><br><span class="line"><span class="comment"># ceph fs ls</span></span><br><span class="line">name: tstfs, metadata pool: cephfs_metadata, data pools: [cephfs_data ]</span><br></pre></td></tr></table></figure>
-<p>查看cephfs对应的active MDS</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph mds stat</span></span><br><span class="line">e229: 1/1/1 up &#123;0=mds-daemon-37=up:active&#125;, 1 up:standby</span><br></pre></td></tr></table></figure>
-<h2 id="cephfs测试"><a href="#cephfs测试" class="headerlink" title="cephfs测试"></a>cephfs测试</h2><p>为了评估cephfs的稳定性和性能，结合常用的测试场景和测试工具，我们对cephfs的测试进行了分类，然后在选定的另一台测试节点上mount并测试cephfs。</p>
-<p>在测试节点mount上cephfs</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@cephfs-client yangguanjun]<span class="comment"># mount -t ceph 10.1.1.6:6789:/ /home/yangguanjun/cephfs/</span></span><br></pre></td></tr></table></figure>
-<h3 id="cephfs功能测试"><a href="#cephfs功能测试" class="headerlink" title="cephfs功能测试"></a>cephfs功能测试</h3><p>cephfs是兼容POSIX协议的文件系统，这里通过手动和自动测试工具的方式来验证cephfs的可用性。</p>
-<h4 id="手动模式"><a href="#手动模式" class="headerlink" title="手动模式"></a>手动模式</h4><p>通过手动模式测试常见的文件系统操作</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">创建测试dir和file</span><br><span class="line"><span class="comment"># cd /home/yangguanjun/cephfs/</span></span><br><span class="line"><span class="comment"># mkdir tstdir</span></span><br><span class="line"><span class="comment"># cd tstdir</span></span><br><span class="line"><span class="comment"># touch tstfile</span></span><br><span class="line"></span><br><span class="line">测试file的读写</span><br><span class="line"><span class="comment"># echo "hello cephfs" &gt; tstfile</span></span><br><span class="line"><span class="comment"># cat tstfile</span></span><br><span class="line">hello cephfs</span><br><span class="line"></span><br><span class="line">测试file的chmod</span><br><span class="line"><span class="comment"># ll tstfile</span></span><br><span class="line">-rw-r--r-- 1 root root 13 Jul  7 10:33 tstfile</span><br><span class="line"><span class="comment"># chmod 755 tstfile</span></span><br><span class="line"><span class="comment"># ll tstfile</span></span><br><span class="line">-rwxr-xr-x 1 root root 13 Jul  7 10:33 tstfile</span><br><span class="line"></span><br><span class="line">测试file的chown</span><br><span class="line"><span class="comment"># chown yangguanjun:yangguanjun tstfile</span></span><br><span class="line"><span class="comment"># ll tstfile</span></span><br><span class="line">-rwxr-xr-x 1 yangguanjun yangguanjun 13 Jul  7 10:33 tstfile</span><br><span class="line"></span><br><span class="line">测试file的symlink</span><br><span class="line"><span class="comment"># ln -s tstfile lnfile</span></span><br><span class="line"><span class="comment"># ll lnfile</span></span><br><span class="line">lrwxrwxrwx 1 root root 7 Jul  7 10:31 lnfile -&gt; tstfile</span><br><span class="line"></span><br><span class="line">删除测试dir和file</span><br><span class="line"><span class="comment"># rm -f tstfile</span></span><br><span class="line"><span class="comment"># cd ../</span></span><br><span class="line"><span class="comment"># rm -rf tstdir</span></span><br></pre></td></tr></table></figure>
-<h4 id="自动测试工具"><a href="#自动测试工具" class="headerlink" title="自动测试工具"></a>自动测试工具</h4><p>这里使用fstest测试工具对cephfs进行测试。</p>
-<p>fstest是一套简化版的文件系统POSIX兼容性测试套件，它可以工作在FreeBSD, Solaris, Linux上用于测试UFS, ZFS, ext3, XFS and the NTFS-3G等文件系统。fstest目前有3601个回归测试用例，测试的系统调用覆盖chmod, chown, link, mkdir, mkfifo, open, rename, rmdir, symlink, truncate, unlink。</p>
-<ul>
-<li>获取fstest</li>
-</ul>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">网站：http://www.tuxera.com/community/posix-test-suite/</span><br><span class="line"><span class="comment"># wget http://tuxera.com/sw/qa/pjd-fstest-20090130-RC.tgz</span></span><br></pre></td></tr></table></figure>
-<ul>
-<li>安装fstest</li>
-</ul>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yum install -y libacl-devel</span></span><br><span class="line"><span class="comment"># tar -zxf pjd-fstest-20090130-RC.tgz</span></span><br><span class="line"><span class="comment"># cd pjd-fstest-20090130-RC</span></span><br><span class="line"><span class="comment"># make</span></span><br><span class="line">gcc -Wall -DHAS_ACL -lacl fstest.c -o fstest</span><br></pre></td></tr></table></figure>
-<ul>
-<li>运行fstest</li>
-</ul>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cd /home/yangguanjun/cephfs/</span></span><br><span class="line"><span class="comment"># prove -r /home/yangguanjun/pjd-fstest-20090130-RC/</span></span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/chflags/00.t ... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/chflags/13.t ... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/chmod/00.t ..... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/chmod/11.t ..... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/chown/00.t ..... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/chown/10.t ..... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/link/00.t ...... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/link/17.t ...... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/mkdir/00.t ..... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/mkdir/12.t ..... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/mkfifo/00.t .... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/mkfifo/12.t .... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/open/00.t ...... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/open/23.t ...... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/rename/00.t .... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/rename/20.t .... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/rmdir/00.t ..... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/rmdir/15.t ..... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/symlink/00.t ... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/symlink/12.t ... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/truncate/00.t .. ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/truncate/14.t .. ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/unlink/00.t .... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/unlink/13.t .... ok</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/xacl/00.t ...... ok</span><br><span class="line">...</span><br><span class="line">/home/yangguanjun/pjd-fstest-20090130-RC/tests/xacl/06.t ...... ok</span><br><span class="line">All tests successful.</span><br><span class="line">Files=191, Tests=1964, 92 wallclock secs ( 0.63 usr  0.11 sys +  4.58 cusr 10.40 csys = 15.72 CPU)</span><br><span class="line">Result: PASS</span><br></pre></td></tr></table></figure>
-<h4 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h4><p>cephfs的功能性验证通过。</p>
-<h3 id="cephfs性能测试"><a href="#cephfs性能测试" class="headerlink" title="cephfs性能测试"></a>cephfs性能测试</h3><p>文件系统的性能测试工具有很多，这里我们选择常用的dd, fio, iozone和filebench。</p>
-<p>cephfs的所有数据和元数据都是直接存在RADOS上的，并且cephfs支持stripe配置，这里我们做了以下stripe配置，作为测试cephfs性能的几种应用场景：</p>
-<ol>
-<li><p>stripe_unit=1M, stripe_count=4, object_size=4M</p>
-<p> 条带大小为1M，条带数目为4，object大小为4M</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">配置测试目录attr</span><br><span class="line">setfattr -n ceph.dir.layout -v <span class="string">"stripe_unit=1048576 stripe_count=4 object_size=4194304"</span> dir-1M-4-4M</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>stripe_unit=4M, stripe_count=1, object_size=4M</p>
-<p> ceph的默认配置：无条带化</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">配置测试目录attr</span><br><span class="line">setfattr -n ceph.dir.layout -v <span class="string">"stripe_unit= 4194304 stripe_count=1 object_size=4194304"</span> dir-4M-1-4M</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>stripe_unit=4M, stripe_count=4, object_size=64M</p>
-<p> 条带大小为4M，条带数目为4，object大小为64M</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">配置测试目录attr</span><br><span class="line">setfattr -n ceph.dir.layout -v <span class="string">"stripe_unit=4194304 stripe_count=4 object_size=67108864"</span> dir-4M-4-64M</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<p><strong>参考</strong></p>
-<p><a href="http://www.yangguanjun.com/2017/06/15/cephfs-stripe/">cephfs的stripe配置</a></p>
-<h4 id="dd"><a href="#dd" class="headerlink" title="dd"></a>dd</h4><p>dd是linux系统常用的测试设备和系统性能的工具。</p>
-<p><strong>测试分类与测试命令</strong></p>
-<ol>
-<li><p>Direct IO</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">写：dd <span class="keyword">if</span>=/dev/zero of=tstfile bs=&lt;bs-size&gt; count=&lt;2G/bs-size&gt; oflag=direct</span><br><span class="line">读：dd <span class="keyword">if</span>=tstfile of=/dev/null bs=&lt;bs-size&gt; count=&lt;2G/bs-size&gt; iflag=direct</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>Sync IO  </p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">写：dd <span class="keyword">if</span>=/dev/zero of=tstfile bs=&lt;bs-size&gt; count=&lt;2G/bs-size&gt; oflag=sync</span><br><span class="line">读：dd <span class="keyword">if</span>=tstfile of=/dev/null bs=&lt;bs-size&gt; count=&lt;2G/bs-size&gt; iflag=sync</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>Normal IO</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">写：dd <span class="keyword">if</span>=/dev/zero of=tstfile bs=&lt;bs-size&gt; count=&lt;2G/bs-size&gt;</span><br><span class="line">读：dd <span class="keyword">if</span>=tstfile of=/dev/null bs=&lt;bs-size&gt; count=&lt;2G/bs-size&gt;</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<h4 id="fio"><a href="#fio" class="headerlink" title="fio"></a>fio</h4><p>fio是一个I/O标准测试和硬件压力验证工具，它支持13种不同类型的I/O引擎（sync, mmap, libaio, posixaio, SG v3, splice, null, network, syslet, guasi, solarisaio等），I/O priorities (for newer Linux kernels), rate I/O, forked or threaded jobs等等。fio可以支持块设备和文件系统测试，广泛用于标准测试、QA、验证测试等，支持Linux, FreeBSD, NetBSD, OS X, OpenSolaris, AIX, HP-UX, Windows等操作系统。</p>
-<p><strong>fio安装</strong></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yum install -y fio</span></span><br></pre></td></tr></table></figure>
-<p><strong>测试分类与测试命令</strong></p>
-<p>固定配置</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">-filename=tstfile   指定测试文件的name</span><br><span class="line">-size=20G           指定测试文件的size为20G</span><br><span class="line">-direct=1           指定测试IO为DIRECT IO</span><br><span class="line">-thread				指定使用thread模式</span><br><span class="line">-name=fio-tst-name  指定job name</span><br></pre></td></tr></table></figure>
-<p>测试bandwidth时</p>
-<ol>
-<li>-ioengine=libaio/sync</li>
-<li>-bs=512k/1M/4M/16M</li>
-<li>-rw=write/read</li>
-<li>-iodepth=64 -iodepth_batch=8 -iodepth_batch_complete=8</li>
-</ol>
-<p>测试iops时：</p>
-<ol>
-<li>-ioengine=libaio</li>
-<li>-bs=4k</li>
-<li>-runtime=300</li>
-<li>-rw=randwrite/randread</li>
-<li>-iodepth=64 -iodepth_batch=1 -iodepth_batch_complete=1</li>
-</ol>
-<p>命令示例：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">测试bandwidth：</span><br><span class="line">fio -filename=tstfile -size=10G -direct=1 -ioengine=libaio -thread -bs=512k -rw=write -iodepth=64 -iodepth_batch_submit=8 -iodepth_batch_complete=8 -name=write-bw-tst</span><br><span class="line"></span><br><span class="line">测试iops：</span><br><span class="line">fio -filename=tstfile -size=10G -direct=1 -ioengine=libaio -thread -bs=4k -rw=randwrite -iodepth=64 -runtime=300 -iodepth_batch=1 -iodepth_batch_complete=1 -name=randwrite-iops-tst</span><br></pre></td></tr></table></figure>
-<h4 id="iozone"><a href="#iozone" class="headerlink" title="iozone"></a>iozone</h4><p>iozone是目前应用非常广泛的文件系统测试标准工具，它能够产生并测量各种的操作性能，包括read, write, re-read, re-write, read backwards, read strided, fread, fwrite, random read, pread ,mmap, aio_read, aio_write等操作。Iozone目前已经被移植到各种体系结构计算机和操作系统上，广泛用于文件系统性能测试、分析与评估的标准工具。</p>
-<p><strong>iozone安装</strong></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># wget http://www.iozone.org/src/current/iozone-3-465.i386.rpm</span></span><br><span class="line"><span class="comment"># rpm -ivh iozone-3-465.i386.rpm</span></span><br><span class="line"><span class="comment"># ln -s /opt/iozone/bin/iozone /usr/bin/iozone</span></span><br></pre></td></tr></table></figure>
-<p><strong>测试分类与测试命令</strong></p>
-<p>iozone参数说明：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">指定使用自动模式</span><br><span class="line">-a</span><br><span class="line"></span><br><span class="line">指定测试模式</span><br><span class="line">-i 0 -i 1 -i 2 </span><br><span class="line">    0=write/rewrite</span><br><span class="line">    1=<span class="built_in">read</span>/re-read</span><br><span class="line">    2=random <span class="built_in">read</span>/random write</span><br><span class="line"></span><br><span class="line">指定自动模式测试文件的大小范围，会依次翻倍</span><br><span class="line">-n 1m -g 2G</span><br><span class="line">    -n 1m : 指定测试文件的最小值为1m</span><br><span class="line">    -g 2G : 指定测试文件的最大值为2G</span><br><span class="line"></span><br><span class="line">指定自动模式下记录块的大小范围，会依次翻倍；记录块大小类似于dd的bs</span><br><span class="line">-y 128k -q 16m</span><br><span class="line">    -y 128k : 指定记录块的最小值为128k</span><br><span class="line">    -q 16m  : 指定记录块的最小值为16m</span><br><span class="line"></span><br><span class="line">指定使用DIRECT IO</span><br><span class="line">-I</span><br><span class="line"></span><br><span class="line">指定写用O_SYNC</span><br><span class="line">-o</span><br><span class="line"></span><br><span class="line">指定threads个数测试系统吞吐量</span><br><span class="line">-t</span><br><span class="line"></span><br><span class="line">指定创建Excel reqport</span><br><span class="line">-R</span><br><span class="line"></span><br><span class="line">指定创建的Excel文件的name</span><br><span class="line">-b</span><br><span class="line"></span><br><span class="line">指定测试使用的record size</span><br><span class="line">-r</span><br><span class="line"></span><br><span class="line">指定测试文件的size</span><br><span class="line">-s</span><br></pre></td></tr></table></figure>
-<ol>
-<li><p>测试DIRET IO / SYNC IO - 非throughput模式</p>
-<p> 不指定threads，测试单个线程的iozone性能</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">iozone -a -i 0 -i 1 -i 2 -n 1m -g 10G -y 128k -q 16m -I -Rb iozone-directio-output.xls</span><br><span class="line">iozone -a -i 0 -i 1 -i 2 -n 1m -g 10G -y 128k -q 16m -o -Rb iozone-syncio-output.xls</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>测试系统吞吐量 - throughput模式</p>
-<p> 指定threads=16，获取整个系统的throughput</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">iozone -a -i 0 -i 1 -i 2 -r 16m -s 2G -I -t 16 -Rb iozone-directio-throughput-output.xls</span><br><span class="line">iozone -a -i 0 -i 1 -i 2 -r 16m -s 2G -o -t 16 -Rb iozone-syncio-throughput-output.xls</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<h4 id="filebench"><a href="#filebench" class="headerlink" title="filebench"></a>filebench</h4><p>Filebench 是一款文件系统性能的自动化测试工具，它通过快速模拟真实应用服务器的负载来测试文件系统的性能。它不仅可以仿真文件系统微操作（如 copyfiles, createfiles, randomread, randomwrite ），而且可以仿真复杂的应用程序（如 varmail, fileserver, oltp, dss, webserver, webproxy ）。 Filebench 比较适合用来测试文件服务器性能，但同时也是一款负载自动生成工具，也可用于文件系统的性能。</p>
-<p><strong>filebench安装</strong></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">源码：https://github.com/filebench/filebench</span><br><span class="line">下载后在测试节点解压缩</span><br><span class="line"></span><br><span class="line"><span class="comment"># yum install libtool automake</span></span><br><span class="line"><span class="comment"># libtoolize</span></span><br><span class="line"><span class="comment"># aclocal</span></span><br><span class="line"><span class="comment"># autoheader</span></span><br><span class="line"><span class="comment"># automake --add-missing</span></span><br><span class="line"><span class="comment"># autoconf</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># yum install gcc flex bison</span></span><br><span class="line"><span class="comment"># ./configure</span></span><br><span class="line"><span class="comment"># make</span></span><br><span class="line"><span class="comment"># make install</span></span><br></pre></td></tr></table></figure>
-<p>安装后，在目录 <code>/usr/local/share/filebench/workloads/</code> 下有很多定义好的workload，可以直接拿来使用。<br>配置里面的 <code>$dir</code> 为测试cephfs的目录，若文件后没有 run <secs> 命令，添加：run <secs></secs></secs></p>
-<p><strong>测试分类</strong></p>
-<p>filebench有很多定义好的workload，如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ls /usr/local/share/filebench/workloads/</span></span><br><span class="line">compflow_demo.f                 filemicro_rwrite.f              fivestreamreaddirect.f          openfiles.f                     singlestreamwrite.f</span><br><span class="line">copyfiles.f                     filemicro_rwritefsync.f         fivestreamread.f                randomfileaccess.f              tpcso.f</span><br><span class="line">createfiles.f                   filemicro_seqread.f             fivestreamwritedirect.f         randomread.f                    varmail.f</span><br><span class="line">cvar_example.f                  filemicro_seqwrite.f            fivestreamwrite.f               randomrw.f                      videoserver.f</span><br><span class="line">filemicro_create.f              filemicro_seqwriterand.f        listdirs.f                      randomwrite.f                   webproxy.f</span><br><span class="line">filemicro_createfiles.f         filemicro_seqwriterandvargam.f  makedirs.f                      ratelimcopyfiles.f              webserver.f</span><br><span class="line">filemicro_createrand.f          filemicro_seqwriterandvartab.f  mongo.f                         removedirs.f</span><br><span class="line">filemicro_delete.f              filemicro_statfile.f            netsfs.f                        singlestreamreaddirect.f</span><br><span class="line">filemicro_rread.f               filemicro_writefsync.f          networkfs.f                     singlestreamread.f</span><br><span class="line">filemicro_rwritedsync.f         fileserver.f                    oltp.f                          singlestreamwritedirect.f</span><br></pre></td></tr></table></figure>
-<p>因为最新的filebench修改了变量的定义，所以这里面的一些workload并不能成功运行，只需选择可用的有代表性的workload测试即可。</p>
-<p><strong>参考</strong></p>
-<p><a href="http://www.yangguanjun.com/2017/07/08/fs-testtool-filebench/">filesystem测试工具之filebench</a></p>
-<h4 id="结论-1"><a href="#结论-1" class="headerlink" title="结论"></a>结论</h4><ol>
-<li>cephfs的direct IO性能有限</li>
-<li>cephfs读写能跑满ceph cluster集群性能</li>
-<li>客户端缓存和OSD缓存对读写的影响很大</li>
-</ol>
-<h3 id="cephfs稳定性测试"><a href="#cephfs稳定性测试" class="headerlink" title="cephfs稳定性测试"></a>cephfs稳定性测试</h3><p>为了测试cephfs是否能在线上提供服务，需要测试下其稳定性，这里采用两种方式测试。</p>
-<h4 id="读写数据模式"><a href="#读写数据模式" class="headerlink" title="读写数据模式"></a>读写数据模式</h4><p>针对读写数据模式，我们选择工具<code>fio</code>，在cephfs client端长时间运行，看会不会报错。</p>
-<p>测试逻辑大概如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># fio循环测试读写</span></span><br><span class="line"><span class="keyword">while</span> now &lt; time</span><br><span class="line">	fio write 10G file</span><br><span class="line">	fio <span class="built_in">read</span> 10G file</span><br><span class="line">	delete file</span><br></pre></td></tr></table></figure>
-<h4 id="读写元数据模式"><a href="#读写元数据模式" class="headerlink" title="读写元数据模式"></a>读写元数据模式</h4><p>针对读写元数据模式，我们采用自写脚本，大规模创建目录、文件、写很小数据到文件中，在cephfs client端长时间运行，看会不会报错。</p>
-<p>测试逻辑大概如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 百万级别的文件个数</span></span><br><span class="line"><span class="keyword">while</span> now &lt; time</span><br><span class="line">	create <span class="built_in">dirs</span></span><br><span class="line">	touch files</span><br><span class="line">	write little data to each file</span><br><span class="line">	delete files</span><br><span class="line">	delete <span class="built_in">dirs</span></span><br></pre></td></tr></table></figure>
-<h4 id="结论-2"><a href="#结论-2" class="headerlink" title="结论"></a>结论</h4><p>通过几天的连续测试，cephfs一切正常，这说明cephfs是可以应用到生产环境的。<br>但在上亿级别的文件测试中，也遇到点问题，会在下面章节的问题里说明。</p>
-<h3 id="cephfs异常测试"><a href="#cephfs异常测试" class="headerlink" title="cephfs异常测试"></a>cephfs异常测试</h3><p>cephfs的功能依赖于MDS和Ceph Cluster，关键的元数据都通过MDS获取，这里测试的异常也主要基于MDS的异常进行分类的。</p>
-<p>查看ceph MDS与interl和timeout相关的配置有：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">OPTION(mds_tick_interval, OPT_FLOAT, 5)</span><br><span class="line">OPTION(mds_mon_shutdown_timeout, OPT_DOUBLE, 5)</span><br><span class="line">OPTION(mds_op_complaint_time, OPT_FLOAT, 30)</span><br></pre></td></tr></table></figure>
-<p>所以这里测试对MDS stop/start的时间间隔取为：2s，10s，60s</p>
-<h4 id="测试分类"><a href="#测试分类" class="headerlink" title="测试分类"></a>测试分类</h4><ol>
-<li>主从MDS</li>
-<li>单MDS</li>
-</ol>
-<p>测试中启停MDS service的命令为：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># systemctl stop ceph-mds.target</span></span><br><span class="line"><span class="comment"># systemctl start ceph-mds.target</span></span><br></pre></td></tr></table></figure>
-<h4 id="测试结果"><a href="#测试结果" class="headerlink" title="测试结果"></a>测试结果</h4><ul>
-<li>fio随机写单个文件</li>
-</ul>
-<table>
-<thead>
-<tr>
-<th>MDS模式</th>
-<th>启停interval</th>
-<th>io影响</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>单MDS</td>
-<td>2s, 10s</td>
-<td>无</td>
-</tr>
-<tr>
-<td></td>
-<td>60s</td>
-<td>约40s时影响IO</td>
-</tr>
-<tr>
-<td>主从MDS</td>
-<td>2s, 10s</td>
-<td>无</td>
-</tr>
-<tr>
-<td></td>
-<td>60s</td>
-<td>主从不同时停止时无影响 <br> 同时停止主从MDS时，影响与单MDS一致</td>
-</tr>
-</tbody>
-</table>
-<p>下面展示了单MDS停止约60s的时候，对fio测试的影响：</p>
-<p><img src="/images/fio-randwrite-bw-mds-crush.jpg" alt="fio rw bw"></p>
-<ul>
-<li>iozone测试direct IO</li>
-</ul>
-<table>
-<thead>
-<tr>
-<th>MDS模式</th>
-<th>启停interval</th>
-<th>io影响</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>单MDS</td>
-<td>2s，10s，60s</td>
-<td>对当前文件的IO影响同fio测试 <br> 对读写新文件的影响会立刻体现</td>
-</tr>
-<tr>
-<td>主从MDS</td>
-<td>2s，10s，60s</td>
-<td>主从不同时停止时无影响 <br> 同时停止主从MDS时，影响与单MDS一致</td>
-</tr>
-</tbody>
-</table>
-<h4 id="结论-3"><a href="#结论-3" class="headerlink" title="结论"></a>结论</h4><ol>
-<li>单MDS的情况下，短暂的MDS crush并不会影响客户端对一个file的读写</li>
-<li>单MDS的情况下，MDS crush后，client端对没有缓存过caps的文件操作会hang住</li>
-<li>主从MDS的情况下，只要有一个MDS正常，cephfs的服务就不会中断</li>
-<li>主从MDS的情况下，两个MDS都crush后，影响与单MDS的一致</li>
-</ol>
-<p>所以生产环境中，我们建议配置主从MDS的模式，提高cephfs的高可用性。</p>
-<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><h3 id="cephfs配置较大stripe-unit的问题"><a href="#cephfs配置较大stripe-unit的问题" class="headerlink" title="cephfs配置较大stripe unit的问题"></a>cephfs配置较大stripe unit的问题</h3><p>测试中，对于指定cephfs的laylout如下时，发现了一个cephfs的bug，已经提交给ceph社区.</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># setfattr -n ceph.dir.layout -v "stripe_unit=67108864 stripe_count=1 object_size=67108864" dir-64M-1-64M</span></span><br></pre></td></tr></table></figure>
-<p>详情参阅：<a href="http://tracker.ceph.com/issues/20528" target="_blank" rel="noopener">http://tracker.ceph.com/issues/20528</a></p>
-<p><strong>最新更新</strong></p>
-<p>cephfs client端的配置限制了read message的最大size为16M。<br>==所以实际使用中的 stripe_unit 不能大于16M==</p>
-<h3 id="cephfs读写上亿级文件"><a href="#cephfs读写上亿级文件" class="headerlink" title="cephfs读写上亿级文件"></a>cephfs读写上亿级文件</h3><p>为了查看cephfs对大规模小文件应用的支持效果，我们这里通过脚本测试了5亿个文件的场景。</p>
-<p>测试的脚本如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 5000个目录，每个目录10万个文件</span></span><br><span class="line">round=5000</span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> `date` &gt;&gt; /root/mds_testlog</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> j <span class="keyword">in</span> `seq <span class="variable">$round</span>`;<span class="keyword">do</span></span><br><span class="line">	mkdir /mnt/<span class="built_in">test</span><span class="variable">$j</span></span><br><span class="line">	<span class="keyword">for</span> i <span class="keyword">in</span> `seq 100000`;<span class="keyword">do</span></span><br><span class="line">		<span class="built_in">echo</span> hello &gt; /mnt/<span class="built_in">test</span><span class="variable">$j</span>/file<span class="variable">$&#123;i&#125;</span>;</span><br><span class="line">	<span class="keyword">done</span></span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> j <span class="keyword">in</span> `seq <span class="variable">$round</span>`;<span class="keyword">do</span></span><br><span class="line">	rm -rf /mnt/<span class="built_in">test</span><span class="variable">$j</span></span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
-<p><strong>问题：</strong></p>
-<ol>
-<li>单线程运行耗时较长</li>
-<li>单线程删除文件时，rm命令报<code>No space left on device</code>错误</li>
-<li>单线程删除文件时，日志中报<code>_send skipping beacon, heartbeat map not healthy</code></li>
-<li>多线程并发创建、删除测试和深目录层级测试待验证</li>
-</ol>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>经过功能测试、性能测试、稳定性测试和异常测试后，我们得出如下结论：</p>
-<ol>
-<li>cephfs是production ready的，能满足基本生产环境对文件存储的需求</li>
-<li>cephfs的主从MDS是稳定的</li>
-<li>cephfs的direct IO性能有限，分析后明确是cephfs kernel client的IO处理逻辑限制的</li>
-<li>cephfs是能跑满整个ceph cluster集群性能的</li>
-<li>默认的stripe模式下(stripe unit=4M, stripe count=1, object size=4M)，cephfs的性能就挺好</li>
-<li>受到cephfs client端的系统缓存影响，非direct IO的读写性能都会比较高，这个不具有太大参考意义</li>
-</ol>
-
-          
+          cephfs简介cephfs是ceph提供的兼容POSIX协议的文件系统，对比rbd和rgw功能，这个是ceph里最晚满足production ready的一个功能，它底层还是使用rados存储数据
+cephfs的架构
+使用cephfs的两种方式
+cephfs kernel module
+cephf
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/07/16/cephfs-test-method-lite/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -2759,36 +1713,15 @@
       
         
           
-            <h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>Filebench 是一款文件系统性能的自动化测试工具，它通过快速模拟真实应用服务器的负载来测试文件系统的性能。它不仅可以仿真文件系统微操作（如 copyfiles, createfiles, randomread, randomwrite ），而且可以仿真复杂的应用程序（如 varmail, fileserver, oltp, dss, webserver, webproxy ）。 Filebench 比较适合用来测试文件服务器性能，但同时也是一款负载自动生成工具，也可用于文件系统的性能。 </p>
-<h2 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h2><p><a href="https://github.com/filebench/filebench" target="_blank" rel="noopener">https://github.com/filebench/filebench</a></p>
-<h2 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yum install libtool automake</span></span><br><span class="line"><span class="comment"># libtoolize</span></span><br><span class="line"><span class="comment"># aclocal</span></span><br><span class="line"><span class="comment"># autoheader</span></span><br><span class="line"><span class="comment"># automake --add-missing</span></span><br><span class="line"><span class="comment"># autoconf</span></span><br><span class="line"><span class="comment"># yum install gcc flex bison</span></span><br><span class="line"><span class="comment"># ./configure</span></span><br><span class="line"><span class="comment"># make</span></span><br><span class="line"><span class="comment"># make install</span></span><br><span class="line">...</span><br><span class="line">----------------------------------------------------------------------</span><br><span class="line">▽</span><br><span class="line">Libraries have been installed <span class="keyword">in</span>:</span><br><span class="line">   /usr/<span class="built_in">local</span>/lib/filebench</span><br><span class="line">If you ever happen to want to link against installed libraries</span><br><span class="line"><span class="keyword">in</span> a given directory, LIBDIR, you must either use libtool, and</span><br><span class="line">specify the full pathname of the library, or use the `-LLIBDIR<span class="string">'</span></span><br><span class="line"><span class="string">flag during linking and do at least one of the following:</span></span><br><span class="line"><span class="string">   - add LIBDIR to the `LD_LIBRARY_PATH'</span> environment variable</span><br><span class="line">     during execution</span><br><span class="line">   - add LIBDIR to the `LD_RUN_PATH<span class="string">' environment variable</span></span><br><span class="line"><span class="string">     during linking</span></span><br><span class="line"><span class="string">   - use the `-Wl,-rpath -Wl,LIBDIR'</span> linker flag</span><br><span class="line">   - have your system administrator add LIBDIR to `/etc/ld.so.conf<span class="string">'</span></span><br><span class="line"><span class="string">See any operating system documentation about shared libraries for</span></span><br><span class="line"><span class="string">more information, such as the ld(1) and ld.so(8) manual pages.</span></span><br><span class="line"><span class="string">----------------------------------------------------------------------</span></span><br><span class="line"><span class="string">...</span></span><br></pre></td></tr></table></figure>
-<h2 id="运行"><a href="#运行" class="headerlink" title="运行"></a>运行</h2><p>在目录 /usr/local/share/filebench/workloads/ 下有很多定义好的workload，我们可以拿来使用<br>配置里面的 $dir 为测试filesystem的目录，若文件后没有<code>run &lt;secs&gt;</code>命令，添加：<code>run &lt;secs&gt;</code></p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ls /usr/local/share/filebench/workloads/</span></span><br><span class="line">compflow_demo.f                 filemicro_rwrite.f              fivestreamreaddirect.f          openfiles.f                     singlestreamwrite.f</span><br><span class="line">copyfiles.f                     filemicro_rwritefsync.f         fivestreamread.f                randomfileaccess.f              tpcso.f</span><br><span class="line">createfiles.f                   filemicro_seqread.f             fivestreamwritedirect.f         randomread.f                    varmail.f</span><br><span class="line">cvar_example.f                  filemicro_seqwrite.f            fivestreamwrite.f               randomrw.f                      videoserver.f</span><br><span class="line">filemicro_create.f              filemicro_seqwriterand.f        listdirs.f                      randomwrite.f                   webproxy.f</span><br><span class="line">filemicro_createfiles.f         filemicro_seqwriterandvargam.f  makedirs.f                      ratelimcopyfiles.f              webserver.f</span><br><span class="line">filemicro_createrand.f          filemicro_seqwriterandvartab.f  mongo.f                         removedirs.f</span><br><span class="line">filemicro_delete.f              filemicro_statfile.f            netsfs.f                        singlestreamreaddirect.f</span><br><span class="line">filemicro_rread.f               filemicro_writefsync.f          networkfs.f                     singlestreamread.f</span><br><span class="line">filemicro_rwritedsync.f         fileserver.f                    oltp.f                          singlestreamwritedirect.f</span><br></pre></td></tr></table></figure>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /usr/local/bin/filebench -f /usr/local/share/filebench/workloads/createfiles.f</span></span><br><span class="line">Filebench Version 1.5-alpha3</span><br><span class="line">0.000: Allocated 173MB of shared memory</span><br><span class="line">0.001: Createfiles Version 3.0 personality successfully loaded</span><br><span class="line">0.001: Populating and pre-allocating filesets</span><br><span class="line">0.031: bigfileset populated: 50000 files, avg. dir. width = 100, avg. dir. depth = 2.3, 0 leafdirs, 781.250MB total size</span><br><span class="line">0.031: Removing bigfileset tree (<span class="keyword">if</span> exists)</span><br><span class="line">0.033: Pre-allocating directories <span class="keyword">in</span> bigfileset tree</span><br><span class="line">0.159: Pre-allocating files <span class="keyword">in</span> bigfileset tree</span><br><span class="line">0.207: Waiting <span class="keyword">for</span> pre-allocation to finish (<span class="keyword">in</span> <span class="keyword">case</span> of a parallel pre-allocation)</span><br><span class="line">0.207: Population and pre-allocation of filesets completed</span><br><span class="line">0.208: Starting 1 filecreate instances</span><br><span class="line">1.210: Running...</span><br><span class="line">17.211: Run took 16 seconds...</span><br><span class="line">17.211: Per-Operation Breakdown</span><br><span class="line">closefile1           49985ops     3124ops/s   0.0mb/s    0.002ms/op [0.001ms - 0.238ms]</span><br><span class="line">writefile1           49985ops     3124ops/s  48.8mb/s    0.020ms/op [0.006ms - 2.307ms]</span><br><span class="line">createfile1          50000ops     3125ops/s   0.0mb/s    4.905ms/op [0.147ms - 1267.256ms]</span><br><span class="line">17.211: IO Summary: 149970 ops 9372.298 ops/s 0/3124 rd/wr  48.8mb/s 1.643ms/op</span><br><span class="line">17.211: Shutting down processes</span><br></pre></td></tr></table></figure>
-<p><strong>输出解释：</strong></p>
-<ol>
-<li>flowop name - 支持的flowop有很多</li>
-<li>所有threads的ops</li>
-<li>所有threads的ops / run time</li>
-<li>所有threads的<code>READ/WRITE</code>带宽</li>
-<li>所有threads的每个op的平均latency</li>
-<li>测试中op的最小和最大latency</li>
-</ol>
-<p><strong>IO Summary:</strong></p>
-<ol>
-<li><code>149970 ops</code> ：所有flowop的总和</li>
-<li><code>9372.298 ops/s</code> ：所有flowop的总和 / run time</li>
-<li><code>0/3124 rd/wr</code> ：所有flowop中<code>READ/WRITE</code>的ops / run time</li>
-<li><code>48.8mb/s</code> ： 所有flowop的IO带宽</li>
-<li><code>1.643ms/op</code> ：所有flowop的每个op的平均latency</li>
-</ol>
-<p><strong>参考</strong></p>
-<p><a href="https://github.com/filebench/filebench/wiki/Collected-metrics" target="_blank" rel="noopener">https://github.com/filebench/filebench/wiki/Collected-metrics</a></p>
-<h2 id="写workload"><a href="#写workload" class="headerlink" title="写workload"></a>写workload</h2><p>我们可以自己写workload文件，语法格式可参考：<a href="https://github.com/filebench/filebench/wiki/Workload-model-language" target="_blank" rel="noopener">https://github.com/filebench/filebench/wiki/Workload-model-language</a></p>
-<p>以createfiles.f为例，解释里面的含义：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat createfiles.f</span></span><br><span class="line">...</span><br><span class="line">// 下面是用户变量定义</span><br><span class="line"><span class="built_in">set</span> <span class="variable">$dir</span>=/home/yangguanjun3/mike/tst1</span><br><span class="line"><span class="built_in">set</span> <span class="variable">$nfiles</span>=50000</span><br><span class="line"><span class="built_in">set</span> <span class="variable">$meandirwidth</span>=100</span><br><span class="line"><span class="built_in">set</span> <span class="variable">$meanfilesize</span>=16k</span><br><span class="line"><span class="built_in">set</span> <span class="variable">$iosize</span>=1m</span><br><span class="line"><span class="built_in">set</span> <span class="variable">$nthreads</span>=16</span><br><span class="line"> </span><br><span class="line">// 设置退出模式，支持[ timeout | alldone | firstdone ]</span><br><span class="line"><span class="built_in">set</span> mode quit firstdone</span><br><span class="line"> </span><br><span class="line">// fileset：定义一组测试中用的files</span><br><span class="line">//     name=bigfileset：必须指定 - fileset的名称，后面flowop中用到</span><br><span class="line">//     path=<span class="variable">$dir</span>：必须指定 - 创建测试文件的目录</span><br><span class="line">//     size=<span class="variable">$meanfilesize</span>：可选，关键字也可以为filesize，默认为1KB - 测试文件的size</span><br><span class="line">//     entries=<span class="variable">$nfiles</span>：可选，默认位1024 - fileset中的file个数</span><br><span class="line">//     dirwidth=<span class="variable">$meandirwidth</span>：可选，默认为0 - 每个目录中创建的file个数</span><br><span class="line">define fileset name=bigfileset,path=<span class="variable">$dir</span>,size=<span class="variable">$meanfilesize</span>,entries=<span class="variable">$nfiles</span>,dirwidth=<span class="variable">$meandirwidth</span></span><br><span class="line"> </span><br><span class="line">// process：定义处理过程</span><br><span class="line">//     name=filecreate：必须指定 - 处理过程的名称</span><br><span class="line">//     instances=1：可选，默认为1 - 处理过程的进程数</span><br><span class="line">define process name=filecreate,instances=1</span><br><span class="line">&#123;</span><br><span class="line">// thread：process中的一个thread</span><br><span class="line">//     name=filecreatethread：必须指定 - 处理线程的名称</span><br><span class="line">//     memsize=10m：必须指定 - 线程启动后初始化为0的内存大小，用于<span class="built_in">read</span>/write flowop</span><br><span class="line">//     instances=<span class="variable">$nthreads</span>：可选，默认为1 - 创建的线程数</span><br><span class="line">  thread name=filecreatethread,memsize=10m,instances=<span class="variable">$nthreads</span></span><br><span class="line">  &#123;</span><br><span class="line">// flowop：定义处理流程中的每一步</span><br><span class="line">//     createfile/writewholefile/closefile：flowop的关键字，每个代表不同的操作</span><br><span class="line">//     name=<span class="variable">$name</span>：flowop的名称</span><br><span class="line">//     filesetname=bigfileset：指定op操作的fileset</span><br><span class="line">//     fd=1：指定file descriptor的值，在应用允许文件被多次open的场景中有用</span><br><span class="line">//     iosize=<span class="variable">$iosize</span>：指定读写的iosize</span><br><span class="line">    flowop createfile name=createfile1,filesetname=bigfileset,fd=1</span><br><span class="line">    flowop writewholefile name=writefile1,fd=1,iosize=<span class="variable">$iosize</span></span><br><span class="line">    flowop closefile name=closefile1,fd=1</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span>  <span class="string">"Createfiles Version 3.0 personality successfully loaded”</span></span><br><span class="line"><span class="string">// 开始运行filebench测试</span></span><br><span class="line"><span class="string">// 格式：run [&lt;runtime&gt;]，&lt;runtime&gt;不指定的话，默认为60s</span></span><br><span class="line"><span class="string">run 60</span></span><br></pre></td></tr></table></figure>
-
-          
+          简介Filebench 是一款文件系统性能的自动化测试工具，它通过快速模拟真实应用服务器的负载来测试文件系统的性能。它不仅可以仿真文件系统微操作（如 copyfiles, createfiles, randomread, randomwrite ），而且可以仿真复杂的应用程序（如 varmail, 
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/07/08/fs-testtool-filebench/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -2939,47 +1872,16 @@
       
         
           
-            <h2 id="需求"><a href="#需求" class="headerlink" title="需求"></a>需求</h2><p>cephfs支持client端的authentication，来限制不同的用户访问不同的目录，或者后端的pool，但需要先开启ceph集群的认证。</p>
-<h2 id="环境"><a href="#环境" class="headerlink" title="环境"></a>环境</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Ceph：Jewel 10.2.7</span><br><span class="line">Host：CentOS Linux release 7.2.1511 (Core)</span><br><span class="line">Kernel Version: Linux 3.10.0-327.el7.x86_64</span><br></pre></td></tr></table></figure>
-<h2 id="打开ceph集群认证"><a href="#打开ceph集群认证" class="headerlink" title="打开ceph集群认证"></a>打开ceph集群认证</h2><h3 id="修改ceph-conf"><a href="#修改ceph-conf" class="headerlink" title="修改ceph.conf"></a>修改ceph.conf</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># vim /etc/ceph/ceph.conf</span></span><br><span class="line">auth_cluster_required = cephx</span><br><span class="line">auth_service_required = cephx</span><br><span class="line">auth_client_required = cephx</span><br></pre></td></tr></table></figure>
-<h3 id="检查ceph模块的keyring"><a href="#检查ceph模块的keyring" class="headerlink" title="检查ceph模块的keyring"></a>检查ceph模块的keyring</h3><p>开启ceph认证后，各个模块都会受到自己的keyring的权限限制。<br>默认各个模块的keyring都在目录/var/lib/ceph/下的对应子目录里。<br>比如ceph osd-0的keyring：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat /var/lib/ceph/osd/ceph-0/keyring</span></span><br><span class="line">[osd.0]</span><br><span class="line">    key = AQACrQFZbvBLARAAWXWdeXgVd3SN7NmAYzXDtg==</span><br></pre></td></tr></table></figure>
-<p>在我们系统里，查看各个monitor的对应目录是没有keyring的，所以要自己手动创建，命令如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-authtool --create-keyring /tmp/ceph.mon.keyring --gen-key -n mon. --cap mon 'allow *’</span></span><br><span class="line"><span class="comment"># cp /tmp/ceph.mon.keyring /var/lib/ceph/mon/ceph-mon1/keyring</span></span><br></pre></td></tr></table></figure>
-<p>若有多个monitor节点，把文件/tmp/ceph.mon.keyring拷贝到其它节点的monitor目录即可</p>
-<h3 id="检查mds的keyring"><a href="#检查mds的keyring" class="headerlink" title="检查mds的keyring"></a>检查mds的keyring</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat /var/lib/ceph/mds/ceph-mds1/keyring</span></span><br><span class="line">[mds.mds1]</span><br><span class="line">    key = AQCJ8CNZhh7ZNxAAtKplOjgzBdEPpc/g4C2QWg==</span><br></pre></td></tr></table></figure>
-<p>若没有对应的keyring，通过下面的命令创建，<code>{$id}</code>是mds的name：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph auth get-or-create mds.&#123;$id&#125; mon 'allow rwx' osd 'allow *' mds 'allow *' -o /var/lib/ceph/mds/ceph-&#123;$id&#125;/keyring</span></span><br></pre></td></tr></table></figure>
-<h3 id="重启ceph服务"><a href="#重启ceph服务" class="headerlink" title="重启ceph服务"></a>重启ceph服务</h3><p>在对应的ceph服务节点重启各个服务，命令如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># systemctl restart ceph-mon.target</span></span><br><span class="line"><span class="comment"># systemctl restart ceph-osd.target</span></span><br><span class="line"><span class="comment"># systemctl restart ceph-mds.target</span></span><br></pre></td></tr></table></figure>
-<h2 id="创建auth-client"><a href="#创建auth-client" class="headerlink" title="创建auth client"></a>创建auth client</h2><p>创建不同的client，赋予不同的权限访问cephfs</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph auth get-or-create client.tst1 mon 'allow r' mds 'allow r, allow rw path=/tst1’ osd 'allow rw'</span></span><br><span class="line"><span class="comment"># ceph auth get-or-create client.tst2 mon 'allow r' mds 'allow r, allow rw path=/tst2’ osd 'allow rw'</span></span><br></pre></td></tr></table></figure>
-<p>上诉命令解释：</p>
-<ol>
-<li>mon ‘allow r’ ：允许user从monitor读取数据；必须配置</li>
-<li>mds ‘allow r, allow rw path=/tst1’：允许user从mds读取数据，允许user对目录/tst1读写；其中’allow r’必须配置，不然user不能从mds读取数据，mount会报permission error；</li>
-<li>osd ‘allow rw’ ：允许user从osd上读写数据；若不配置，用户只能从mds上获取FS的元数据信息，没法查看各个文件的数据；</li>
-</ol>
-<p><strong>注释：</strong></p>
-<ul>
-<li><p>ceph client的auth还不是很完善，上面配置中限制了 client tst1能读写/tst1目录，client tst2能读写/tst2目录，但是user tst1/tst2都能看到并读取FS的所有文件，还没找到如何设置user只能访问到指定子目录的方法</p>
-</li>
-<li><p>osd还可以配置指定访问pool和namespace，比如配置<code>osd &#39;allow rw pool=cephfs_data2&#39;</code>，既是指定该user只能rw pool cephfs_data2；</p>
-<p>  结合命令：<code>setfattr -n ceph.dir.layout -v &quot;pool=cephfs_data2&quot; /mnt/tst1/</code> 可以配置目录<code>tst1</code>使用<code>cephfs_data2</code>的pool，这样可以做到多租户的数据隔离（以pool为单位）。以admin用户登录，修改tst1目录的attr。</p>
-</li>
-<li><p><code>namespace</code>说是可以指定user访问同一pool的不同namespace，可以做多租户的数据隔离，但还没找到如何配置使用。文档说明是只有librados支持，ceph client（rbd/rgw/cephfs）都还不支持。</p>
-</li>
-</ul>
-<h2 id="检查ceph-auth"><a href="#检查ceph-auth" class="headerlink" title="检查ceph auth"></a>检查ceph auth</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph auth list</span></span><br><span class="line">...</span><br><span class="line">client.tst1</span><br><span class="line">    key: AQCd+UBZxpi4EBAAUNyBDGdZbPgfd4oUb+u41A==</span><br><span class="line">    caps: [mds] allow r, allow rw path=/tst1</span><br><span class="line">    caps: [mon] allow r</span><br><span class="line">client.tst2</span><br><span class="line">    key: AQC5FUFZ6EycMBAAx9yD8DFmii2PIEv9YOVLUw==</span><br><span class="line">    caps: [mds] allow r, allow rw path=/tst2</span><br><span class="line">    caps: [mon] allow r</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
-<h2 id="测试cephfs-client-auth"><a href="#测试cephfs-client-auth" class="headerlink" title="测试cephfs client auth"></a>测试cephfs client auth</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mount -t ceph 10.10.2.1:6789:/tst1 /home/mike/tst1/ -o name=tst1,secret=AQdd+UBZxpi4EaAAUNyBDGdZbPgfd4oUb+u41A==</span></span><br><span class="line"><span class="comment"># mount -t ceph 10.10.2.1:6789:/tst2 /home/mike/tst2/ -o name=tst2,secret=AQd5FUFZ6EycMaAAx9yD8DFmii2PIEv9YOVLUw==</span></span><br></pre></td></tr></table></figure>
-<p>验证两个目录都有读写权限，cd进去后可以正常读写。</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># umount /home/mike/tst1/</span></span><br><span class="line"><span class="comment"># umount /home/mike/tst2/</span></span><br><span class="line"><span class="comment"># mount -t ceph 10.10.2.1:6789:/ /home/mike/tst1/ -o name=tst1,secret=AQdd+UBZxpi4EaAAUNyBDGdZbPgfd4oUb+u41A==</span></span><br><span class="line"><span class="comment"># mount -t ceph 10.10.2.1:6789:/ /home/mike/tst2/ -o name=tst2,secret=AQd5FUFZ6EycMaAAx9yD8DFmii2PIEv9YOVLUw==</span></span><br></pre></td></tr></table></figure>
-<p>上诉命令把整个cephfs通过不同的user mount到不同的目录，进去可以发现，是可以看到整个cephfs的文件信息的，但是不能访问user没有rw权限的文件。</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cd /home/mike/tst1/       // 进入user tst1 mount的目录，该目录访问受到user tst1的权限限制</span></span><br><span class="line"><span class="comment"># ls                        // 访问cephfs的根目录</span></span><br><span class="line">1.txt  tst1  tst2</span><br><span class="line"><span class="comment"># cat 1.txt</span></span><br><span class="line">cat: 1.txt: Operation not permitted</span><br><span class="line"><span class="comment"># cd tst1</span></span><br><span class="line"><span class="comment"># echo "hello tst1" &gt; tst1file</span></span><br><span class="line"><span class="comment"># cat tst1file</span></span><br><span class="line">hello tst1</span><br><span class="line"><span class="comment"># cd ../tst2</span></span><br><span class="line"><span class="comment"># echo "hello tst1" &gt; tst1file</span></span><br><span class="line">bash: tst1file: Permission denied</span><br><span class="line"></span><br><span class="line"><span class="comment"># cd /home/mike/tst2/       // 进入user tst2 mount的目录，该目录访问受到user tst2的权限限制</span></span><br><span class="line"><span class="comment"># ls                        // 访问cephfs的根目录</span></span><br><span class="line">1.txt  tst1  tst2</span><br><span class="line"><span class="comment"># cat 1.txt</span></span><br><span class="line">cat: 1.txt: Operation not permitted</span><br><span class="line"><span class="comment"># cd tst1</span></span><br><span class="line"><span class="comment"># echo "hello tst2" &gt; tst2file</span></span><br><span class="line">bash: tst2file: Permission denied</span><br><span class="line"><span class="comment"># cd ../tst2</span></span><br><span class="line"><span class="comment"># echo "hello tst2" &gt; tst2file</span></span><br><span class="line"><span class="comment"># cat tst2file</span></span><br><span class="line">hello tst2</span><br></pre></td></tr></table></figure>
-<p>所以从上面的测试中可以看出，若用户有对cephfs的目录权限控制，我们可以通过上述user的auth来实现。但这部分也不是很完善，还没找到能支持readonly访问某一目录的方法。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://docs.ceph.com/docs/jewel/rados/configuration/auth-config-ref/" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/rados/configuration/auth-config-ref/</a><br><a href="http://docs.ceph.com/docs/jewel/cephfs/client-auth/" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/cephfs/client-auth/</a></p>
-
-          
+          需求cephfs支持client端的authentication，来限制不同的用户访问不同的目录，或者后端的pool，但需要先开启ceph集群的认证。
+环境123Ceph：Jewel 10.2.7Host：CentOS Linux release 7.2.1511 (Core)Kernel Vers
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/07/01/cephfs-client-authentication/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
