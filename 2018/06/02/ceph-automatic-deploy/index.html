@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,ceph-deploy," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="一、概述Ceph当前的自动化部署有两个，分别是ceph-deploy和ceph-ansible，语言都是python，对应的github库地址为：ceph-deploy: https://github.com/ceph/ceph-deployceph-ansible: https://github.com/ceph/ceph-ansible ceph-deploy在手动部署中用的比较多，要实现自动">
+<meta name="keywords" content="ceph,ceph-deploy">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ceph自动化部署">
+<meta property="og:url" content="http://www.yangguanjun.com/2018/06/02/ceph-automatic-deploy/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="一、概述Ceph当前的自动化部署有两个，分别是ceph-deploy和ceph-ansible，语言都是python，对应的github库地址为：ceph-deploy: https://github.com/ceph/ceph-deployceph-ansible: https://github.com/ceph/ceph-ansible ceph-deploy在手动部署中用的比较多，要实现自动">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.yangguanjun.com/images/ceph-deploy-arch.png">
+<meta property="og:updated_time" content="2018-06-03T02:11:32.031Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="ceph自动化部署">
+<meta name="twitter:description" content="一、概述Ceph当前的自动化部署有两个，分别是ceph-deploy和ceph-ansible，语言都是python，对应的github库地址为：ceph-deploy: https://github.com/ceph/ceph-deployceph-ansible: https://github.com/ceph/ceph-ansible ceph-deploy在手动部署中用的比较多，要实现自动">
+<meta name="twitter:image" content="http://www.yangguanjun.com/images/ceph-deploy-arch.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.yangguanjun.com/2018/06/02/ceph-automatic-deploy/"/>
+
+
+
+
+
+  <title>ceph自动化部署 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-7472013512056838",
+    enable_page_level_ads: true
+  });
+</script>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2018/06/02/ceph-automatic-deploy/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">ceph自动化部署</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-06-02T10:11:21+08:00">
+                2018-06-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/06/02/ceph-automatic-deploy/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/06/02/ceph-automatic-deploy/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="一、概述"><a href="#一、概述" class="headerlink" title="一、概述"></a>一、概述</h2><p>Ceph当前的自动化部署有两个，分别是ceph-deploy和ceph-ansible，语言都是python，对应的github库地址为：<br>ceph-deploy: <a href="https://github.com/ceph/ceph-deploy" target="_blank" rel="noopener">https://github.com/ceph/ceph-deploy</a><br>ceph-ansible: <a href="https://github.com/ceph/ceph-ansible" target="_blank" rel="noopener">https://github.com/ceph/ceph-ansible</a></p>
+<p>ceph-deploy在手动部署中用的比较多，要实现自动化部署，必须再写脚本执行；<br>ceph-ansible基于ansible，可以实现根据配置文件的ceph自动化部署；</p>
+<p>我在之前写过一个基于ceph-deploy部署ceph的自动化脚本，用起来比较方便熟练；<br>所以这里我写的自动化部署是基于自写脚本调用ceph-deploy的自动化部署；</p>
+<h2 id="二、脚本"><a href="#二、脚本" class="headerlink" title="二、脚本"></a>二、脚本</h2><p>这里有两个文件：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:~/ceph-deploy<span class="comment"># ls</span></span><br><span class="line">ceph-auto-deploy.py     deploy.conf</span><br></pre></td></tr></table></figure>
+<ul>
+<li>ceph-auto-deploy.py: 执行自动化部署的python脚本</li>
+<li>deploy.conf：ceph deploy的配置文件，里面包括了ceph cluster的配置信息，ceph集群的参数优化信息等；</li>
+</ul>
+<h3 id="deploy-conf"><a href="#deploy-conf" class="headerlink" title="deploy.conf"></a>deploy.conf</h3><p>该文件里需要用户配置的信息如下：（在文件底部）</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">##################</span></span><br><span class="line"><span class="comment">## host-specific</span></span><br><span class="line"><span class="comment">## Put your settings for each node here, these settings will be removed</span></span><br><span class="line"><span class="comment">## from the ultimate ceph.conf</span></span><br><span class="line">[host-specific]</span><br><span class="line">mon_hosts = ceph0, ceph1, ceph2</span><br><span class="line">osd_hosts = ceph0, ceph1</span><br><span class="line">rgw_hosts = ceph0</span><br><span class="line"> </span><br><span class="line"><span class="comment"># Example configuration use file system path</span></span><br><span class="line"><span class="comment">#osd.ceph0.paths = /var/lib/ceph/osd/ceph-0, /var/lib/ceph/osd/ceph-1</span></span><br><span class="line"><span class="comment">#osd.ceph1.paths = /var/lib/ceph/osd/ceph-2, /var/lib/ceph/osd/ceph-3</span></span><br><span class="line">osd.ceph0.devs = vdb:vde, vdc:vde, vdd:vde</span><br><span class="line">osd.ceph1.devs = vdb, vdc, vdd</span><br><span class="line"> </span><br><span class="line"><span class="comment">## for multi network settings</span></span><br><span class="line"><span class="comment">## public network 1;cluster network1 = Host1, Host2, Host3</span></span><br><span class="line"><span class="comment">## public network 2;cluster network2 = Host4, Host5</span></span><br><span class="line">192.10.4.0/24;192.10.4.0/24 = ceph0, ceph1, ceph2</span><br></pre></td></tr></table></figure>
+<p>指定Ceph组件部署在哪些Host上：</p>
+<ul>
+<li>mon_hosts = ceph0, ceph1, ceph2<ul>
+<li>Ceph Monitors部署ceph0, ceph1, ceph2上</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>osd_hosts = ceph0, ceph1, ceph2<ul>
+<li>Ceph OSDs部署ceph0, ceph1上</li>
+</ul>
+</li>
+<li>rgw_hosts = ceph0<ul>
+<li>Ceph RadosGW部署ceph0上（若不配置RadosGW，可注释掉改行）</li>
+</ul>
+</li>
+</ul>
+<p>指定每个部署OSDs的host上，哪些磁盘来启动osd：（于上述配置osd_hosts对应）</p>
+<ul>
+<li><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">osd.ceph0.devs = vdb:vde, vdc:vde, vdd:vde</span><br></pre></td></tr></table></figure>
+<p>在ceph0上，启动 vdb, vdc, vde三个osd，vde作为这三个osd的journal盘</p>
+</li>
+<li><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">osd.ceph1.devs = vdb, vdc, vdd</span><br></pre></td></tr></table></figure>
+<p>在ceph1上，启动 vdb, vdc, vde三个osd，每个盘会自动格式化一个分区作为journal</p>
+</li>
+</ul>
+<blockquote>
+<p>注: 在deploy.conf里可配置journal size</p>
+</blockquote>
+<h3 id="ceph-auto-deploy-py"><a href="#ceph-auto-deploy-py" class="headerlink" title="ceph-auto-deploy.py"></a>ceph-auto-deploy.py</h3><p>该文件是自动化部署ceph的执行脚本，支持的命令有：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:~/ceph-deploy<span class="comment"># python ceph-auto-deploy.py --help</span></span><br><span class="line">ceph-auto-deploy.py usage:</span><br><span class="line">    python ceph-auto-deploy.py     run this script with default configuration</span><br><span class="line">    -h, --<span class="built_in">help</span>                          <span class="built_in">print</span> <span class="built_in">help</span> message</span><br><span class="line">    -v, --version                       <span class="built_in">print</span> script version</span><br><span class="line">    -c [configure file]                 specify the configure file</span><br><span class="line">    -p                                  just purge older ceph and ceph data</span><br><span class="line">    -r                                  <span class="keyword">do</span> ceph purge and ceph reinstall</span><br><span class="line">    --just-deploy-osds                  just <span class="keyword">do</span> deploy ceph osds</span><br><span class="line">    --debug                             just <span class="built_in">print</span> out the commands</span><br></pre></td></tr></table></figure>
+<p>常用的命令有：</p>
+<ul>
+<li><code>python ceph-auto-deploy.py</code><br>根据deploy.conf的配置，部署ceph集群</li>
+<li><code>python ceph-auto-deploy.py -p</code><br>根据deploy.conf的配置，删除旧ceph系统和其中ceph相关数据</li>
+<li><code>python ceph-auto-deploy.py -r</code><br>根据deploy.conf的配置，执行purge后，重新安装ceph系统相关packages（不会部署ceph集群）</li>
+</ul>
+<h2 id="三、依赖"><a href="#三、依赖" class="headerlink" title="三、依赖"></a>三、依赖</h2><p>执行上述python自动化部署ceph集群，依赖ceph-deploy，整体架构如下：</p>
+<p><img src="/images/ceph-deploy-arch.png" alt="ceph-deploy-arch"></p>
+<p>其中ceph-deploy所在节点也可以是ceph的node节点。</p>
+<p><strong>所以有如下两个依赖：</strong></p>
+<ol>
+<li>admin-node上安装ceph-deploy</li>
+<li>admin-node到ceph nodes的无密码登陆</li>
+</ol>
+<h2 id="四、部署步骤"><a href="#四、部署步骤" class="headerlink" title="四、部署步骤"></a>四、部署步骤</h2><p>这里以三个虚拟机自动化部署ceph集群为例，说明该自动化脚本的使用：</p>
+<p>三个节点分别为：</p>
+<table>
+<thead>
+<tr>
+<th>node</th>
+<th>Hostname</th>
+<th>Network</th>
+<th>Devices</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>node1</td>
+<td>ceph0</td>
+<td>192.10.4.109</td>
+<td>vdb, vdc, vdd, vde</td>
+</tr>
+<tr>
+<td>node2</td>
+<td>ceph1</td>
+<td>192.10.4.110</td>
+<td>vdb, vdc, vdd, vde</td>
+</tr>
+<tr>
+<td>node3</td>
+<td>ceph2</td>
+<td>192.10.4.111</td>
+<td>vdb, vdc, vdd, vde</td>
+</tr>
+</tbody>
+</table>
+<p>每个node节点的系统信息为：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:~<span class="comment"># lsb_release -a</span></span><br><span class="line">No LSB modules are available.</span><br><span class="line">Distributor ID: Ubuntu</span><br><span class="line">Description:    Ubuntu 16.04.1 LTS</span><br><span class="line">Release:    16.04</span><br><span class="line">Codename:   xenial</span><br></pre></td></tr></table></figure>
+<h3 id="确定nodes节点角色"><a href="#确定nodes节点角色" class="headerlink" title="确定nodes节点角色"></a>确定nodes节点角色</h3><p>首先我们需要确定使用哪个node作为admin-node，然后确定ceph集群nodes节点都部署哪些组件，包括Monitor、OSD、RadosGW、MDS等；</p>
+<p>根据ceph集群部署需求，我们可以做如下node节点角色规划：</p>
+<table>
+<thead>
+<tr>
+<th>node</th>
+<th>Hostname</th>
+<th>Role</th>
+<th>ceph Network</th>
+<th>Ceph Component</th>
+<th>OSD/Journal Devices</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>node1</td>
+<td>ceph0</td>
+<td>admin-node ceph-node</td>
+<td>192.10.4.109</td>
+<td>Monitor, OSD</td>
+<td>OSD: vdb, vdc, vdd Journal: vde</td>
+</tr>
+<tr>
+<td>node2</td>
+<td>ceph1</td>
+<td>ceph-node</td>
+<td>192.10.4.110</td>
+<td>Monitor, OSD</td>
+<td>OSD: vdb, vdc, vdd Journal为OSD盘的一个分区</td>
+</tr>
+<tr>
+<td>node3</td>
+<td>ceph2</td>
+<td>ceph-node</td>
+<td>192.10.4.111</td>
+<td>Monitor</td>
+<td>不配置OSD</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>注：上述规划与第二章节中的 <strong>deploy.conf</strong> 配置保持一致</p>
+</blockquote>
+<h3 id="admin-node节点安装ceph-deploy"><a href="#admin-node节点安装ceph-deploy" class="headerlink" title="admin-node节点安装ceph-deploy"></a>admin-node节点安装ceph-deploy</h3><p>如前文所述，需要在选择的admin-node上安装自动化部署依赖的ceph-deploy，步骤如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:~<span class="comment"># apt-get install -y ceph-deploy</span></span><br><span class="line">root@ceph0:~<span class="comment"># ceph-deploy --help</span></span><br><span class="line">usage: ceph-deploy [-h] [-v | -q] [--version] [--username USERNAME]</span><br><span class="line">                   [--overwrite-conf] [--cluster NAME] [--ceph-conf CEPH_CONF]</span><br><span class="line">                   COMMAND ...</span><br><span class="line"> </span><br><span class="line">Easy Ceph deployment</span><br><span class="line"> </span><br><span class="line">    -^-</span><br><span class="line">   /   \</span><br><span class="line">   |O o|  ceph-deploy v1.5.32</span><br><span class="line">   ).-.(</span><br><span class="line">  <span class="string">'/|||\`</span></span><br><span class="line"><span class="string">  | '</span>|` |</span><br><span class="line">    <span class="string">'|`</span></span><br><span class="line"><span class="string"> </span></span><br><span class="line"><span class="string">Full documentation can be found at: http://ceph.com/ceph-deploy/docs</span></span><br><span class="line"><span class="string"> </span></span><br><span class="line"><span class="string">...</span></span><br></pre></td></tr></table></figure>
+<h3 id="获取pkg源的ceph版本信息"><a href="#获取pkg源的ceph版本信息" class="headerlink" title="获取pkg源的ceph版本信息"></a>获取pkg源的ceph版本信息</h3><p>我们当前推荐安装Ceph的Jewel版本（10.2.*），在Ubuntu系统上，我们可以通过下面命令获取其对应的Ceph pkgs版本信息：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:~<span class="comment"># apt-get update</span></span><br><span class="line">...</span><br><span class="line">root@ceph0:~<span class="comment"># apt-cache show ceph</span></span><br><span class="line">Package: ceph</span><br><span class="line">Architecture: amd64</span><br><span class="line">Version: 10.2.9-0ubuntu0.16.04.1</span><br><span class="line">Priority: optional</span><br><span class="line">Section: admin</span><br><span class="line">Origin: Ubuntu</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>注：若对应Ceph不是Jewel版本，需要更换pkg源</p>
+</blockquote>
+<h3 id="admin-node节点配置无秘访问ceph-nodes"><a href="#admin-node节点配置无秘访问ceph-nodes" class="headerlink" title="admin-node节点配置无秘访问ceph nodes"></a>admin-node节点配置无秘访问ceph nodes</h3><p>自动化部署脚本会通过ssh自动在ceph nodes节点执行命令，ceph-deploy也依赖ssh的无秘访问nodes节点，所以这里我们要先配置这些：</p>
+<ol>
+<li>/etc/hosts上添加ceph nodes节点的hostname与ip的对应关系</li>
+</ol>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/hosts</span><br><span class="line">...</span><br><span class="line">192.10.4.109 ceph0</span><br><span class="line">192.10.4.110 ceph1</span><br><span class="line">192.10.4.111 ceph2</span><br></pre></td></tr></table></figure>
+<ol>
+<li>生成admin-node节点的ssh key</li>
+</ol>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:~<span class="comment"># ssh-keygen</span></span><br><span class="line">...</span><br><span class="line">root@ceph0:~<span class="comment"># cat ~/.ssh/id_rsa.pub</span></span><br><span class="line">ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCqIu+xLrVo0e0++z3i/zdAbZqqqWeyKshA47oUJzQneqD9HP39AJ8btGS5Pow4I/V/1zGsRJ2iV4EDxMymw2wwJ9LyxLl81WsfhSsuOVo7uvhlu3PiU6xDpr8UK66Sv7lquQ67yx9UnH9Vra2TQFsWPwbiPZm+N+qdXuXHeX4RVpOKlKmtEWN40Q3AZt3sbFe5hfAfP08v8XM70znFIEHKbhlN4XpLmuQxZ+vdxAY7kOA1EUugSZpc5nfc61SnCEzhI0stW+ccDsD/vmZsnCtITitS0YqGYJYvGHziKWfmZAw3ZtQd9CQIlZHnmqyA7vF4eoFSoj6YhkI4ozHzxLqt root@ceph0</span><br></pre></td></tr></table></figure>
+<ol>
+<li>在其他节点填入ceph0的public key</li>
+</ol>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:~<span class="comment"># cat ~/.ssh/authorized_keys</span></span><br><span class="line">ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCqIu+xLrVo0e0++z3i/zdAbZqqqWeyKshA47oUJzQneqD9HP39AJ8btGS5Pow4I/V/1zGsRJ2iV4EDxMymw2wwJ9LyxLl81WsfhSsuOVo7uvhlu3PiU6xDpr8UK66Sv7lquQ67yx9UnH9Vra2TQFsWPwbiPZm+N+qdXuXHeX4RVpOKlKmtEWN40Q3AZt3sbFe5hfAfP08v8XM70znFIEHKbhlN4XpLmuQxZ+vdxAY7kOA1EUugSZpc5nfc61SnCEzhI0stW+ccDsD/vmZsnCtITitS0YqGYJYvGHziKWfmZAw3ZtQd9CQIlZHnmqyA7vF4eoFSoj6YhkI4ozHzxLqt root@ceph0</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>注：因为ceph0既是admin-node，也是ceph node，所以也需要配置本身的ssh无秘访问</p>
+</blockquote>
+<h3 id="admin-node节点执行自动化部署"><a href="#admin-node节点执行自动化部署" class="headerlink" title="admin-node节点执行自动化部署"></a>admin-node节点执行自动化部署</h3><p>之前的准备工作做完后，就可以通过自动化脚本部署Ceph集群了</p>
+<ol>
+<li>获取ceph deploy自动化脚本</li>
+</ol>
+<p>GitLab地址：<a href="https://github.com/ictfox/ceph-deploy" target="_blank" rel="noopener">https://github.com/ictfox/ceph-deploy</a></p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:~<span class="comment"># cd ceph-deploy</span></span><br><span class="line">root@ceph0:~/ceph-deploy<span class="comment"># ls</span></span><br><span class="line">ceph-auto-deploy.py     deploy.conf</span><br></pre></td></tr></table></figure>
+<ol>
+<li>根据第二章节介绍，配置 deploy.conf 文件</li>
+</ol>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:~/ceph-deploy<span class="comment"># vim deploy.conf</span></span><br><span class="line"><span class="comment">##################</span></span><br><span class="line"><span class="comment">## host-specific</span></span><br><span class="line"><span class="comment">## Put your settings for each node here, these settings will be removed</span></span><br><span class="line"><span class="comment">## from the ultimate ceph.conf</span></span><br><span class="line">[host-specific]</span><br><span class="line">mon_hosts = ceph0, ceph1, ceph2</span><br><span class="line">osd_hosts = ceph0, ceph1</span><br><span class="line">rgw_hosts = ceph0</span><br><span class="line"> </span><br><span class="line"><span class="comment"># Example configuration use file system path</span></span><br><span class="line"><span class="comment">#osd.ceph0.paths = /var/lib/ceph/osd/ceph-0, /var/lib/ceph/osd/ceph-1</span></span><br><span class="line"><span class="comment">#osd.ceph1.paths = /var/lib/ceph/osd/ceph-2, /var/lib/ceph/osd/ceph-3</span></span><br><span class="line">osd.ceph0.devs = vdb:vde, vdc:vde, vdd:vde</span><br><span class="line">osd.ceph1.devs = vdb, vdc, vdd</span><br><span class="line"> </span><br><span class="line"><span class="comment">## for multi network settings</span></span><br><span class="line"><span class="comment">## public network 1;cluster network1 = Host1, Host2, Host3</span></span><br><span class="line"><span class="comment">## public network 2;cluster network2 = Host4, Host5</span></span><br><span class="line">192.10.4.0/24;192.10.4.0/24 = ceph0, ceph1, ceph2</span><br></pre></td></tr></table></figure>
+<ol>
+<li>安装Ceph对应packages</li>
+</ol>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:~<span class="comment"># python ceph-auto-deploy.py -r</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>这个会花费些时间，但每个Ceph node上安装ceph相关pkgs是并行的，时间不会太长；</p>
+<ol>
+<li>执行命令，自动化部署Ceph集群</li>
+</ol>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@ceph0:~<span class="comment"># python ceph-auto-deploy.py</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>这个会花费较长时间，因为ceph-deploy部署osd时是串行的，为了使得每个Host上的osd id是连续的，方便之后ceph集群使用。</p>
+<p>中间也可能出错，错误信息会输出到屏幕上，详细错误信息也会输出到同目录下的文件：ceph-deploy-ceph.log 里，方便出错时候查看定位问题。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/ceph-deploy/" rel="tag"># ceph-deploy</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/05/17/ceph-daemonperf-intro/" rel="next" title="ceph daemonperf tool分析">
+                <i class="fa fa-chevron-left"></i> ceph daemonperf tool分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">78</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">50</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#一、概述"><span class="nav-number">1.</span> <span class="nav-text">一、概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#二、脚本"><span class="nav-number">2.</span> <span class="nav-text">二、脚本</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#deploy-conf"><span class="nav-number">2.1.</span> <span class="nav-text">deploy.conf</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ceph-auto-deploy-py"><span class="nav-number">2.2.</span> <span class="nav-text">ceph-auto-deploy.py</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#三、依赖"><span class="nav-number">3.</span> <span class="nav-text">三、依赖</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#四、部署步骤"><span class="nav-number">4.</span> <span class="nav-text">四、部署步骤</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#确定nodes节点角色"><span class="nav-number">4.1.</span> <span class="nav-text">确定nodes节点角色</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#admin-node节点安装ceph-deploy"><span class="nav-number">4.2.</span> <span class="nav-text">admin-node节点安装ceph-deploy</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#获取pkg源的ceph版本信息"><span class="nav-number">4.3.</span> <span class="nav-text">获取pkg源的ceph版本信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#admin-node节点配置无秘访问ceph-nodes"><span class="nav-number">4.4.</span> <span class="nav-text">admin-node节点配置无秘访问ceph nodes</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#admin-node节点执行自动化部署"><span class="nav-number">4.5.</span> <span class="nav-text">admin-node节点执行自动化部署</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.yangguanjun.com/2018/06/02/ceph-automatic-deploy/';
+          this.page.identifier = '2018/06/02/ceph-automatic-deploy/';
+          this.page.title = 'ceph自动化部署';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
