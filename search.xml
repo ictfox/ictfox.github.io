@@ -936,8 +936,8 @@
       </categories>
       <tags>
         <tag>ceph</tag>
-        <tag>filestore</tag>
         <tag>osd</tag>
+        <tag>filestore</tag>
       </tags>
   </entry>
   <entry>
@@ -949,8 +949,8 @@
       </categories>
       <tags>
         <tag>ceph</tag>
-        <tag>radosgw</tag>
         <tag>memstore</tag>
+        <tag>radosgw</tag>
         <tag>cache tiering</tag>
       </tags>
   </entry>
