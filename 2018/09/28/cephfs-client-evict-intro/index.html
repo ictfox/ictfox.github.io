@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,CephFS," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="概述在使用Ceph的CephFS时，每个client都会建立与MDS的连接，以获取CephFS的元数据信息。如果有多个Active的MDS，则一个client可能会与多个MDS都建立连接。 Ceph提供了client/session子命令来查询和管理这些连接，在这些子命令中，有一个命令来处理当CephFS的client有问题时，如何手动来断开这些client的连接，比如执行命令：# ceph te">
+<meta name="keywords" content="ceph,CephFS">
+<meta property="og:type" content="article">
+<meta property="og:title" content="CephFS client evict子命令使用">
+<meta property="og:url" content="http://www.yangguanjun.com/2018/09/28/cephfs-client-evict-intro/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述在使用Ceph的CephFS时，每个client都会建立与MDS的连接，以获取CephFS的元数据信息。如果有多个Active的MDS，则一个client可能会与多个MDS都建立连接。 Ceph提供了client/session子命令来查询和管理这些连接，在这些子命令中，有一个命令来处理当CephFS的client有问题时，如何手动来断开这些client的连接，比如执行命令：# ceph te">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2018-09-28T14:46:53.187Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="CephFS client evict子命令使用">
+<meta name="twitter:description" content="概述在使用Ceph的CephFS时，每个client都会建立与MDS的连接，以获取CephFS的元数据信息。如果有多个Active的MDS，则一个client可能会与多个MDS都建立连接。 Ceph提供了client/session子命令来查询和管理这些连接，在这些子命令中，有一个命令来处理当CephFS的client有问题时，如何手动来断开这些client的连接，比如执行命令：# ceph te">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.yangguanjun.com/2018/09/28/cephfs-client-evict-intro/"/>
+
+
+
+
+
+  <title>CephFS client evict子命令使用 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-7472013512056838",
+    enable_page_level_ads: true
+  });
+</script>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2018/09/28/cephfs-client-evict-intro/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">CephFS client evict子命令使用</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-09-28T22:24:34+08:00">
+                2018-09-28
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/09/28/cephfs-client-evict-intro/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/09/28/cephfs-client-evict-intro/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在使用Ceph的CephFS时，每个client都会建立与MDS的连接，以获取CephFS的元数据信息。如果有多个Active的MDS，则一个client可能会与多个MDS都建立连接。</p>
+<p>Ceph提供了<code>client/session</code>子命令来查询和管理这些连接，在这些子命令中，有一个命令来处理当CephFS的client有问题时，如何手动来断开这些client的连接，比如执行命令：<code># ceph tell mds.2 client evict</code>，则会把与mds rank 2 连接的所有clients都断开。</p>
+<p>那么执行<code>client evict</code>的影响是什么？是否可以恢复呢？本文将重点介绍一下这些。</p>
+<h2 id="命令格式"><a href="#命令格式" class="headerlink" title="命令格式"></a>命令格式</h2><p>参考：<a href="http://docs.ceph.com/docs/master/cephfs/eviction/" target="_blank" rel="noopener">http://docs.ceph.com/docs/master/cephfs/eviction/</a></p>
+<p>测试环境：Ceph Mimic 13.2.1</p>
+<h3 id="1-查看所有client-session"><a href="#1-查看所有client-session" class="headerlink" title="1. 查看所有client/session"></a>1. 查看所有client/session</h3><p>可以通过命令 <code>client/session ls</code>查看与ms rank [id] 建立connection的所有clients；</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph tell mds.0 client ls</span></span><br><span class="line">2018-09-05 10:00:15.986 7f97f0ff9700  0 client.25196 ms_handle_reset on 192.168.0.26:6800/1856812761</span><br><span class="line">2018-09-05 10:00:16.002 7f97f1ffb700  0 client.25199 ms_handle_reset on 192.168.0.26:6800/1856812761</span><br><span class="line">[</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"id"</span>: 25085,</span><br><span class="line">        <span class="string">"num_leases"</span>: 0,</span><br><span class="line">        <span class="string">"num_caps"</span>: 5,</span><br><span class="line">        <span class="string">"state"</span>: <span class="string">"open"</span>,</span><br><span class="line">        <span class="string">"replay_requests"</span>: 0,</span><br><span class="line">        <span class="string">"completed_requests"</span>: 0,</span><br><span class="line">        <span class="string">"reconnecting"</span>: <span class="literal">false</span>,</span><br><span class="line">        <span class="string">"inst"</span>: <span class="string">"client.25085 192.168.0.26:0/265326503"</span>,</span><br><span class="line">        <span class="string">"client_metadata"</span>: &#123;</span><br><span class="line">            <span class="string">"ceph_sha1"</span>: <span class="string">"5533ecdc0fda920179d7ad84e0aa65a127b20d77"</span>,</span><br><span class="line">            <span class="string">"ceph_version"</span>: <span class="string">"ceph version 13.2.1 (5533ecdc0fda920179d7ad84e0aa65a127b20d77) mimic (stable)"</span>,</span><br><span class="line">            <span class="string">"entity_id"</span>: <span class="string">"admin"</span>,</span><br><span class="line">            <span class="string">"hostname"</span>: <span class="string">"mimic3"</span>,</span><br><span class="line">            <span class="string">"mount_point"</span>: <span class="string">"/mnt/cephfuse"</span>,</span><br><span class="line">            <span class="string">"pid"</span>: <span class="string">"44876"</span>,</span><br><span class="line">            <span class="string">"root"</span>: <span class="string">"/"</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+<p><strong>比较重要的信息有：</strong></p>
+<ul>
+<li>id：client唯一id</li>
+<li>num_caps：client获取的caps</li>
+<li>inst：client端的ip和端口链接信息</li>
+<li>ceph_version：client端的ceph-fuse版本，若使用kernel client，则为kernel_version</li>
+<li>hostname：client端的主机名</li>
+<li>mount_point：client在主机上对应的mount point</li>
+<li>pid：client端ceph-fuse进程的pid</li>
+</ul>
+<h3 id="2-evict指定client"><a href="#2-evict指定client" class="headerlink" title="2. evict指定client"></a>2. evict指定client</h3><p>可以通过指定id来evict特定的client链接；</p>
+<blockquote>
+<p>若有多个Active MDS，单个MDS Rank的evict也会传播到别的Active MDS</p>
+</blockquote>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph tell mds.0 client evict id=25085</span></span><br></pre></td></tr></table></figure>
+<p>evict client后，在对应的host上检查client的mountpoint已经不能访问：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">root@mimic3:/mnt/cephfuse<span class="comment"># ls</span></span><br><span class="line">ls: cannot open directory <span class="string">'.'</span>: Cannot send after transport endpoint shutdown</span><br><span class="line"> </span><br><span class="line"> </span><br><span class="line">root@mimic3:~<span class="comment"># vim /var/log/ceph/ceph-client.admin.log</span></span><br><span class="line">...</span><br><span class="line">2018-09-05 10:02:54.829 7fbe732d7700 -1 client.25085 I was blacklisted at osd epoch 519</span><br></pre></td></tr></table></figure>
+<h3 id="3-查看ceph-osd的blacklist"><a href="#3-查看ceph-osd的blacklist" class="headerlink" title="3. 查看ceph osd的blacklist"></a>3. 查看ceph osd的blacklist</h3><p>evict client后，会把client加入到osd blacklist中（后续有代码分析）；</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">root@mimic1:~<span class="comment"># ceph osd blacklist ls</span></span><br><span class="line">listed 1 entries</span><br><span class="line">192.168.0.26:0/265326503 2018-09-05 11:02:54.696345</span><br></pre></td></tr></table></figure>
+<p>加入到osd blacklist后，防止evict client的in-flight数据写下去，影响数据一致性；有效时间为1个小时；</p>
+<h3 id="4-尝试恢复evict-client"><a href="#4-尝试恢复evict-client" class="headerlink" title="4. 尝试恢复evict client"></a>4. 尝试恢复evict client</h3><p>把ceph osd blacklist里与刚evict client相关的记录删除；</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@mimic1:~<span class="comment"># ceph osd blacklist rm 192.168.0.26:0/265326503</span></span><br><span class="line">un-blacklisting 192.168.0.26:0/265326503</span><br></pre></td></tr></table></figure>
+<p>在对应的host上检查client是否正常？发现client变得正常了！！</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">root@mimic3:~<span class="comment"># cd /mnt/cephfuse</span></span><br><span class="line">root@mimic3:/mnt/cephfuse<span class="comment"># ls</span></span><br><span class="line">perftest</span><br></pre></td></tr></table></figure>
+<p>而测试 <strong>Ceph Luminous 12.2.7</strong> 版本时，evcit client后无法立刻恢复，等一段时间后恢复！！</p>
+<blockquote>
+<p>（ “mds_session_autoclose”: “300.000000”,）</p>
+</blockquote>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">root@luminous2:~<span class="comment"># ceph osd blacklist rm 192.168.213.25:0/1534097905</span></span><br><span class="line">un-blacklisting 192.168.213.25:0/1534097905</span><br><span class="line"></span><br><span class="line">root@luminous2:~<span class="comment"># ceph osd blacklist ls</span></span><br><span class="line">listed 0 entries</span><br><span class="line"></span><br><span class="line">root@luminous2:/mnt/cephfuse<span class="comment"># ls</span></span><br><span class="line">ls: cannot open directory <span class="string">'.'</span>: Cannot send after transport endpoint shutdown</span><br></pre></td></tr></table></figure>
+<p>等待一段时间（300s）后，session变得正常！</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@luminous2:/mnt/cephfuse# ls</span><br><span class="line">perftest</span><br></pre></td></tr></table></figure>
+<p>测试<strong>cephfs kernel client</strong>的evcit，client无法恢复！！</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@mimic3:~<span class="comment"># cd /mnt/cephfs</span></span><br><span class="line">-bash: <span class="built_in">cd</span>: /mnt/cephfs: Permission denied</span><br></pre></td></tr></table></figure>
+<h3 id="5-evict所有的client"><a href="#5-evict所有的client" class="headerlink" title="5. evict所有的client"></a>5. evict所有的client</h3><p>若在evict命令后不指定具体的client id，则会把与该MDS Rank链接的所有client evict掉；</p>
+<blockquote>
+<p>若有多个Active MDS，单个MDS Rank的evict也会传播到别的Active MDS</p>
+</blockquote>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph tell mds.0 client evict</span></span><br></pre></td></tr></table></figure>
+<p><strong>这个命令慎用，也一定不要误用，影响比较大！！！</strong></p>
+<h3 id="6-session-kill命令"><a href="#6-session-kill命令" class="headerlink" title="6. session kill命令"></a>6. session kill命令</h3><p>session子命令里还有一个kill命令，它比evict命令更彻底；</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">root@mimic1:~<span class="comment"># ceph tell mds.0 session kill 104704</span></span><br><span class="line">2018-09-05 15:57:45.897 7ff2157fa700  0 client.25742 ms_handle_reset on 192.168.0.26:6800/1856812761</span><br><span class="line">2018-09-05 15:57:45.917 7ff2167fc700  0 client.25745 ms_handle_reset on 192.168.0.26:6800/1856812761</span><br><span class="line"> </span><br><span class="line"> </span><br><span class="line">root@mimic1:~<span class="comment"># ceph tell mds.0 session ls</span></span><br><span class="line">2018-09-05 15:57:50.709 7f44eeffd700  0 client.95370 ms_handle_reset on 192.168.0.26:6800/1856812761</span><br><span class="line">2018-09-05 15:57:50.725 7f44effff700  0 client.95376 ms_handle_reset on 192.168.0.26:6800/1856812761</span><br><span class="line">[]</span><br><span class="line"> </span><br><span class="line"> </span><br><span class="line">root@mimic1:~<span class="comment"># ceph osd blacklist ls</span></span><br><span class="line">listed 1 entries</span><br><span class="line">192.168.0.26:0/1613295381 2018-09-05 16:57:45.920138</span><br></pre></td></tr></table></figure>
+<p>删除 osd blacklist entry：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">root@mimic1:~<span class="comment"># ceph osd blacklist rm 192.168.0.26:0/1613295381</span></span><br><span class="line">un-blacklisting 192.168.0.26:0/1613295381</span><br><span class="line">root@mimic1:~<span class="comment"># ceph osd blacklist ls</span></span><br><span class="line">listed 0 entries</span><br></pre></td></tr></table></figure>
+<p>之后client链接没有再恢复！！！</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">root@mimic3:~<span class="comment"># cd /mnt/cephfuse</span></span><br><span class="line">root@mimic3:/mnt/cephfuse<span class="comment"># ls</span></span><br><span class="line">ls: cannot open directory <span class="string">'.'</span>: Cannot send after transport endpoint shutdown</span><br></pre></td></tr></table></figure>
+<p><strong>session kill后，这个session无法再恢复！！！也要慎用！！！</strong></p>
+<h2 id="代码分析"><a href="#代码分析" class="headerlink" title="代码分析"></a>代码分析</h2><p>基于Ceph Mimic 13.2.1代码；</p>
+<p>执行client evict的代码如下，可以看出里面会添加osd blacklist：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">bool</span> MDSRank::evict_client(<span class="keyword">int64_t</span> session_id,</span><br><span class="line">                           <span class="keyword">bool</span> wait, <span class="keyword">bool</span> blacklist, <span class="built_in">std</span>::<span class="built_in">stringstream</span>&amp; err_ss,</span><br><span class="line">                           Context *on_killed)</span><br><span class="line">&#123;</span><br><span class="line">	...</span><br><span class="line">    <span class="comment">// 获取指定id的session</span></span><br><span class="line">    Session *session = sessionmap.get_session(</span><br><span class="line">                           <span class="keyword">entity_name_t</span>(CEPH_ENTITY_TYPE_CLIENT, session_id));</span><br><span class="line">    </span><br><span class="line">	<span class="comment">// 定义kill mds session的函数</span></span><br><span class="line">    <span class="keyword">auto</span> kill_mds_session = [<span class="keyword">this</span>, session_id, on_killed]() &#123;</span><br><span class="line">        assert(mds_lock.is_locked_by_me());</span><br><span class="line">        Session *session = sessionmap.get_session(</span><br><span class="line">                               <span class="keyword">entity_name_t</span>(CEPH_ENTITY_TYPE_CLIENT, session_id));</span><br><span class="line">        <span class="keyword">if</span> (session) &#123;</span><br><span class="line">            <span class="keyword">if</span> (on_killed) &#123;</span><br><span class="line">                server-&gt;kill_session(session, on_killed);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                C_SaferCond on_safe;</span><br><span class="line">                server-&gt;kill_session(session, &amp;on_safe);</span><br><span class="line">                mds_lock.Unlock();</span><br><span class="line">                on_safe.wait();</span><br><span class="line">                mds_lock.Lock();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        ...</span><br><span class="line">    &#125;;</span><br><span class="line"> </span><br><span class="line"> 	<span class="comment">// 定义添加OSD blacklist的函数</span></span><br><span class="line">    <span class="keyword">auto</span> background_blacklist = [<span class="keyword">this</span>, session_id, cmd](<span class="built_in">std</span>::function&lt;<span class="keyword">void</span> ()&gt; fn) &#123;</span><br><span class="line">        ...</span><br><span class="line">        Context *on_blacklist_done = <span class="keyword">new</span> FunctionContext([<span class="keyword">this</span>, session_id, fn](<span class="keyword">int</span> r) &#123;</span><br><span class="line">            objecter-&gt;wait_for_latest_osdmap(</span><br><span class="line">                <span class="keyword">new</span> C_OnFinisher(</span><br><span class="line">            		<span class="keyword">new</span> FunctionContext(...), finisher)</span><br><span class="line">            );</span><br><span class="line">        &#125;);</span><br><span class="line">		...</span><br><span class="line">        monc-&gt;start_mon_command(cmd, &#123;&#125;, <span class="literal">nullptr</span>, <span class="literal">nullptr</span>, on_blacklist_done);</span><br><span class="line">    &#125;;</span><br><span class="line"> </span><br><span class="line"> </span><br><span class="line">    <span class="keyword">auto</span> blocking_blacklist = [<span class="keyword">this</span>, cmd, &amp;err_ss, background_blacklist]() &#123;</span><br><span class="line">        C_SaferCond inline_ctx;</span><br><span class="line">        background_blacklist([&amp;inline_ctx]() &#123;</span><br><span class="line">            inline_ctx.complete(<span class="number">0</span>);</span><br><span class="line">        &#125;);</span><br><span class="line">        mds_lock.Unlock();</span><br><span class="line">        inline_ctx.wait();</span><br><span class="line">        mds_lock.Lock();</span><br><span class="line">    &#125;;</span><br><span class="line"> </span><br><span class="line"> 	<span class="comment">// 根据参数执行kill mds session和添加OSD的blacklist</span></span><br><span class="line">    <span class="keyword">if</span> (wait) &#123;</span><br><span class="line">        <span class="keyword">if</span> (blacklist) &#123;</span><br><span class="line">            blocking_blacklist();</span><br><span class="line">        &#125;</span><br><span class="line"> </span><br><span class="line">        <span class="comment">// We dropped mds_lock, so check that session still exists</span></span><br><span class="line">        session = sessionmap.get_session(<span class="keyword">entity_name_t</span>(CEPH_ENTITY_TYPE_CLIENT,</span><br><span class="line">                                         session_id));</span><br><span class="line">		...</span><br><span class="line">        kill_mds_session();</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (blacklist) &#123;</span><br><span class="line">            background_blacklist(kill_mds_session);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            kill_mds_session();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>调用该函数的地方有：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">Cscope tag: evict_client</span><br><span class="line">   <span class="meta">#   <span class="meta-keyword">line</span>  filename / context / <span class="meta-keyword">line</span></span></span><br><span class="line">   <span class="number">1</span>   <span class="number">1965</span>  mds/MDSRank.cc &lt;&lt;handle_asok_command&gt;&gt;</span><br><span class="line">             <span class="keyword">bool</span> evicted = evict_client(strtol(client_id.c_str(), <span class="number">0</span>, <span class="number">10</span>), <span class="literal">true</span>,</span><br><span class="line">   <span class="number">2</span>   <span class="number">2120</span>  mds/MDSRank.cc &lt;&lt;evict_clients&gt;&gt;</span><br><span class="line">             evict_client(s-&gt;info.inst.name.num(), <span class="literal">false</span>,</span><br><span class="line">   <span class="number">3</span>    <span class="number">782</span>  mds/Server.cc &lt;&lt;find_idle_sessions&gt;&gt;</span><br><span class="line">             mds-&gt;evict_client(session-&gt;info.inst.name.num(), <span class="literal">false</span>, <span class="literal">true</span>,</span><br><span class="line">   <span class="number">4</span>   <span class="number">1058</span>  mds/Server.cc &lt;&lt;reconnect_tick&gt;&gt;</span><br><span class="line">             mds-&gt;evict_client(session-&gt;info.inst.name.num(), <span class="literal">false</span>, <span class="literal">true</span>, ss,</span><br></pre></td></tr></table></figure>
+<p>1、handle_asok_command：命令行处理client evict</p>
+<p>2、evict_clients：批量evict clients</p>
+<p>3、find_idle_sessions：对于stale状态的session，执行evict client</p>
+<p>4、reconnect_tick：mds恢复后等待client reconnect，45s超时后evict clients</p>
+<h2 id="相关参数"><a href="#相关参数" class="headerlink" title="相关参数"></a>相关参数</h2><p>于mds session相关的配置参数有：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph daemon mgr.luminous2 config show | grep mds_session_</span></span><br><span class="line">    <span class="string">"mds_session_autoclose"</span>: <span class="string">"300.000000"</span>,</span><br><span class="line">    <span class="string">"mds_session_blacklist_on_evict"</span>: <span class="string">"true"</span>,</span><br><span class="line">    <span class="string">"mds_session_blacklist_on_timeout"</span>: <span class="string">"true"</span>,</span><br><span class="line">    <span class="string">"mds_session_timeout"</span>: <span class="string">"60.000000"</span>,</span><br></pre></td></tr></table></figure>
+<p>还有一些client相关的：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"client_reconnect_stale"</span>: <span class="string">"false"</span>,</span><br><span class="line"><span class="string">"client_tick_interval"</span>: <span class="string">"1.000000"</span>,</span><br><span class="line"><span class="string">"mon_client_ping_interval"</span>: <span class="string">"10.000000"</span>,</span><br><span class="line"><span class="string">"mon_client_ping_timeout"</span>: <span class="string">"30.000000"</span>,</span><br></pre></td></tr></table></figure>
+<h2 id="evict-client后的处理"><a href="#evict-client后的处理" class="headerlink" title="evict client后的处理"></a>evict client后的处理</h2><p>从上面的实践可以看出，evcit client后，client会被添加到osd blacklist里，超时时间为1小时；在这个时间段内，client是不能访问CephFS的；</p>
+<p>但是通过命令：<code>ceph osd blacklist rm &lt;entry&gt;</code> 删除osd的blacklist后，client端立刻就能继续访问CephFS，一切都跟之前正常时候一样！</p>
+<h3 id="方法1：rm-blacklist"><a href="#方法1：rm-blacklist" class="headerlink" title="方法1：rm blacklist"></a>方法1：rm blacklist</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">root@mimic1:~<span class="comment"># ceph tell mds.0 client evict id=25085</span></span><br><span class="line">2018-09-05 11:07:43.580 7f80d37fe700  0 client.25364 ms_handle_reset on 192.168.0.26:6800/1856812761</span><br><span class="line">2018-09-05 11:07:44.292 7f80e8ff9700  0 client.25370 ms_handle_reset on 192.168.0.26:6800/1856812761</span><br><span class="line"> </span><br><span class="line"> </span><br><span class="line">root@mimic1:~<span class="comment"># ceph tell mds.0 client ls</span></span><br><span class="line">2018-09-05 11:05:23.527 7f5005ffb700  0 client.25301 ms_handle_reset on 192.168.0.26:6800/1856812761</span><br><span class="line">2018-09-05 11:05:23.539 7f5006ffd700  0 client.94941 ms_handle_reset on 192.168.0.26:6800/1856812761</span><br><span class="line">[]</span><br><span class="line"> </span><br><span class="line"> </span><br><span class="line">root@mimic1:~<span class="comment"># ceph osd blacklist rm 192.168.0.26:0/265326503</span></span><br><span class="line">un-blacklisting 192.168.0.26:0/265326503</span><br><span class="line"> </span><br><span class="line"> </span><br><span class="line">root@mimic1:~<span class="comment"># ceph tell mds.0 client ls</span></span><br><span class="line">2018-09-05 11:07:57.884 7fe07b7f6700  0 client.95022 ms_handle_reset on 192.168.0.26:6800/1856812761</span><br><span class="line">2018-09-05 11:07:57.900 7fe07c7f8700  0 client.25400 ms_handle_reset on 192.168.0.26:6800/1856812761</span><br><span class="line">[]</span><br></pre></td></tr></table></figure>
+<p>然后在client host重新访问以下挂载点目录后，session变为正常</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">root@mimic1:~<span class="comment"># ceph tell mds.0 client ls</span></span><br><span class="line">2018-09-05 11:06:31.484 7f6c6bfff700  0 client.94971 ms_handle_reset on 192.168.0.26:6800/1856812761</span><br><span class="line">2018-09-05 11:06:31.496 7f6c717fa700  0 client.94977 ms_handle_reset on 192.168.0.26:6800/1856812761</span><br><span class="line">[</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"id"</span>: 25085,</span><br><span class="line">        <span class="string">"num_leases"</span>: 0,</span><br><span class="line">        <span class="string">"num_caps"</span>: 4,</span><br><span class="line">        <span class="string">"state"</span>: <span class="string">"open"</span>,</span><br><span class="line">        <span class="string">"replay_requests"</span>: 0,</span><br><span class="line">        <span class="string">"completed_requests"</span>: 0,</span><br><span class="line">        <span class="string">"reconnecting"</span>: <span class="literal">false</span>,</span><br><span class="line">        <span class="string">"inst"</span>: <span class="string">"client.25085 192.168.0.26:0/265326503"</span>,</span><br><span class="line">        <span class="string">"client_metadata"</span>: &#123;</span><br><span class="line">            <span class="string">"ceph_sha1"</span>: <span class="string">"5533ecdc0fda920179d7ad84e0aa65a127b20d77"</span>,</span><br><span class="line">            <span class="string">"ceph_version"</span>: <span class="string">"ceph version 13.2.1 (5533ecdc0fda920179d7ad84e0aa65a127b20d77) mimic (stable)"</span>,</span><br><span class="line">            <span class="string">"entity_id"</span>: <span class="string">"admin"</span>,</span><br><span class="line">            <span class="string">"hostname"</span>: <span class="string">"mimic3"</span>,</span><br><span class="line">            <span class="string">"mount_point"</span>: <span class="string">"/mnt/cephfuse"</span>,</span><br><span class="line">            <span class="string">"pid"</span>: <span class="string">"44876"</span>,</span><br><span class="line">            <span class="string">"root"</span>: <span class="string">"/"</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+<h3 id="方法2：wait-1小时"><a href="#方法2：wait-1小时" class="headerlink" title="方法2：wait 1小时"></a>方法2：wait 1小时</h3><p>默认evict client后，添加osd blacklist的超时时间为1小时，考察1小时过后，session可以变为正常：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@mimic1:~<span class="comment"># ceph osd blacklist ls</span></span><br><span class="line">listed 0 entries</span><br></pre></td></tr></table></figure>
+<p>然后在client host重新访问以下挂载点目录后，session变为正常</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">root@mimic3:~<span class="comment"># cd /mnt/cephfuse/</span></span><br><span class="line">root@mimic3:/mnt/cephfuse<span class="comment"># ls</span></span><br><span class="line">perftest</span><br></pre></td></tr></table></figure>
+<p>查看mds的sessions：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">root@mimic1:~<span class="comment"># ceph tell mds.0 session ls</span></span><br><span class="line">2018-09-05 13:56:26.630 7fae7f7fe700  0 client.95118 ms_handle_reset on 192.168.0.26:6801/1541744746</span><br><span class="line">2018-09-05 13:56:26.642 7fae94ff9700  0 client.25496 ms_handle_reset on 192.168.0.26:6801/1541744746</span><br><span class="line">[</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">"id"</span>: 25085,</span><br><span class="line">        <span class="string">"num_leases"</span>: 0,</span><br><span class="line">        <span class="string">"num_caps"</span>: 1,</span><br><span class="line">        <span class="string">"state"</span>: <span class="string">"open"</span>,</span><br><span class="line">        <span class="string">"replay_requests"</span>: 0,</span><br><span class="line">        <span class="string">"completed_requests"</span>: 0,</span><br><span class="line">        <span class="string">"reconnecting"</span>: <span class="literal">false</span>,</span><br><span class="line">        <span class="string">"inst"</span>: <span class="string">"client.25085 192.168.0.26:0/265326503"</span>,</span><br><span class="line">        <span class="string">"client_metadata"</span>: &#123;</span><br><span class="line">            <span class="string">"ceph_sha1"</span>: <span class="string">"5533ecdc0fda920179d7ad84e0aa65a127b20d77"</span>,</span><br><span class="line">            <span class="string">"ceph_version"</span>: <span class="string">"ceph version 13.2.1 (5533ecdc0fda920179d7ad84e0aa65a127b20d77) mimic (stable)"</span>,</span><br><span class="line">            <span class="string">"entity_id"</span>: <span class="string">"admin"</span>,</span><br><span class="line">            <span class="string">"hostname"</span>: <span class="string">"mimic3"</span>,</span><br><span class="line">            <span class="string">"mount_point"</span>: <span class="string">"/mnt/cephfuse"</span>,</span><br><span class="line">            <span class="string">"pid"</span>: <span class="string">"44876"</span>,</span><br><span class="line">            <span class="string">"root"</span>: <span class="string">"/"</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>红包</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/CephFS/" rel="tag"># CephFS</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/09/15/ceph-mimic-dashboard-intro/" rel="next" title="Ceph Mimic测试Dashboard功能">
+                <i class="fa fa-chevron-left"></i> Ceph Mimic测试Dashboard功能
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">85</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">57</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#命令格式"><span class="nav-number">2.</span> <span class="nav-text">命令格式</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-查看所有client-session"><span class="nav-number">2.1.</span> <span class="nav-text">1. 查看所有client/session</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-evict指定client"><span class="nav-number">2.2.</span> <span class="nav-text">2. evict指定client</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-查看ceph-osd的blacklist"><span class="nav-number">2.3.</span> <span class="nav-text">3. 查看ceph osd的blacklist</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-尝试恢复evict-client"><span class="nav-number">2.4.</span> <span class="nav-text">4. 尝试恢复evict client</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-evict所有的client"><span class="nav-number">2.5.</span> <span class="nav-text">5. evict所有的client</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-session-kill命令"><span class="nav-number">2.6.</span> <span class="nav-text">6. session kill命令</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#代码分析"><span class="nav-number">3.</span> <span class="nav-text">代码分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#相关参数"><span class="nav-number">4.</span> <span class="nav-text">相关参数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#evict-client后的处理"><span class="nav-number">5.</span> <span class="nav-text">evict client后的处理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#方法1：rm-blacklist"><span class="nav-number">5.1.</span> <span class="nav-text">方法1：rm blacklist</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#方法2：wait-1小时"><span class="nav-number">5.2.</span> <span class="nav-text">方法2：wait 1小时</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.yangguanjun.com/2018/09/28/cephfs-client-evict-intro/';
+          this.page.identifier = '2018/09/28/cephfs-client-evict-intro/';
+          this.page.title = 'CephFS client evict子命令使用';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
