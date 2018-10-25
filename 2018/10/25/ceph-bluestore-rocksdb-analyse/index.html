@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,Bluestore,RocksDB," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="概述对于Ceph全新的存储引擎BlueStore来说，RocksDB的意义很大，它存储了BlueStore相关的元数据信息，对它的理解有助于更好的理解BlueStore的实现，分析之后遇到的问题； BlueStore架构BlueStore的架构图如下，还是被广泛使用的一张：  如上图所示，BlueStore的几个关键组件中，RocksDB对接了BlueStore的metadata信息，本文抛开别的">
+<meta name="keywords" content="ceph,Bluestore,RocksDB">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Ceph Bluestore RocksDB Analyse">
+<meta property="og:url" content="http://www.yangguanjun.com/2018/10/25/ceph-bluestore-rocksdb-analyse/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述对于Ceph全新的存储引擎BlueStore来说，RocksDB的意义很大，它存储了BlueStore相关的元数据信息，对它的理解有助于更好的理解BlueStore的实现，分析之后遇到的问题； BlueStore架构BlueStore的架构图如下，还是被广泛使用的一张：  如上图所示，BlueStore的几个关键组件中，RocksDB对接了BlueStore的metadata信息，本文抛开别的">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.yangguanjun.com/images/ceph-bluestore-arch.png">
+<meta property="og:updated_time" content="2018-10-25T14:35:19.121Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Ceph Bluestore RocksDB Analyse">
+<meta name="twitter:description" content="概述对于Ceph全新的存储引擎BlueStore来说，RocksDB的意义很大，它存储了BlueStore相关的元数据信息，对它的理解有助于更好的理解BlueStore的实现，分析之后遇到的问题； BlueStore架构BlueStore的架构图如下，还是被广泛使用的一张：  如上图所示，BlueStore的几个关键组件中，RocksDB对接了BlueStore的metadata信息，本文抛开别的">
+<meta name="twitter:image" content="http://www.yangguanjun.com/images/ceph-bluestore-arch.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.yangguanjun.com/2018/10/25/ceph-bluestore-rocksdb-analyse/"/>
+
+
+
+
+
+  <title>Ceph Bluestore RocksDB Analyse | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-7472013512056838",
+    enable_page_level_ads: true
+  });
+</script>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2018/10/25/ceph-bluestore-rocksdb-analyse/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Ceph Bluestore RocksDB Analyse</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-10-25T22:30:34+08:00">
+                2018-10-25
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/10/25/ceph-bluestore-rocksdb-analyse/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/10/25/ceph-bluestore-rocksdb-analyse/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>对于Ceph全新的存储引擎BlueStore来说，RocksDB的意义很大，它存储了BlueStore相关的元数据信息，对它的理解有助于更好的理解BlueStore的实现，分析之后遇到的问题；</p>
+<h2 id="BlueStore架构"><a href="#BlueStore架构" class="headerlink" title="BlueStore架构"></a>BlueStore架构</h2><p>BlueStore的架构图如下，还是被广泛使用的一张：</p>
+<p><img src="/images/ceph-bluestore-arch.png" alt="bluestore-arch"></p>
+<p>如上图所示，BlueStore的几个关键组件中，RocksDB对接了BlueStore的metadata信息，本文抛开别的组件，详细描述RocksDB在这里存储的信息以及其实现；</p>
+<h2 id="BlueStore结构体定义"><a href="#BlueStore结构体定义" class="headerlink" title="BlueStore结构体定义"></a>BlueStore结构体定义</h2><p>Ceph里BlueStore的定义和主要数据成员如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BlueStore</span> :</span> <span class="keyword">public</span> ObjectStore, <span class="keyword">public</span> <span class="keyword">md_config_obs_t</span> &#123;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    BlueFS *bluefs = <span class="literal">nullptr</span>;</span><br><span class="line">    <span class="keyword">unsigned</span> bluefs_shared_bdev = <span class="number">0</span>;  <span class="comment">///&lt; which bluefs bdev we are sharing</span></span><br><span class="line">    <span class="keyword">bool</span> bluefs_single_shared_device = <span class="literal">true</span>;</span><br><span class="line">    <span class="keyword">utime_t</span> bluefs_last_balance;</span><br><span class="line"></span><br><span class="line">    KeyValueDB *db = <span class="literal">nullptr</span>;</span><br><span class="line">    BlockDevice *bdev = <span class="literal">nullptr</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">string</span> freelist_type;</span><br><span class="line">    FreelistManager *fm = <span class="literal">nullptr</span>;</span><br><span class="line">    Allocator *alloc = <span class="literal">nullptr</span>;</span><br><span class="line">    uuid_d fsid;</span><br><span class="line">    <span class="keyword">int</span> path_fd = <span class="number">-1</span>;  <span class="comment">///&lt; open handle to $path</span></span><br><span class="line">    <span class="keyword">int</span> fsid_fd = <span class="number">-1</span>;  <span class="comment">///&lt; open handle (locked) to $path/fsid</span></span><br><span class="line">    <span class="keyword">bool</span> mounted = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">vector</span>&lt;Cache*&gt; cache_shards;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">std</span>::mutex osr_lock;              <span class="comment">///&lt; protect osd_set</span></span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">set</span>&lt;OpSequencerRef&gt; osr_set; <span class="comment">///&lt; set of all OpSequencers</span></span><br><span class="line">...</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>几个关键的数据成员如下：</p>
+<h3 id="1-BlueFS"><a href="#1-BlueFS" class="headerlink" title="1) BlueFS"></a>1) BlueFS</h3><p>定义：<code>BlueFS *bluefs = nullptr;</code></p>
+<p>支持RocksDB的定制FS，只实现了RocksEnv需要的API接口；</p>
+<p>代码里在_open_db()里对其初始化：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> BlueStore::_open_db(<span class="keyword">bool</span> create)</span><br><span class="line">&#123;</span><br><span class="line">    rocksdb::Env *env = <span class="literal">NULL</span>;</span><br><span class="line">    <span class="keyword">if</span> (do_bluefs) &#123;</span><br><span class="line">        bluefs = <span class="keyword">new</span> BlueFS(cct);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="2-RocksDB"><a href="#2-RocksDB" class="headerlink" title="2) RocksDB"></a>2) RocksDB</h3><p>定义：<code>KeyValueDB *db = nullptr;</code></p>
+<p>在BlueStore的元数据和OMap都通过DB存储，这里使用的是RocksDB，它的初始化也是在_open_db()函数中：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> BlueStore::_open_db(<span class="keyword">bool</span> create)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 获取kv的后端设备</span></span><br><span class="line">    <span class="built_in">string</span> kv_backend;</span><br><span class="line">    <span class="keyword">if</span> (create) &#123;</span><br><span class="line">        kv_backend = cct-&gt;_conf-&gt;bluestore_kvbackend;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        r = read_meta(<span class="string">"kv_backend"</span>, &amp;kv_backend);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// mkfs也会调用这里，create时候根据配置做bluefs的创建</span></span><br><span class="line">    <span class="keyword">if</span> (create) &#123;</span><br><span class="line">        do_bluefs = cct-&gt;_conf-&gt;bluestore_bluefs;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="built_in">string</span> s;</span><br><span class="line">        r = read_meta(<span class="string">"bluefs"</span>, &amp;s);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    rocksdb::Env *env = <span class="literal">NULL</span>;</span><br><span class="line">    <span class="comment">// 创建bluefs</span></span><br><span class="line">    <span class="keyword">if</span> (do_bluefs) &#123;</span><br><span class="line">        bluefs = <span class="keyword">new</span> BlueFS(cct);</span><br><span class="line">        bfn = path + <span class="string">"/block.db"</span>;</span><br><span class="line">        <span class="keyword">if</span> (::stat(bfn.c_str(), &amp;st) == <span class="number">0</span>) &#123;</span><br><span class="line">            r = bluefs-&gt;add_block_device(BlueFS::BDEV_DB, bfn);</span><br><span class="line">            <span class="keyword">if</span> (bluefs-&gt;bdev_support_label(BlueFS::BDEV_DB)) &#123;</span><br><span class="line">                r = _check_or_set_bdev_label(</span><br><span class="line">                        bfn,</span><br><span class="line">                        bluefs-&gt;get_block_device_size(BlueFS::BDEV_DB),</span><br><span class="line">                        <span class="string">"bluefs db"</span>, create);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (create) &#123;</span><br><span class="line">                bluefs-&gt;add_block_extent(</span><br><span class="line">                    BlueFS::BDEV_DB,</span><br><span class="line">                    SUPER_RESERVED,</span><br><span class="line">                    bluefs-&gt;get_block_device_size(BlueFS::BDEV_DB) - SUPER_RESERVED);</span><br><span class="line">            &#125;</span><br><span class="line">            bluefs_shared_bdev = BlueFS::BDEV_SLOW;</span><br><span class="line">            bluefs_single_shared_device = <span class="literal">false</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (::lstat(bfn.c_str(), &amp;st) == <span class="number">-1</span>) &#123;</span><br><span class="line">                bluefs_shared_bdev = BlueFS::BDEV_DB;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// shared device</span></span><br><span class="line">        bfn = path + <span class="string">"/block"</span>;</span><br><span class="line">        r = bluefs-&gt;add_block_device(bluefs_shared_bdev, bfn);</span><br><span class="line">        </span><br><span class="line">        bfn = path + <span class="string">"/block.wal"</span>;</span><br><span class="line">        <span class="keyword">if</span> (::stat(bfn.c_str(), &amp;st) == <span class="number">0</span>) &#123;</span><br><span class="line">            r = bluefs-&gt;add_block_device(BlueFS::BDEV_WAL, bfn);</span><br><span class="line">            <span class="keyword">if</span> (bluefs-&gt;bdev_support_label(BlueFS::BDEV_WAL)) &#123;</span><br><span class="line">                r = _check_or_set_bdev_label(</span><br><span class="line">                        bfn,</span><br><span class="line">                        bluefs-&gt;get_block_device_size(BlueFS::BDEV_WAL),</span><br><span class="line">                        <span class="string">"bluefs wal"</span>, create);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (create) &#123;</span><br><span class="line">                bluefs-&gt;add_block_extent(</span><br><span class="line">                    BlueFS::BDEV_WAL, BDEV_LABEL_BLOCK_SIZE,</span><br><span class="line">                    bluefs-&gt;get_block_device_size(BlueFS::BDEV_WAL) -</span><br><span class="line">                    BDEV_LABEL_BLOCK_SIZE);</span><br><span class="line">            &#125;</span><br><span class="line">            cct-&gt;_conf-&gt;set_val(<span class="string">"rocksdb_separate_wal_dir"</span>, <span class="string">"true"</span>);</span><br><span class="line">            bluefs_single_shared_device = <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 创建RocksDB</span></span><br><span class="line">    db = KeyValueDB::create(cct,</span><br><span class="line">                            kv_backend,</span><br><span class="line">                            fn,</span><br><span class="line">                            <span class="keyword">static_cast</span>&lt;<span class="keyword">void</span>*&gt;(env));</span><br><span class="line">    </span><br><span class="line">    FreelistManager::setup_merge_operators(db);</span><br><span class="line">    db-&gt;set_merge_operator(PREFIX_STAT, merge_op);</span><br><span class="line"></span><br><span class="line">    db-&gt;set_cache_size(cache_size * cache_kv_ratio);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (kv_backend == <span class="string">"rocksdb"</span>)</span><br><span class="line">        options = cct-&gt;_conf-&gt;bluestore_rocksdb_options;</span><br><span class="line">    db-&gt;init(options);</span><br><span class="line">    <span class="keyword">if</span> (create)</span><br><span class="line">        r = db-&gt;create_and_open(err);</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        r = db-&gt;open(err);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="3-BlockDevice"><a href="#3-BlockDevice" class="headerlink" title="3) BlockDevice"></a>3) BlockDevice</h3><p>定义：<code>BlockDevice *bdev = nullptr;</code></p>
+<p>底层存储BlueStore Data / db / wal的块设备，有如下几种：</p>
+<ol>
+<li>KernelDevice</li>
+<li>NVMEDevice</li>
+<li>PMEMDevice</li>
+</ol>
+<p>代码中对其初始化如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> BlueStore::_open_bdev(<span class="keyword">bool</span> create)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="built_in">string</span> p = path + <span class="string">"/block"</span>;</span><br><span class="line">    bdev = BlockDevice::create(cct, p, aio_cb, <span class="keyword">static_cast</span>&lt;<span class="keyword">void</span>*&gt;(<span class="keyword">this</span>));</span><br><span class="line">    <span class="keyword">int</span> r = bdev-&gt;open(p);</span><br><span class="line">     </span><br><span class="line">    <span class="keyword">if</span> (bdev-&gt;supported_bdev_label()) &#123;</span><br><span class="line">        r = _check_or_set_bdev_label(p, bdev-&gt;get_size(), <span class="string">"main"</span>, create);</span><br><span class="line">    &#125;</span><br><span class="line">     </span><br><span class="line">    <span class="comment">// initialize global block parameters</span></span><br><span class="line">    block_size = bdev-&gt;get_block_size();</span><br><span class="line">    block_mask = ~(block_size - <span class="number">1</span>);</span><br><span class="line">    block_size_order = ctz(block_size);</span><br><span class="line">     </span><br><span class="line">    r = _set_cache_sizes();</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="4-FreelistManager"><a href="#4-FreelistManager" class="headerlink" title="4) FreelistManager"></a>4) FreelistManager</h3><p>定义：<code>FreelistManager *fm = nullptr;</code></p>
+<p>管理BlueStore里空闲blob的；</p>
+<p>默认使用的是：BitmapFreelistManager</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> BlueStore::_open_fm(<span class="keyword">bool</span> create)&#123;</span><br><span class="line">    fm = FreelistManager::create(cct, freelist_type, db, PREFIX_ALLOC);</span><br><span class="line">    <span class="keyword">int</span> r = fm-&gt;init(bdev-&gt;get_size());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="5-Allocator"><a href="#5-Allocator" class="headerlink" title="5) Allocator"></a>5) Allocator</h3><p>定义：<code>Allocator *alloc = nullptr;</code></p>
+<p>BlueStore的blob分配器，支持如下几种：</p>
+<ul>
+<li>BitmapAllocator</li>
+<li>StupidAllocator</li>
+</ul>
+<p>默认使用的是 StupidAllocator；</p>
+<h3 id="6-总结：BlueStore的mount过程"><a href="#6-总结：BlueStore的mount过程" class="headerlink" title="6) 总结：BlueStore的mount过程"></a>6) 总结：BlueStore的mount过程</h3><p>在BlueStore的 mount过程中，会调用各个函数来初始化其使用的各个组件，顺序如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> BlueStore::_mount(<span class="keyword">bool</span> kv_only)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span> r = read_meta(<span class="string">"type"</span>, &amp;type);</span><br><span class="line">    <span class="keyword">if</span> (type != <span class="string">"bluestore"</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> -EIO;</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">int</span> r = _open_path();</span><br><span class="line">    r = _open_fsid(<span class="literal">false</span>);</span><br><span class="line">    r = _read_fsid(&amp;fsid);</span><br><span class="line">    r = _lock_fsid();</span><br><span class="line">    r = _open_bdev(<span class="literal">false</span>);</span><br><span class="line">    r = _open_db(<span class="literal">false</span>);</span><br><span class="line"> </span><br><span class="line">    <span class="keyword">if</span> (kv_only)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"> </span><br><span class="line">    r = _open_super_meta();</span><br><span class="line">    r = _open_fm(<span class="literal">false</span>);</span><br><span class="line">    r = _open_alloc();</span><br><span class="line">    r = _open_collections();</span><br><span class="line">    r = _reload_logger();</span><br><span class="line"> </span><br><span class="line">    <span class="keyword">if</span> (bluefs) &#123;</span><br><span class="line">        r = _reconcile_bluefs_freespace();</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    _kv_start();</span><br><span class="line">    r = _deferred_replay();</span><br><span class="line">    mempool_thread.init();</span><br><span class="line">    mounted = <span class="literal">true</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="RocksDB的定义"><a href="#RocksDB的定义" class="headerlink" title="RocksDB的定义"></a>RocksDB的定义</h2><p>RocksDB的定义如下，基于KeyValueDB实现接口：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Uses RocksDB to implement the KeyValueDB interface</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">RocksDBStore</span> :</span> <span class="keyword">public</span> KeyValueDB &#123;</span><br><span class="line">...</span><br><span class="line">    <span class="built_in">string</span> path;</span><br><span class="line">    <span class="keyword">void</span> *priv;</span><br><span class="line">    rocksdb::DB *db;</span><br><span class="line">    rocksdb::Env *env;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">shared_ptr</span>&lt;rocksdb::Statistics&gt; dbstats;</span><br><span class="line">    rocksdb::BlockBasedTableOptions bbt_opts;</span><br><span class="line">    <span class="built_in">string</span> options_str;</span><br><span class="line"> </span><br><span class="line">    <span class="keyword">uint64_t</span> cache_size = <span class="number">0</span>;</span><br><span class="line">...</span><br><span class="line"> </span><br><span class="line">    <span class="comment">// manage async compactions</span></span><br><span class="line">    Mutex compact_queue_lock;</span><br><span class="line">    Cond compact_queue_cond;</span><br><span class="line">    <span class="built_in">list</span>&lt; pair&lt;<span class="built_in">string</span>,<span class="built_in">string</span>&gt; &gt; compact_queue;</span><br><span class="line">    <span class="keyword">bool</span> compact_queue_stop;</span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">CompactThread</span> :</span> <span class="keyword">public</span> Thread &#123;</span><br><span class="line">        RocksDBStore *db;</span><br><span class="line">    <span class="keyword">public</span>:</span><br><span class="line">        explicit CompactThread(RocksDBStore *d) : db(d) &#123;&#125;</span><br><span class="line">        <span class="function"><span class="keyword">void</span> *<span class="title">entry</span><span class="params">()</span> override </span>&#123;</span><br><span class="line">            db-&gt;compact_thread_entry();</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">friend</span> <span class="class"><span class="keyword">class</span> <span class="title">RocksDBStore</span>;</span></span><br><span class="line">    &#125; compact_thread;</span><br><span class="line">     </span><br><span class="line">...</span><br><span class="line">     </span><br><span class="line">    <span class="class"><span class="keyword">struct</span>  <span class="title">RocksWBHandler</span>:</span> <span class="keyword">public</span> rocksdb::WriteBatch::Handler &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">string</span> seen ;</span><br><span class="line">        <span class="keyword">int</span> num_seen = <span class="number">0</span>;</span><br><span class="line">    &#125;;</span><br><span class="line"> </span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">RocksDBTransactionImpl</span> :</span> <span class="keyword">public</span> KeyValueDB::TransactionImpl &#123;</span><br><span class="line">    <span class="keyword">public</span>:</span><br><span class="line">        rocksdb::WriteBatch bat;</span><br><span class="line">        RocksDBStore *db;</span><br><span class="line">     &#125;;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// DB Iterator的具体实现，比较重要</span></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">RocksDBWholeSpaceIteratorImpl</span> :</span></span><br><span class="line">        <span class="keyword">public</span> KeyValueDB::WholeSpaceIteratorImpl &#123;</span><br><span class="line">    <span class="keyword">protected</span>:</span><br><span class="line">        rocksdb::Iterator *dbiter;</span><br><span class="line">    <span class="keyword">public</span>:</span><br><span class="line">        explicit RocksDBWholeSpaceIteratorImpl(rocksdb::Iterator *iter) :</span><br><span class="line">            dbiter(iter) &#123; &#125;</span><br><span class="line">        <span class="comment">//virtual ~RocksDBWholeSpaceIteratorImpl() &#123; &#125;</span></span><br><span class="line">        ~RocksDBWholeSpaceIteratorImpl() override;</span><br><span class="line"> </span><br><span class="line">        <span class="function"><span class="keyword">int</span> <span class="title">seek_to_first</span><span class="params">()</span> override</span>;</span><br><span class="line">        <span class="function"><span class="keyword">int</span> <span class="title">seek_to_first</span><span class="params">(<span class="keyword">const</span> <span class="built_in">string</span> &amp;prefix)</span> override</span>;</span><br><span class="line">        <span class="function"><span class="keyword">int</span> <span class="title">seek_to_last</span><span class="params">()</span> override</span>;</span><br><span class="line">        <span class="function"><span class="keyword">int</span> <span class="title">seek_to_last</span><span class="params">(<span class="keyword">const</span> <span class="built_in">string</span> &amp;prefix)</span> override</span>;</span><br><span class="line">        <span class="function"><span class="keyword">int</span> <span class="title">upper_bound</span><span class="params">(<span class="keyword">const</span> <span class="built_in">string</span> &amp;prefix, <span class="keyword">const</span> <span class="built_in">string</span> &amp;after)</span> override</span>;</span><br><span class="line">        <span class="function"><span class="keyword">int</span> <span class="title">lower_bound</span><span class="params">(<span class="keyword">const</span> <span class="built_in">string</span> &amp;prefix, <span class="keyword">const</span> <span class="built_in">string</span> &amp;to)</span> override</span>;</span><br><span class="line">        <span class="function"><span class="keyword">bool</span> <span class="title">valid</span><span class="params">()</span> override</span>;</span><br><span class="line">        <span class="function"><span class="keyword">int</span> <span class="title">next</span><span class="params">()</span> override</span>;</span><br><span class="line">        <span class="function"><span class="keyword">int</span> <span class="title">prev</span><span class="params">()</span> override</span>;</span><br><span class="line">        <span class="function"><span class="built_in">string</span> <span class="title">key</span><span class="params">()</span> override</span>;</span><br><span class="line">        pair&lt;<span class="built_in">string</span>,<span class="built_in">string</span>&gt; raw_key() override;</span><br><span class="line">        <span class="function"><span class="keyword">bool</span> <span class="title">raw_key_is_prefixed</span><span class="params">(<span class="keyword">const</span> <span class="built_in">string</span> &amp;prefix)</span> override</span>;</span><br><span class="line">        <span class="function">bufferlist <span class="title">value</span><span class="params">()</span> override</span>;</span><br><span class="line">        <span class="function">bufferptr <span class="title">value_as_ptr</span><span class="params">()</span> override</span>;</span><br><span class="line">        <span class="function"><span class="keyword">int</span> <span class="title">status</span><span class="params">()</span> override</span>;</span><br><span class="line">        <span class="keyword">size_t</span> key_size() override;</span><br><span class="line">        <span class="keyword">size_t</span> value_size() override;</span><br><span class="line">    &#125;;</span><br><span class="line">...</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>基类 KeyValueDB 的定义如下，只罗列了几个关键的基类定义：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Defines virtual interface to be implemented by key value store</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Kyoto Cabinet or LevelDB should implement this</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">KeyValueDB</span> &#123;</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">TransactionImpl</span> &#123;</span></span><br><span class="line">        ...</span><br><span class="line">    &#125;;</span><br><span class="line">    <span class="keyword">typedef</span> ceph::<span class="built_in">shared_ptr</span>&lt; TransactionImpl &gt; Transaction;</span><br><span class="line"> </span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">WholeSpaceIteratorImpl</span> &#123;</span></span><br><span class="line">        ...</span><br><span class="line">    &#125;;</span><br><span class="line">    <span class="keyword">typedef</span> ceph::<span class="built_in">shared_ptr</span>&lt; WholeSpaceIteratorImpl &gt; WholeSpaceIterator;</span><br><span class="line">     </span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">IteratorImpl</span> :</span> <span class="keyword">public</span> GenericIteratorImpl &#123;</span><br><span class="line">        <span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span> prefix;</span><br><span class="line">        WholeSpaceIterator generic_iter;</span><br><span class="line">        ...</span><br><span class="line">        <span class="function"><span class="keyword">int</span> <span class="title">seek_to_first</span><span class="params">()</span> override </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> generic_iter-&gt;seek_to_first(prefix);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">int</span> <span class="title">seek_to_last</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> generic_iter-&gt;seek_to_last(prefix);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">int</span> <span class="title">upper_bound</span><span class="params">(<span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span> &amp;after)</span> override </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> generic_iter-&gt;upper_bound(prefix, after);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">int</span> <span class="title">lower_bound</span><span class="params">(<span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span> &amp;to)</span> override </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> generic_iter-&gt;lower_bound(prefix, to);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">bool</span> <span class="title">valid</span><span class="params">()</span> override </span>&#123;</span><br><span class="line">            <span class="keyword">if</span> (!generic_iter-&gt;valid())</span><br><span class="line">                <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">            <span class="keyword">return</span> generic_iter-&gt;raw_key_is_prefixed(prefix);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;;</span><br><span class="line">    <span class="keyword">typedef</span> ceph::<span class="built_in">shared_ptr</span>&lt; IteratorImpl &gt; Iterator;</span><br><span class="line">     </span><br><span class="line">    <span class="function">WholeSpaceIterator <span class="title">get_iterator</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> _get_iterator();</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    <span class="function">Iterator <span class="title">get_iterator</span><span class="params">(<span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span> &amp;prefix)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="built_in">std</span>::make_shared&lt;IteratorImpl&gt;(prefix, get_iterator());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>在代码中，使用RocksDB的常用方法如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">KeyValueDB::Iterator it;</span><br><span class="line">it = db-&gt;get_iterator(PREFIX_OBJ);       <span class="comment">// 设置key的前缀</span></span><br><span class="line">it-&gt;lower_bound(key); / it-&gt;upper_bound(key);    <span class="comment">// 找到对应key的iterator位置</span></span><br><span class="line"><span class="keyword">while</span> (it-&gt;valid()) &#123;            <span class="comment">// 检查iterator是否有效</span></span><br><span class="line">    ...</span><br><span class="line">    it-&gt;key() / it-&gt;value();;    <span class="comment">// 获取iterator对应的key或value</span></span><br><span class="line">    it-&gt;next();                  <span class="comment">// 获取下一个iterator位置</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="RocksDB里KV分类"><a href="#RocksDB里KV分类" class="headerlink" title="RocksDB里KV分类"></a>RocksDB里KV分类</h2><p>BlueStore里所有的kv数据都可以存储在RocksDB里，实现中通过数据的前缀分类，如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// kv store prefixes</span></span><br><span class="line"><span class="keyword">const</span> <span class="built_in">string</span> PREFIX_SUPER = <span class="string">"S"</span>;   <span class="comment">// field -&gt; value</span></span><br><span class="line"><span class="keyword">const</span> <span class="built_in">string</span> PREFIX_STAT = <span class="string">"T"</span>;    <span class="comment">// field -&gt; value(int64 array)</span></span><br><span class="line"><span class="keyword">const</span> <span class="built_in">string</span> PREFIX_COLL = <span class="string">"C"</span>;    <span class="comment">// collection name -&gt; cnode_t</span></span><br><span class="line"><span class="keyword">const</span> <span class="built_in">string</span> PREFIX_OBJ = <span class="string">"O"</span>;     <span class="comment">// object name -&gt; onode_t</span></span><br><span class="line"><span class="keyword">const</span> <span class="built_in">string</span> PREFIX_OMAP = <span class="string">"M"</span>;    <span class="comment">// u64 + keyname -&gt; value</span></span><br><span class="line"><span class="keyword">const</span> <span class="built_in">string</span> PREFIX_DEFERRED = <span class="string">"L"</span>;  <span class="comment">// id -&gt; deferred_transaction_t</span></span><br><span class="line"><span class="keyword">const</span> <span class="built_in">string</span> PREFIX_ALLOC = <span class="string">"B"</span>;   <span class="comment">// u64 offset -&gt; u64 length (freelist)</span></span><br><span class="line"><span class="keyword">const</span> <span class="built_in">string</span> PREFIX_SHARED_BLOB = <span class="string">"X"</span>; <span class="comment">// u64 offset -&gt; shared_blob_t</span></span><br></pre></td></tr></table></figure>
+<p>下面针对每一类前缀做详细介绍：</p>
+<h3 id="1-PREFIX-SUPER"><a href="#1-PREFIX-SUPER" class="headerlink" title="1) PREFIX_SUPER"></a>1) PREFIX_SUPER</h3><p>BlueStore的超级块信息，里面BlueStore自身的元数据信息，比如：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">S   blobid_max</span><br><span class="line">S   bluefs_extents</span><br><span class="line">S   freelist_type</span><br><span class="line">S   min_alloc_size</span><br><span class="line">S   min_compat_ondisk_format</span><br><span class="line">S   nid_max</span><br><span class="line">S   ondisk_format</span><br></pre></td></tr></table></figure>
+<h3 id="2-PREFIX-STAT"><a href="#2-PREFIX-STAT" class="headerlink" title="2) PREFIX_STAT"></a>2) PREFIX_STAT</h3><p>bluestore_statfs 信息</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BlueStore</span> :</span> <span class="keyword">public</span> ObjectStore,</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">md_config_obs_t</span> &#123;</span><br><span class="line">...</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">volatile_statfs</span> &#123;</span></span><br><span class="line">        <span class="keyword">enum</span> &#123;</span><br><span class="line">            STATFS_ALLOCATED = <span class="number">0</span>,</span><br><span class="line">            STATFS_STORED,</span><br><span class="line">            STATFS_COMPRESSED_ORIGINAL,</span><br><span class="line">            STATFS_COMPRESSED,</span><br><span class="line">            STATFS_COMPRESSED_ALLOCATED,</span><br><span class="line">            STATFS_LAST</span><br><span class="line">        &#125;;</span><br><span class="line">        <span class="keyword">int64_t</span> values[STATFS_LAST];</span><br><span class="line">...</span><br><span class="line">&#125;;</span><br><span class="line"> </span><br><span class="line"> </span><br><span class="line">设置地方：</span><br><span class="line"><span class="keyword">void</span> BlueStore::_txc_update_store_statfs(TransContext *txc)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (txc-&gt;statfs_delta.is_empty())</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">...</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="built_in">std</span>::lock_guard&lt;<span class="built_in">std</span>::mutex&gt; l(vstatfs_lock);</span><br><span class="line">        vstatfs += txc-&gt;statfs_delta;</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    bufferlist bl;</span><br><span class="line">    txc-&gt;statfs_delta.encode(bl);</span><br><span class="line"> </span><br><span class="line">    txc-&gt;t-&gt;merge(PREFIX_STAT, <span class="string">"bluestore_statfs"</span>, bl);</span><br><span class="line">    txc-&gt;statfs_delta.reset();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="3-PREFIX-COLL"><a href="#3-PREFIX-COLL" class="headerlink" title="3) PREFIX_COLL"></a>3) PREFIX_COLL</h3><p>Collection的元数据信息，Collection对应逻辑上的PG，每个ObjectStore都会实现自己的Collection；</p>
+<p>BlueStore存储一个PG，就会存储一个Collection的kv到RocksDB；</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BlueStore</span> :</span> <span class="keyword">public</span> ObjectStore,</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">md_config_obs_t</span> &#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">typedef</span> boost::intrusive_ptr&lt;Collection&gt; CollectionRef;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">Collection</span> :</span> <span class="keyword">public</span> CollectionImpl &#123;</span><br><span class="line">        BlueStore *store;</span><br><span class="line">        Cache *cache;       <span class="comment">///&lt; our cache shard</span></span><br><span class="line">        <span class="keyword">coll_t</span> cid;</span><br><span class="line">        <span class="keyword">bluestore_cnode_t</span> cnode;</span><br><span class="line">        RWLock lock;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">bool</span> exists;</span><br><span class="line"></span><br><span class="line">        SharedBlobSet shared_blob_set;      <span class="comment">///&lt; open SharedBlobs</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">// cache onodes on a per-collection basis to avoid lock</span></span><br><span class="line">        <span class="comment">// contention.</span></span><br><span class="line">        OnodeSpace onode_map;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//pool options</span></span><br><span class="line">        <span class="keyword">pool_opts_t</span> pool_opts;</span><br><span class="line">        ...</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="4-PREFIX-OBJ"><a href="#4-PREFIX-OBJ" class="headerlink" title="4) PREFIX_OBJ"></a>4) PREFIX_OBJ</h3><p>Object的元数据信息，对于存在BlueStore里的任何一个Object，都会把其的struct Onode信息（+其他）作为value写入RocksDB；</p>
+<p>需要访问该Object时，先查询RocksDB，构造出其内存数据结构Onode，再访问之；</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BlueStore</span> :</span> <span class="keyword">public</span> ObjectStore,</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">md_config_obs_t</span> &#123;</span><br><span class="line">    ...  </span><br><span class="line">    <span class="comment">/// an in-memory object</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">Onode</span> &#123;</span></span><br><span class="line">        <span class="built_in">std</span>::<span class="keyword">atomic_int</span> nref;  <span class="comment">///&lt; reference count</span></span><br><span class="line">        Collection *c;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">ghobject_t</span> oid;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/// key under PREFIX_OBJ where we are stored</span></span><br><span class="line">        mempool::bluestore_cache_other::<span class="built_in">string</span> key;</span><br><span class="line"></span><br><span class="line">        boost::intrusive::list_member_hook&lt;&gt; lru_item;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">bluestore_onode_t</span> onode;  <span class="comment">///&lt; metadata stored as value in kv store</span></span><br><span class="line">        <span class="keyword">bool</span> exists;              <span class="comment">///&lt; true if object logically exists</span></span><br><span class="line"></span><br><span class="line">        ExtentMap extent_map;</span><br><span class="line">        ...</span><br><span class="line">    &#125;;</span><br><span class="line">    <span class="keyword">typedef</span> boost::intrusive_ptr&lt;Onode&gt; OnodeRef;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="5-PREFIX-OMAP"><a href="#5-PREFIX-OMAP" class="headerlink" title="5) PREFIX_OMAP"></a>5) PREFIX_OMAP</h3><p>Object的OMap信息，之前存储在Object的attr和Map信息，都通过PREFIX_OMAP前缀保存在RocksDB里；</p>
+<h3 id="6-PREFIX-DEFERRED"><a href="#6-PREFIX-DEFERRED" class="headerlink" title="6) PREFIX_DEFERRED"></a>6) PREFIX_DEFERRED</h3><p>BlueStore Deferred transaction的信息，对应数据结构定义如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/// writeahead-logged transaction</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">bluestore_deferred_transaction_t</span> &#123;</span></span><br><span class="line">    <span class="keyword">uint64_t</span> seq = <span class="number">0</span>;</span><br><span class="line">    <span class="built_in">list</span>&lt;<span class="keyword">bluestore_deferred_op_t</span>&gt; ops;</span><br><span class="line">    interval_set&lt;<span class="keyword">uint64_t</span>&gt; released;  <span class="comment">///&lt; allocations to release after tx</span></span><br><span class="line"> </span><br><span class="line">    <span class="keyword">bluestore_deferred_transaction_t</span>() : seq(<span class="number">0</span>) &#123;&#125;</span><br><span class="line"> </span><br><span class="line">    DENC(<span class="keyword">bluestore_deferred_transaction_t</span>, v, p) &#123;</span><br><span class="line">        DENC_START(<span class="number">1</span>, <span class="number">1</span>, p);</span><br><span class="line">        denc(v.seq, p);</span><br><span class="line">        denc(v.ops, p);</span><br><span class="line">        denc(v.released, p);</span><br><span class="line">        DENC_FINISH(p);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">dump</span><span class="params">(Formatter *f)</span> <span class="keyword">const</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">generate_test_instances</span><span class="params">(<span class="built_in">list</span>&lt;<span class="keyword">bluestore_deferred_transaction_t</span>*&gt;&amp; o)</span></span>;</span><br><span class="line">&#125;;</span><br><span class="line">WRITE_CLASS_DENC(<span class="keyword">bluestore_deferred_transaction_t</span>)</span><br></pre></td></tr></table></figure>
+<h3 id="7-PREFIX-ALLOC"><a href="#7-PREFIX-ALLOC" class="headerlink" title="7) PREFIX_ALLOC"></a>7) PREFIX_ALLOC</h3><p>FreelistManager相关，默认使用BitmapFreelistManager；</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">B       blocks</span><br><span class="line">B       blocks_per_key</span><br><span class="line">B       bytes_per_block</span><br><span class="line">B       size</span><br></pre></td></tr></table></figure>
+<h3 id="8-PREFIX-SHARED-BLOB"><a href="#8-PREFIX-SHARED-BLOB" class="headerlink" title="8) PREFIX_SHARED_BLOB"></a>8) PREFIX_SHARED_BLOB</h3><p>Shared blob的元数据信息，因为blob的size比较大，有可能上面的多个extent maps映射下来；</p>
+<h2 id="RocksDB-tool"><a href="#RocksDB-tool" class="headerlink" title="RocksDB tool"></a>RocksDB tool</h2><p>ceph提供了一个命令来获取一个kvstore里的数据：ceph-kvstore-tool，help如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">root@ceph6:~<span class="meta"># ceph-kvstore-tool -h</span></span><br><span class="line">Usage: ceph-kvstore-tool &lt;leveldb|rocksdb|bluestore-kv&gt; &lt;store path&gt; command [args...]</span><br><span class="line"> </span><br><span class="line">Commands:</span><br><span class="line">  <span class="built_in">list</span> [prefix]</span><br><span class="line">  <span class="built_in">list</span>-crc [prefix]</span><br><span class="line">  exists &lt;prefix&gt; [key]</span><br><span class="line">  get &lt;prefix&gt; &lt;key&gt; [out &lt;file&gt;]</span><br><span class="line">  crc &lt;prefix&gt; &lt;key&gt;</span><br><span class="line">  get-size [&lt;prefix&gt; &lt;key&gt;]</span><br><span class="line">  <span class="built_in">set</span> &lt;prefix&gt; &lt;key&gt; [ver &lt;N&gt;|in &lt;file&gt;]</span><br><span class="line">  rm &lt;prefix&gt; &lt;key&gt;</span><br><span class="line">  rm-prefix &lt;prefix&gt;</span><br><span class="line">  store-copy &lt;path&gt; [num-keys-per-tx] [leveldb|rocksdb|...]</span><br><span class="line">  store-crc &lt;path&gt;</span><br><span class="line">  compact</span><br><span class="line">  compact-prefix &lt;prefix&gt;</span><br><span class="line">  compact-range &lt;prefix&gt; &lt;start&gt; &lt;end&gt;</span><br><span class="line">  repair</span><br></pre></td></tr></table></figure>
+<p>使用示例：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">root@ceph6:~<span class="meta"># systemctl stop ceph-osd@20.service</span></span><br><span class="line"> </span><br><span class="line"> </span><br><span class="line">root@ceph6:~<span class="meta"># ceph-kvstore-tool bluestore-kv /var/lib/ceph/osd/ceph-20/ list B &gt; list-B</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.679</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bluestore(/var/lib/ceph/osd/ceph<span class="number">-20</span>/) _mount path /var/lib/ceph/osd/ceph<span class="number">-20</span>/</span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.679</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev create path /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block type kernel</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.679</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev(<span class="number">0x55ddf4e58000</span> /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block) open path /var/lib/ceph/osd/ceph-20//block</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.679</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev(<span class="number">0x55ddf4e58000</span> /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block) open size 4000783007744 (0x3a381400000, 3.6 TiB) block_size 4096 (4 KiB) rotational</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.679</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bluestore(/var/lib/ceph/osd/ceph<span class="number">-20</span>/) _set_cache_sizes cache_size <span class="number">1073741824</span> meta <span class="number">0.5</span> kv <span class="number">0.5</span> data <span class="number">0</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.679</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev create path /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block.db type kernel</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.679</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev(<span class="number">0x55ddf4e58380</span> /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block.db) open path /var/lib/ceph/osd/ceph-20//block.db</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.679</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev(<span class="number">0x55ddf4e58380</span> /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block.db) open size 3221225472 (0xc0000000, 3 GiB) block_size 4096 (4 KiB) non-rotational</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.679</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bluefs add_block_device bdev <span class="number">1</span> path /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block.db size 3 GiB</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.679</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev create path /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block type kernel</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.679</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev(<span class="number">0x55ddf4e58700</span> /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block) open path /var/lib/ceph/osd/ceph-20//block</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.683</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev(<span class="number">0x55ddf4e58700</span> /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block) open size 4000783007744 (0x3a381400000, 3.6 TiB) block_size 4096 (4 KiB) rotational</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.683</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bluefs add_block_device bdev <span class="number">2</span> path /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block size 3.6 TiB</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.683</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev create path /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block.wal type kernel</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.683</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev(<span class="number">0x55ddf4e58a80</span> /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block.wal) open path /var/lib/ceph/osd/ceph-20//block.wal</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.683</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev(<span class="number">0x55ddf4e58a80</span> /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block.wal) open size 3221225472 (0xc0000000, 3 GiB) block_size 4096 (4 KiB) non-rotational</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.683</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bluefs add_block_device bdev <span class="number">0</span> path /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block.wal size 3 GiB</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.683</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bluefs mount</span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">0</span>  <span class="built_in">set</span> rocksdb option compaction_readahead_size = <span class="number">2097152</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">0</span>  <span class="built_in">set</span> rocksdb option compression = kNoCompression</span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">0</span>  <span class="built_in">set</span> rocksdb option max_write_buffer_number = <span class="number">4</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">0</span>  <span class="built_in">set</span> rocksdb option min_write_buffer_number_to_merge = <span class="number">1</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">0</span>  <span class="built_in">set</span> rocksdb option recycle_log_file_num = <span class="number">4</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">0</span>  <span class="built_in">set</span> rocksdb option writable_file_max_buffer_size = <span class="number">0</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">0</span>  <span class="built_in">set</span> rocksdb option write_buffer_size = <span class="number">268435456</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">0</span>  <span class="built_in">set</span> rocksdb option compaction_readahead_size = <span class="number">2097152</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">0</span>  <span class="built_in">set</span> rocksdb option compression = kNoCompression</span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">0</span>  <span class="built_in">set</span> rocksdb option max_write_buffer_number = <span class="number">4</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">0</span>  <span class="built_in">set</span> rocksdb option min_write_buffer_number_to_merge = <span class="number">1</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">0</span>  <span class="built_in">set</span> rocksdb option recycle_log_file_num = <span class="number">4</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">0</span>  <span class="built_in">set</span> rocksdb option writable_file_max_buffer_size = <span class="number">0</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">0</span>  <span class="built_in">set</span> rocksdb option write_buffer_size = <span class="number">268435456</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.691</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> rocksdb: do_open column families: [<span class="keyword">default</span>]</span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.699</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bluestore(/var/lib/ceph/osd/ceph<span class="number">-20</span>/) _open_db opened rocksdb path db options compression=kNoCompression,max_write_buffer_number=<span class="number">4</span>,min_write_buffer_number_to_merge=<span class="number">1</span>,recycle_log_file_num=<span class="number">4</span>,write_buffer_size=<span class="number">268435456</span>,writable_file_max_buffer_size=<span class="number">0</span>,compaction_readahead_size=<span class="number">2097152</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.703</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bluestore(/var/lib/ceph/osd/ceph<span class="number">-20</span>/) umount</span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.703</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bluefs umount</span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.703</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> stupidalloc <span class="number">0x0</span>x55ddf4a92a70 shutdown</span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.703</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> stupidalloc <span class="number">0x0</span>x55ddf4a92ae0 shutdown</span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.703</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> stupidalloc <span class="number">0x0</span>x55ddf4a92b50 shutdown</span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.703</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev(<span class="number">0x55ddf4e58a80</span> /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block.wal) close</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">42.991</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev(<span class="number">0x55ddf4e58380</span> /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block.db) close</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">43.227</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev(<span class="number">0x55ddf4e58700</span> /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block) close</span></span><br><span class="line"><span class="number">2018</span><span class="number">-09</span><span class="number">-21</span> <span class="number">11</span>:<span class="number">43</span>:<span class="number">43.463</span> <span class="number">7f</span>4ec14deb80  <span class="number">1</span> bdev(<span class="number">0x55ddf4e58000</span> /var/lib/ceph/osd/ceph<span class="number">-20</span><span class="comment">//block) close</span></span><br><span class="line"> </span><br><span class="line"> </span><br><span class="line">root@ceph6:~# systemctl start ceph-osd@<span class="number">20.</span>service</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>红包</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/Bluestore/" rel="tag"># Bluestore</a>
+          
+            <a href="/tags/RocksDB/" rel="tag"># RocksDB</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/09/28/cephfs-client-evict-intro/" rel="next" title="CephFS client evict子命令使用">
+                <i class="fa fa-chevron-left"></i> CephFS client evict子命令使用
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">86</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">59</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BlueStore架构"><span class="nav-number">2.</span> <span class="nav-text">BlueStore架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BlueStore结构体定义"><span class="nav-number">3.</span> <span class="nav-text">BlueStore结构体定义</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-BlueFS"><span class="nav-number">3.1.</span> <span class="nav-text">1) BlueFS</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-RocksDB"><span class="nav-number">3.2.</span> <span class="nav-text">2) RocksDB</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-BlockDevice"><span class="nav-number">3.3.</span> <span class="nav-text">3) BlockDevice</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-FreelistManager"><span class="nav-number">3.4.</span> <span class="nav-text">4) FreelistManager</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-Allocator"><span class="nav-number">3.5.</span> <span class="nav-text">5) Allocator</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-总结：BlueStore的mount过程"><span class="nav-number">3.6.</span> <span class="nav-text">6) 总结：BlueStore的mount过程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RocksDB的定义"><span class="nav-number">4.</span> <span class="nav-text">RocksDB的定义</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RocksDB里KV分类"><span class="nav-number">5.</span> <span class="nav-text">RocksDB里KV分类</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-PREFIX-SUPER"><span class="nav-number">5.1.</span> <span class="nav-text">1) PREFIX_SUPER</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-PREFIX-STAT"><span class="nav-number">5.2.</span> <span class="nav-text">2) PREFIX_STAT</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-PREFIX-COLL"><span class="nav-number">5.3.</span> <span class="nav-text">3) PREFIX_COLL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-PREFIX-OBJ"><span class="nav-number">5.4.</span> <span class="nav-text">4) PREFIX_OBJ</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-PREFIX-OMAP"><span class="nav-number">5.5.</span> <span class="nav-text">5) PREFIX_OMAP</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-PREFIX-DEFERRED"><span class="nav-number">5.6.</span> <span class="nav-text">6) PREFIX_DEFERRED</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-PREFIX-ALLOC"><span class="nav-number">5.7.</span> <span class="nav-text">7) PREFIX_ALLOC</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-PREFIX-SHARED-BLOB"><span class="nav-number">5.8.</span> <span class="nav-text">8) PREFIX_SHARED_BLOB</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RocksDB-tool"><span class="nav-number">6.</span> <span class="nav-text">RocksDB tool</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.yangguanjun.com/2018/10/25/ceph-bluestore-rocksdb-analyse/';
+          this.page.identifier = '2018/10/25/ceph-bluestore-rocksdb-analyse/';
+          this.page.title = 'Ceph Bluestore RocksDB Analyse';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
