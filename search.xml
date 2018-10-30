@@ -999,8 +999,8 @@
       </categories>
       <tags>
         <tag>ceph</tag>
-        <tag>memstore</tag>
         <tag>radosgw</tag>
+        <tag>memstore</tag>
         <tag>cache tiering</tag>
       </tags>
   </entry>
@@ -1014,8 +1014,8 @@
       <tags>
         <tag>ceph</tag>
         <tag>memstore</tag>
-        <tag>rest-bench</tag>
         <tag>filestore</tag>
+        <tag>rest-bench</tag>
       </tags>
   </entry>
   <entry>
