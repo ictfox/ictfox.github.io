@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,cephfs,kernel," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="概述在使用CephFS的kernel client后，发现它对比ceph-fuse客户端，不方便找到对应的log了，在dmesg或kern.log里也仅有很少的log输出，这在遇到问题的时候很不方便，需要找到打印Ceph kernel log的方法。 代码定义Ceph的kernel module有两个，如下：12345root@ceph2:~# lsmod | grep cephceph">
+<meta name="keywords" content="ceph,cephfs,kernel">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Ceph Kernel module dynamic debug">
+<meta property="og:url" content="http://www.yangguanjun.com/2018/11/08/ceph-kernel-module-dynamic-debug/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述在使用CephFS的kernel client后，发现它对比ceph-fuse客户端，不方便找到对应的log了，在dmesg或kern.log里也仅有很少的log输出，这在遇到问题的时候很不方便，需要找到打印Ceph kernel log的方法。 代码定义Ceph的kernel module有两个，如下：12345root@ceph2:~# lsmod | grep cephceph">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2018-11-09T14:12:33.841Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Ceph Kernel module dynamic debug">
+<meta name="twitter:description" content="概述在使用CephFS的kernel client后，发现它对比ceph-fuse客户端，不方便找到对应的log了，在dmesg或kern.log里也仅有很少的log输出，这在遇到问题的时候很不方便，需要找到打印Ceph kernel log的方法。 代码定义Ceph的kernel module有两个，如下：12345root@ceph2:~# lsmod | grep cephceph">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.yangguanjun.com/2018/11/08/ceph-kernel-module-dynamic-debug/"/>
+
+
+
+
+
+  <title>Ceph Kernel module dynamic debug | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-7472013512056838",
+    enable_page_level_ads: true
+  });
+</script>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2018/11/08/ceph-kernel-module-dynamic-debug/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Ceph Kernel module dynamic debug</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-11-08T21:00:34+08:00">
+                2018-11-08
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/11/08/ceph-kernel-module-dynamic-debug/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/11/08/ceph-kernel-module-dynamic-debug/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在使用CephFS的kernel client后，发现它对比ceph-fuse客户端，不方便找到对应的log了，在dmesg或kern.log里也仅有很少的log输出，这在遇到问题的时候很不方便，需要找到打印Ceph kernel log的方法。</p>
+<h2 id="代码定义"><a href="#代码定义" class="headerlink" title="代码定义"></a>代码定义</h2><p>Ceph的kernel module有两个，如下：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">root@ceph2:~<span class="comment"># lsmod | grep ceph</span></span><br><span class="line">ceph                  385024  0</span><br><span class="line">libceph               315392  1 ceph</span><br><span class="line">fscache               368640  1 ceph</span><br><span class="line">libcrc32c              16384  8 nf_conntrack,nf_nat,dm_persistent_data,btrfs,xfs,raid456,libceph,ip_vs</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>ceph：CephFS kernel client模块</li>
+<li>libceph：Ceph kernel网络通信模块</li>
+</ul>
+<p>在Ceph kernel的代码里，有两类log输出机制：</p>
+<ol>
+<li><p>pr_debug 输出<br>分为 info / warning / error等好多种，调用 printk 输出；</p>
+</li>
+<li><p>dout 输出<br>Kernel里对应Dynamic Debug；</p>
+</li>
+</ol>
+<h3 id="pr-debug"><a href="#pr-debug" class="headerlink" title="pr_debug"></a>pr_debug</h3><p>通过调用 printk 的指定log级别输出；</p>
+<p>文件：include/linux/printk.h<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * These can be used to print at the various log levels.</span></span><br><span class="line"><span class="comment"> * All of these will print unconditionally, although note that pr_debug()</span></span><br><span class="line"><span class="comment"> * and other debug macros are compiled out unless either DEBUG is defined</span></span><br><span class="line"><span class="comment"> * or CONFIG_DYNAMIC_DEBUG is set.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> pr_emerg(fmt, ...) \</span></span><br><span class="line">    printk(KERN_EMERG pr_fmt(fmt), ##__VA_ARGS__)</span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> pr_alert(fmt, ...) \</span></span><br><span class="line">    printk(KERN_ALERT pr_fmt(fmt), ##__VA_ARGS__)</span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> pr_crit(fmt, ...) \</span></span><br><span class="line">    printk(KERN_CRIT pr_fmt(fmt), ##__VA_ARGS__)</span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> pr_err(fmt, ...) \</span></span><br><span class="line">    printk(KERN_ERR pr_fmt(fmt), ##__VA_ARGS__)</span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> pr_warning(fmt, ...) \</span></span><br><span class="line">    printk(KERN_WARNING pr_fmt(fmt), ##__VA_ARGS__)</span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> pr_warn pr_warning</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> pr_notice(fmt, ...) \</span></span><br><span class="line">    printk(KERN_NOTICE pr_fmt(fmt), ##__VA_ARGS__)</span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> pr_info(fmt, ...) \</span></span><br><span class="line">    printk(KERN_INFO pr_fmt(fmt), ##__VA_ARGS__)</span><br></pre></td></tr></table></figure></p>
+<h3 id="dout"><a href="#dout" class="headerlink" title="dout"></a>dout</h3><p>ceph kernel代码里log大部分使用dout输出，它的定义如下： </p>
+<p>文件：include/linux/ceph/ceph_debug.h<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* SPDX-License-Identifier: GPL-2.0 */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> _FS_CEPH_DEBUG_H</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> _FS_CEPH_DEBUG_H</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> pr_fmt(fmt) KBUILD_MODNAME <span class="meta-string">": "</span> fmt</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/string.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CONFIG_CEPH_LIB_PRETTYDEBUG</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * wrap pr_debug to include a filename:lineno prefix on each line.</span></span><br><span class="line"><span class="comment"> * this incurs some overhead (kernel size and execution time) due to</span></span><br><span class="line"><span class="comment"> * the extra function call at each call site.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line"><span class="meta"># <span class="meta-keyword">if</span> defined(DEBUG) || defined(CONFIG_DYNAMIC_DEBUG)</span></span><br><span class="line"><span class="meta">#  <span class="meta-keyword">define</span> dout(fmt, ...)                        \</span></span><br><span class="line">    pr_debug(<span class="string">"%.*s %12.12s:%-4d : "</span> fmt,                \</span><br><span class="line">         <span class="number">8</span> - (<span class="keyword">int</span>)<span class="keyword">sizeof</span>(KBUILD_MODNAME), <span class="string">"    "</span>,       \</span><br><span class="line">         kbasename(__FILE__), __LINE__, ##__VA_ARGS__)</span><br><span class="line"><span class="meta"># <span class="meta-keyword">else</span></span></span><br><span class="line"><span class="comment">/* faux printk call just to see any compiler warnings. */</span></span><br><span class="line"><span class="meta">#  <span class="meta-keyword">define</span> dout(fmt, ...)    do &#123;                \</span></span><br><span class="line">        <span class="keyword">if</span> (<span class="number">0</span>)                      \</span><br><span class="line">            printk(KERN_DEBUG fmt, ##__VA_ARGS__);  \</span><br><span class="line">    &#125; <span class="keyword">while</span> (<span class="number">0</span>)</span><br><span class="line"><span class="meta"># <span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * or, just wrap pr_debug</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta"># <span class="meta-keyword">define</span> dout(fmt, ...) pr_debug(<span class="meta-string">" "</span> fmt, ##__VA_ARGS__)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br></pre></td></tr></table></figure></p>
+<p>从上面可以看出，如果内核支持了 CONFIG_DYNAMIC_DEBUG，那我们就可以动态获取到这部分debug输出了； </p>
+<h2 id="系统Dynamic-Debug支持"><a href="#系统Dynamic-Debug支持" class="headerlink" title="系统Dynamic Debug支持"></a>系统Dynamic Debug支持</h2><p>在机器上检查kernel是不是支持 CONFIG_DYNAMIC_DEBUG： </p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">root@ceph2:/boot<span class="comment"># uname -a </span></span><br><span class="line">Linux ceph2 4.18.5-041805-generic <span class="comment">#201808241320 SMP Fri Aug 24 13:22:12 UTC 2018 x86_64 x86_64 x86_64 GNU/Linux </span></span><br><span class="line">root@ceph2:/boot<span class="comment"># grep CONFIG_DYNAMIC_DEBUG config-4.18.5-041805-generic </span></span><br><span class="line">CONFIG_DYNAMIC_DEBUG=y</span><br></pre></td></tr></table></figure>
+<p>如果输出如上述，则表示使用的linux kernel支持了CONFIG_DYNAMIC_DEBUG，那就可以动态获取Ceph kernel module的输出了； </p>
+<p>获取debugfs的目录：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">root@ceph2:~<span class="comment"># mount | grep debugfs </span></span><br><span class="line">debugfs on /sys/kernel/debug <span class="built_in">type</span> debugfs (rw,relatime) </span><br><span class="line"></span><br><span class="line">root@ceph2:~<span class="comment"># cd /sys/kernel/debug/ </span></span><br><span class="line">root@ceph2:/sys/kernel/debug<span class="comment"># cd dynamic_debug/ </span></span><br><span class="line">root@ceph2:/sys/kernel/debug/dynamic_debug<span class="comment"># ls </span></span><br><span class="line">control</span><br></pre></td></tr></table></figure></p>
+<p>查看对应Ceph都有哪些Dynamic Debug支持：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">root@ceph2:/sys/kernel/debug/dynamic_debug<span class="comment"># cat control | grep ceph | wc -l </span></span><br><span class="line">975 </span><br><span class="line"></span><br><span class="line">root@ceph2:/sys/kernel/debug/dynamic_debug<span class="comment"># cat control | grep ceph | less </span></span><br><span class="line">net/ceph/ceph_common.c:787 [libceph]exit_ceph_lib =_ <span class="string">" exit_ceph_lib\012"</span> </span><br><span class="line">net/ceph/ceph_common.c:739 [libceph]ceph_open_session =_ <span class="string">" open_session start\012” </span></span><br><span class="line"><span class="string">...</span></span><br><span class="line"><span class="string">fs/ceph/cache.c:212 [ceph]ceph_fscache_file_set_cookie =_ "</span> fscache_file_set_cookie %p %p enabling cache\012<span class="string">" </span></span><br><span class="line"><span class="string">fs/ceph/cache.c:204 [ceph]ceph_fscache_file_set_cookie =_ "</span> fscache_file_set_cookie %p %p disabling cache\012<span class="string">" </span></span><br><span class="line"><span class="string">fs/ceph/cache.c:138 [ceph]ceph_fscache_inode_check_aux =_ "</span> ceph inode 0x%p cached okay\012<span class="string">"</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="Dynamic-Debug介绍"><a href="#Dynamic-Debug介绍" class="headerlink" title="Dynamic Debug介绍"></a>Dynamic Debug介绍</h2><h3 id="模式分类"><a href="#模式分类" class="headerlink" title="模式分类"></a>模式分类</h3><p>Linux Kernel里的Dynamic Debug支持好几种配置模式，介绍如下：</p>
+<p>1、func<br>输出指定函数的log<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> -n <span class="string">'func xxx +p'</span> &gt; /sys/kernel/debug/dynamic_debug/control </span><br><span class="line"><span class="built_in">echo</span> -n <span class="string">'func xxx -p'</span> &gt; /sys/kernel/debug/dynamic_debug/control</span><br></pre></td></tr></table></figure></p>
+<p>比如：ceph_open_session，则会打印这个函数内的所有log </p>
+<p>2、file<br>输出指定文件的log<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> -n <span class="string">'file xxx.c +p'</span> &gt; /sys/kernel/debug/dynamic_debug/control </span><br><span class="line"><span class="built_in">echo</span> -n <span class="string">'file xxx.c -p'</span> &gt; /sys/kernel/debug/dynamic_debug/control</span><br></pre></td></tr></table></figure></p>
+<p>比如：ceph_common.c，则会打印该文件内的所有log </p>
+<p>3、module<br>输出指定模块的log<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> -n <span class="string">'module xxx.c +p'</span> &gt; /sys/kernel/debug/dynamic_debug/control </span><br><span class="line"><span class="built_in">echo</span> -n <span class="string">'module xxx.c -p'</span> &gt; /sys/kernel/debug/dynamic_debug/control</span><br></pre></td></tr></table></figure></p>
+<p>比如：libceph/ceph，则会打印libceph或ceph模块的所有log </p>
+<p>当前ceph相关的就这两个模块； </p>
+<p>4、format<br>输出符合指定格式的log<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> -n <span class="string">'format xxx +p'</span> &gt; /sys/kernel/debug/dynamic_debug/control </span><br><span class="line"><span class="built_in">echo</span> -n <span class="string">'format xxx -p'</span> &gt; /sys/kernel/debug/dynamic_debug/control</span><br></pre></td></tr></table></figure></p>
+<p>比如：get_session，则只会打印匹配这个字符串的log </p>
+<p>5、line<br>输出指定行号的log<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> -n <span class="string">'file xxx line xxx +p'</span> &gt; /sys/kernel/debug/dynamic_debug/control </span><br><span class="line"><span class="built_in">echo</span> -n <span class="string">'file xxx line xxx -p'</span> &gt; /sys/kernel/debug/dynamic_debug/control</span><br></pre></td></tr></table></figure></p>
+<p>比如：100-200，则只会打印指定文件里100行-200行内的log </p>
+<p>不同line指定的含义介绍如下：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">line 1603           // exactly line 1603 </span><br><span class="line">line 1600-1605      // the six lines from line 1600 to line 1605 </span><br><span class="line">line -1605          // the 1605 lines from line 1 to line 1605 </span><br><span class="line">line 1600-          // all lines from line 1600 to the end of the file</span><br></pre></td></tr></table></figure></p>
+<h3 id="Flag说明"><a href="#Flag说明" class="headerlink" title="Flag说明"></a>Flag说明</h3><p>上述+-号含义如下： </p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">\-    remove the given flags </span><br><span class="line">\+    add the given flags </span><br><span class="line">=    <span class="built_in">set</span> the flags to the given flags</span><br></pre></td></tr></table></figure>
+<p>支持的flag有：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">p    enables the pr_debug() callsite. </span><br><span class="line">f    Include the <span class="keyword">function</span> name <span class="keyword">in</span> the printed message </span><br><span class="line">l    Include line number <span class="keyword">in</span> the printed message </span><br><span class="line">m    Include module name <span class="keyword">in</span> the printed message </span><br><span class="line">t    Include thread ID <span class="keyword">in</span> messages not generated from interrupt context </span><br><span class="line">_    No flags are <span class="built_in">set</span>. (Or<span class="string">'d with others on input)</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="自动配置Dynamic-Debug"><a href="#自动配置Dynamic-Debug" class="headerlink" title="自动配置Dynamic Debug"></a>自动配置Dynamic Debug</h2><p>如何自动配置dynamic debug？ </p>
+<p>通常有三种办法： </p>
+<p>1、添加模块加载的配置<br>2、添加boot args，修改/proc/cmdline<br>3、传递参数给modprobe </p>
+<p>下面介绍通过模块加载时候指定参数的办法： </p>
+<p>在/etc/modprobe.d/目录创建 <module-name>.conf 文件，然后在里面添加dyndbg配置： </module-name></p>
+<p>如下所示：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@ceph2:/etc/modprobe.d<span class="comment"># cat ceph.conf </span></span><br><span class="line">options ceph dyndbg=<span class="string">"format get_session +p"</span></span><br></pre></td></tr></table></figure></p>
+<p>之后就可以通过dmesg或者在kern.log里查看ceph kernel module的log了 ：） 测试如下： </p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">root@ceph2:/etc/modprobe.d<span class="comment"># rmmod ceph </span></span><br><span class="line">root@ceph2:/etc/modprobe.d<span class="comment"># modprobe ceph </span></span><br><span class="line">root@ceph2:/etc/modprobe.d<span class="comment"># mount -t ceph 100.64.0.21,100.64.0.22,100.64.0.26:/ /mnt/cephfs </span></span><br><span class="line">root@ceph2:/etc/modprobe.d<span class="comment"># dmesg -T | tail -n 5 </span></span><br><span class="line">[Thu Oct 25 19:54:13 2018] ceph:  mdsc get_session 0000000046b3700b 2 -&gt; 3 </span><br><span class="line">[Thu Oct 25 19:54:13 2018] ceph:  mdsc get_session 0000000096e295d5 1 -&gt; 2 </span><br><span class="line">[Thu Oct 25 19:54:13 2018] ceph:  mdsc get_session 0000000096e295d5 2 -&gt; 3 </span><br><span class="line">[Thu Oct 25 19:54:13 2018] ceph:  mdsc get_session 0000000046b3700b 1 -&gt; 2 </span><br><span class="line">[Thu Oct 25 19:54:13 2018] ceph:  mdsc get_session 0000000046b3700b 2 -&gt; 3</span><br></pre></td></tr></table></figure>
+<h2 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章"></a>参考文章</h2><p><a href="https://lwn.net/Articles/434856/" target="_blank" rel="noopener">https://lwn.net/Articles/434856/</a><br><a href="https://www.kernel.org/doc/html/v4.18/admin-guide/dynamic-debug-howto.html" target="_blank" rel="noopener">https://www.kernel.org/doc/html/v4.18/admin-guide/dynamic-debug-howto.html</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>红包</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/cephfs/" rel="tag"># cephfs</a>
+          
+            <a href="/tags/kernel/" rel="tag"># kernel</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/10/25/ceph-bluestore-rocksdb-analyse/" rel="next" title="Ceph Bluestore RocksDB Analyse">
+                <i class="fa fa-chevron-left"></i> Ceph Bluestore RocksDB Analyse
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">87</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">60</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#代码定义"><span class="nav-number">2.</span> <span class="nav-text">代码定义</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#pr-debug"><span class="nav-number">2.1.</span> <span class="nav-text">pr_debug</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#dout"><span class="nav-number">2.2.</span> <span class="nav-text">dout</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#系统Dynamic-Debug支持"><span class="nav-number">3.</span> <span class="nav-text">系统Dynamic Debug支持</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Dynamic-Debug介绍"><span class="nav-number">4.</span> <span class="nav-text">Dynamic Debug介绍</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#模式分类"><span class="nav-number">4.1.</span> <span class="nav-text">模式分类</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Flag说明"><span class="nav-number">4.2.</span> <span class="nav-text">Flag说明</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#自动配置Dynamic-Debug"><span class="nav-number">5.</span> <span class="nav-text">自动配置Dynamic Debug</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文章"><span class="nav-number">6.</span> <span class="nav-text">参考文章</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.yangguanjun.com/2018/11/08/ceph-kernel-module-dynamic-debug/';
+          this.page.identifier = '2018/11/08/ceph-kernel-module-dynamic-debug/';
+          this.page.title = 'Ceph Kernel module dynamic debug';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
