@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title><![CDATA[Build CephFS Kernel Module with Latest Codes]]></title>
+    <url>%2F2018%2F12%2F03%2Fbuild-cephfs-kernel-module-with-latest-codes%2F</url>
+    <content type="text"><![CDATA[概述使用CephFS的时候，若需要获取较高的性能，kernel client是一定会使用到的，但它的每次更新都需要升级Linux内核，这样影响比较大，很多时候是不能接受的。 其实我们可以通过拉取Linux对应版本的源码，把最新的CephFS kernel代码merge进当前系统对应版本的源码上，然后进行编译，成功后替换CephFS模块。 这种方法要求两个Linux Kernel Version相差不要太大，不然代码的merge会很痛苦的，也很容易出错！ 编译安装CephFS模块下载内核源码比如当前Linux的最新稳定版本为：4.19.1，我们使用CephFS kernel client的内核版本为：4.18.5。 则通过wget下载4.18.5和4.19.1内核代码： 12# wget https://mirrors.edge.kernel.org/pub/linux/kernel/v4.x/linux-4.18.5.tar.xz# wget https://mirrors.edge.kernel.org/pub/linux/kernel/v4.x/linux-4.19.1.tar.xz 解压缩12root@ceph1:~# tar -xvf linux-4.18.5.tar.xzroot@ceph1:~# tar -xvf linux-4.19.1.tar.xz 编译根据当前机器的版本信息，修改源码的Makefile文件，并执行编译：1234567891011root@ceph1:~# uname -aLinux ceph1 4.18.5-041805-generic #201808241320 SMP Fri Aug 24 13:22:12 UTC 2018 x86_64 x86_64 x86_64 GNU/Linuxroot@ceph1:~# cd linux-4.18.5root@ceph1:~/linux-4.18.5# vim Makefile...VERSION = 4PATCHLEVEL = 18SUBLEVEL = 5EXTRAVERSION = -041805-genericroot@ceph1:~/linux-4.18.5# make menuconfigroot@ceph1:~/linux-4.18.5# make 上述命令或花费数个小时，请通过screen来执行。 注：根据make的输出安装依赖的packages 以后修改Ceph模块代码后，对于Ceph模块的编译，只需要执行如下命令： 1root@ceph1:~/linux-4.18.5# make m=fs/ceph 安装编译后Ceph相关的模块主要有如下几个，通过insmod安装即可： 123456789root@ceph1:~/linux-4.18.5# insmod net/ceph/libceph.koroot@ceph1:~/linux-4.18.5# insmod drivers/block/rbd.koroot@ceph1:~/linux-4.18.5# insmod fs/fscache/fscache.koroot@ceph1:~/linux-4.18.5# insmod fs/ceph/ceph.koroot@ceph1:~/linux-4.18.5# lsmod | grep cephceph 380928 0fscache 364544 1 cephlibceph 315392 2 ceph,rbdlibcrc32c 16384 5 nf_conntrack,nf_nat,btrfs,raid456,libceph 注：若机器本来已经安装了ceph模块，依据上述安装module的逆序卸载即可(rmmod命令) 代码合并Linux源码中，与ceph相关的代码有以下几个位置： 1234fs/ceph/net/ceph/drivers/block/rbd*include/linux/ceph/ 若要使用较新内核版本里的Ceph代码在4.18.5内核上编译模块，需要把对应上面的所有Ceph代码copy替换掉，然后依据上面的编译步骤开始编译； 可以在如下的链接里查看内核4.19.1和4.18.5的代码修改： v4.19.1 diff with v4.18.5 可以看出里面ceph相关代码有很大的变动！ 注意事项： 因为不同内核版本里的函数名称、接口和代码都可能变化，要依据编译出错和提示修改替换后的代码，使之能够在4.18.5内核上编译通过 编译成功后，使用新的ceph module替换4.18.5里的ceph module即可，要在测试机器上先测试一下，因为很可能会有kernel panic]]></content>
+      <categories>
+        <category>ceph</category>
+      </categories>
+      <tags>
+        <tag>ceph</tag>
+        <tag>cephfs</tag>
+        <tag>kernel</tag>
+      </tags>
+  </entry>
+  <entry>
     <title><![CDATA[Ceph Kernel module dynamic debug]]></title>
     <url>%2F2018%2F11%2F08%2Fceph-kernel-module-dynamic-debug%2F</url>
     <content type="text"><![CDATA[概述在使用CephFS的kernel client后，发现它对比ceph-fuse客户端，不方便找到对应的log了，在dmesg或kern.log里也仅有很少的log输出，这在遇到问题的时候很不方便，需要找到打印Ceph kernel log的方法。 代码定义Ceph的kernel module有两个，如下：12345root@ceph2:~# lsmod | grep cephceph 385024 0libceph 315392 1 cephfscache 368640 1 cephlibcrc32c 16384 8 nf_conntrack,nf_nat,dm_persistent_data,btrfs,xfs,raid456,libceph,ip_vs ceph：CephFS kernel client模块 libceph：Ceph kernel网络通信模块 在Ceph kernel的代码里，有两类log输出机制： pr_debug 输出分为 info / warning / error等好多种，调用 printk 输出； dout 输出Kernel里对应Dynamic Debug； pr_debug通过调用 printk 的指定log级别输出； 文件：include/linux/printk.h123456789101112131415161718192021/* * These can be used to print at the various log levels. * All of these will print unconditionally, although note that pr_debug() * and other debug macros are compiled out unless either DEBUG is defined * or CONFIG_DYNAMIC_DEBUG is set. */#define pr_emerg(fmt, ...) \ printk(KERN_EMERG pr_fmt(fmt), ##__VA_ARGS__)#define pr_alert(fmt, ...) \ printk(KERN_ALERT pr_fmt(fmt), ##__VA_ARGS__)#define pr_crit(fmt, ...) \ printk(KERN_CRIT pr_fmt(fmt), ##__VA_ARGS__)#define pr_err(fmt, ...) \ printk(KERN_ERR pr_fmt(fmt), ##__VA_ARGS__)#define pr_warning(fmt, ...) \ printk(KERN_WARNING pr_fmt(fmt), ##__VA_ARGS__)#define pr_warn pr_warning#define pr_notice(fmt, ...) \ printk(KERN_NOTICE pr_fmt(fmt), ##__VA_ARGS__)#define pr_info(fmt, ...) \ printk(KERN_INFO pr_fmt(fmt), ##__VA_ARGS__) doutceph kernel代码里log大部分使用dout输出，它的定义如下： 文件：include/linux/ceph/ceph_debug.h123456789101112131415161718192021222324252627282930313233343536373839/* SPDX-License-Identifier: GPL-2.0 */#ifndef _FS_CEPH_DEBUG_H#define _FS_CEPH_DEBUG_H#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt#include &lt;linux/string.h&gt;#ifdef CONFIG_CEPH_LIB_PRETTYDEBUG/* * wrap pr_debug to include a filename:lineno prefix on each line. * this incurs some overhead (kernel size and execution time) due to * the extra function call at each call site. */# if defined(DEBUG) || defined(CONFIG_DYNAMIC_DEBUG)# define dout(fmt, ...) \ pr_debug("%.*s %12.12s:%-4d : " fmt, \ 8 - (int)sizeof(KBUILD_MODNAME), " ", \ kbasename(__FILE__), __LINE__, ##__VA_ARGS__)# else/* faux printk call just to see any compiler warnings. */# define dout(fmt, ...) do &#123; \ if (0) \ printk(KERN_DEBUG fmt, ##__VA_ARGS__); \ &#125; while (0)# endif#else/* * or, just wrap pr_debug */# define dout(fmt, ...) pr_debug(" " fmt, ##__VA_ARGS__)#endif#endif 从上面可以看出，如果内核支持了 CONFIG_DYNAMIC_DEBUG，那我们就可以动态获取到这部分debug输出了； 系统Dynamic Debug支持在机器上检查kernel是不是支持 CONFIG_DYNAMIC_DEBUG： 1234root@ceph2:/boot# uname -a Linux ceph2 4.18.5-041805-generic #201808241320 SMP Fri Aug 24 13:22:12 UTC 2018 x86_64 x86_64 x86_64 GNU/Linux root@ceph2:/boot# grep CONFIG_DYNAMIC_DEBUG config-4.18.5-041805-generic CONFIG_DYNAMIC_DEBUG=y 如果输出如上述，则表示使用的linux kernel支持了CONFIG_DYNAMIC_DEBUG，那就可以动态获取Ceph kernel module的输出了； 获取debugfs的目录：1234567root@ceph2:~# mount | grep debugfs debugfs on /sys/kernel/debug type debugfs (rw,relatime) root@ceph2:~# cd /sys/kernel/debug/ root@ceph2:/sys/kernel/debug# cd dynamic_debug/ root@ceph2:/sys/kernel/debug/dynamic_debug# ls control 查看对应Ceph都有哪些Dynamic Debug支持：12345678910root@ceph2:/sys/kernel/debug/dynamic_debug# cat control | grep ceph | wc -l 975 root@ceph2:/sys/kernel/debug/dynamic_debug# cat control | grep ceph | less net/ceph/ceph_common.c:787 [libceph]exit_ceph_lib =_ " exit_ceph_lib\012" net/ceph/ceph_common.c:739 [libceph]ceph_open_session =_ " open_session start\012” ...fs/ceph/cache.c:212 [ceph]ceph_fscache_file_set_cookie =_ " fscache_file_set_cookie %p %p enabling cache\012" fs/ceph/cache.c:204 [ceph]ceph_fscache_file_set_cookie =_ " fscache_file_set_cookie %p %p disabling cache\012" fs/ceph/cache.c:138 [ceph]ceph_fscache_inode_check_aux =_ " ceph inode 0x%p cached okay\012" Dynamic Debug介绍模式分类Linux Kernel里的Dynamic Debug支持好几种配置模式，介绍如下： 1、func输出指定函数的log12echo -n 'func xxx +p' &gt; /sys/kernel/debug/dynamic_debug/control echo -n 'func xxx -p' &gt; /sys/kernel/debug/dynamic_debug/control 比如：ceph_open_session，则会打印这个函数内的所有log 2、file输出指定文件的log12echo -n 'file xxx.c +p' &gt; /sys/kernel/debug/dynamic_debug/control echo -n 'file xxx.c -p' &gt; /sys/kernel/debug/dynamic_debug/control 比如：ceph_common.c，则会打印该文件内的所有log 3、module输出指定模块的log12echo -n 'module xxx.c +p' &gt; /sys/kernel/debug/dynamic_debug/control echo -n 'module xxx.c -p' &gt; /sys/kernel/debug/dynamic_debug/control 比如：libceph/ceph，则会打印libceph或ceph模块的所有log 当前ceph相关的就这两个模块； 4、format输出符合指定格式的log12echo -n 'format xxx +p' &gt; /sys/kernel/debug/dynamic_debug/control echo -n 'format xxx -p' &gt; /sys/kernel/debug/dynamic_debug/control 比如：get_session，则只会打印匹配这个字符串的log 5、line输出指定行号的log12echo -n 'file xxx line xxx +p' &gt; /sys/kernel/debug/dynamic_debug/control echo -n 'file xxx line xxx -p' &gt; /sys/kernel/debug/dynamic_debug/control 比如：100-200，则只会打印指定文件里100行-200行内的log 不同line指定的含义介绍如下：1234line 1603 // exactly line 1603 line 1600-1605 // the six lines from line 1600 to line 1605 line -1605 // the 1605 lines from line 1 to line 1605 line 1600- // all lines from line 1600 to the end of the file Flag说明上述+-号含义如下： 123\- remove the given flags \+ add the given flags = set the flags to the given flags 支持的flag有：123456p enables the pr_debug() callsite. f Include the function name in the printed message l Include line number in the printed message m Include module name in the printed message t Include thread ID in messages not generated from interrupt context _ No flags are set. (Or'd with others on input) 自动配置Dynamic Debug如何自动配置dynamic debug？ 通常有三种办法： 1、添加模块加载的配置2、添加boot args，修改/proc/cmdline3、传递参数给modprobe 下面介绍通过模块加载时候指定参数的办法： 在/etc/modprobe.d/目录创建 .conf 文件，然后在里面添加dyndbg配置： 如下所示：12root@ceph2:/etc/modprobe.d# cat ceph.conf options ceph dyndbg="format get_session +p" 之后就可以通过dmesg或者在kern.log里查看ceph kernel module的log了 ：） 测试如下： 123456789root@ceph2:/etc/modprobe.d# rmmod ceph root@ceph2:/etc/modprobe.d# modprobe ceph root@ceph2:/etc/modprobe.d# mount -t ceph 100.64.0.21,100.64.0.22,100.64.0.26:/ /mnt/cephfs root@ceph2:/etc/modprobe.d# dmesg -T | tail -n 5 [Thu Oct 25 19:54:13 2018] ceph: mdsc get_session 0000000046b3700b 2 -&gt; 3 [Thu Oct 25 19:54:13 2018] ceph: mdsc get_session 0000000096e295d5 1 -&gt; 2 [Thu Oct 25 19:54:13 2018] ceph: mdsc get_session 0000000096e295d5 2 -&gt; 3 [Thu Oct 25 19:54:13 2018] ceph: mdsc get_session 0000000046b3700b 1 -&gt; 2 [Thu Oct 25 19:54:13 2018] ceph: mdsc get_session 0000000046b3700b 2 -&gt; 3 参考文章https://lwn.net/Articles/434856/https://www.kernel.org/doc/html/v4.18/admin-guide/dynamic-debug-howto.html]]></content>
@@ -166,8 +179,8 @@
         <category>storage</category>
       </categories>
       <tags>
-        <tag>ssd</tag>
         <tag>bcache</tag>
+        <tag>ssd</tag>
       </tags>
   </entry>
   <entry>
@@ -178,8 +191,8 @@
         <category>storage</category>
       </categories>
       <tags>
-        <tag>ssd</tag>
         <tag>flashcache</tag>
+        <tag>ssd</tag>
       </tags>
   </entry>
   <entry>
@@ -213,8 +226,8 @@
       </categories>
       <tags>
         <tag>lvm</tag>
-        <tag>bcache</tag>
         <tag>flashcache</tag>
+        <tag>bcache</tag>
       </tags>
   </entry>
   <entry>
@@ -999,8 +1012,8 @@
       </categories>
       <tags>
         <tag>ceph</tag>
-        <tag>filestore</tag>
         <tag>osd</tag>
+        <tag>filestore</tag>
       </tags>
   </entry>
   <entry>
@@ -1012,8 +1025,8 @@
       </categories>
       <tags>
         <tag>ceph</tag>
-        <tag>radosgw</tag>
         <tag>memstore</tag>
+        <tag>radosgw</tag>
         <tag>cache tiering</tag>
       </tags>
   </entry>
