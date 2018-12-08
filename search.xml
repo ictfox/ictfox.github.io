@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title><![CDATA[CephFS Grafana Display with Prometheus metrics]]></title>
+    <url>%2F2018%2F12%2F08%2Fcephfs-grafana-display%2F</url>
+    <content type="text"><![CDATA[概述使用CephFS一来，一直是通过CLI来查看CephFS的状态，如下： 123456789101112131415161718192021222324# ceph fs statusmycephfs - 240 clients=======+------+--------+---------+---------------+-------+-------+| Rank | State | MDS | Activity | dns | inos |+------+--------+---------+---------------+-------+-------+| 0 | active | ceph0-1 | Reqs: 938 /s | 21.1M | 21.1M || 1 | active | ceph1-1 | Reqs: 1 /s | 13.5M | 13.3M || 2 | active | ceph2-1 | Reqs: 44 /s | 21.7M | 21.7M |+------+--------+---------+---------------+-------+-------++-----------------+----------+-------+-------+| Pool | type | used | avail |+-----------------+----------+-------+-------+| cephfs_metadata | metadata | 450M | 16.8T || cephfs_data | data | 12.9T | 16.8T |+-----------------+----------+-------+-------++-------------+| Standby MDS |+-------------+| ceph0-2 || ceph1-2 || ceph2-2 |+-------------+MDS version: ceph version 13.2.1 (5533ecdc0fda920179d7ad84e0aa65a127b20d77) mimic (stable) 上述命令仅能显示当前CephFS的状态，若想查看历史的是不可能的，若要查看更细的CephFS信息，只能通过Ceph MDS Daemon的asok dump输出，比较麻烦。 Ceph的官方Dashboard里，有CephFS的信息，但是还比较简单，不完善，就也没有使用。 参考：http://www.yangguanjun.com/images/mimic-dashboard-cephfs.jpg 定制Grafana展示由于Ceph Mgr提供了Prometheus的插件支持，提供官方的Metrics，那就试着从官方的Metrics上自己来搭建CephFS的Dashboard了。 根据自己的需求，做出来的效果图如下： Grafana的json文件已经分享到了grafana官网，需要的可自行下载 ;) 链接：https://grafana.com/dashboards/9340]]></content>
+      <categories>
+        <category>ceph</category>
+      </categories>
+      <tags>
+        <tag>ceph</tag>
+        <tag>grafana</tag>
+        <tag>cephfs</tag>
+      </tags>
+  </entry>
+  <entry>
     <title><![CDATA[Build CephFS Kernel Module with Latest Codes]]></title>
     <url>%2F2018%2F12%2F03%2Fbuild-cephfs-kernel-module-with-latest-codes%2F</url>
     <content type="text"><![CDATA[概述使用CephFS的时候，若需要获取较高的性能，kernel client是一定会使用到的，但它的每次更新都需要升级Linux内核，这样影响比较大，很多时候是不能接受的。 其实我们可以通过拉取Linux对应版本的源码，把最新的CephFS kernel代码merge进当前系统对应版本的源码上，然后进行编译，成功后替换CephFS模块。 这种方法要求两个Linux Kernel Version相差不要太大，不然代码的merge会很痛苦的，也很容易出错！ 编译安装CephFS模块下载内核源码比如当前Linux的最新稳定版本为：4.19.1，我们使用CephFS kernel client的内核版本为：4.18.5。 则通过wget下载4.18.5和4.19.1内核代码： 12# wget https://mirrors.edge.kernel.org/pub/linux/kernel/v4.x/linux-4.18.5.tar.xz# wget https://mirrors.edge.kernel.org/pub/linux/kernel/v4.x/linux-4.19.1.tar.xz 解压缩12root@ceph1:~# tar -xvf linux-4.18.5.tar.xzroot@ceph1:~# tar -xvf linux-4.19.1.tar.xz 编译根据当前机器的版本信息，修改源码的Makefile文件，并执行编译：1234567891011root@ceph1:~# uname -aLinux ceph1 4.18.5-041805-generic #201808241320 SMP Fri Aug 24 13:22:12 UTC 2018 x86_64 x86_64 x86_64 GNU/Linuxroot@ceph1:~# cd linux-4.18.5root@ceph1:~/linux-4.18.5# vim Makefile...VERSION = 4PATCHLEVEL = 18SUBLEVEL = 5EXTRAVERSION = -041805-genericroot@ceph1:~/linux-4.18.5# make menuconfigroot@ceph1:~/linux-4.18.5# make 上述命令或花费数个小时，请通过screen来执行。 注：根据make的输出安装依赖的packages 以后修改Ceph模块代码后，对于Ceph模块的编译，只需要执行如下命令： 1root@ceph1:~/linux-4.18.5# make m=fs/ceph 安装编译后Ceph相关的模块主要有如下几个，通过insmod安装即可： 123456789root@ceph1:~/linux-4.18.5# insmod net/ceph/libceph.koroot@ceph1:~/linux-4.18.5# insmod drivers/block/rbd.koroot@ceph1:~/linux-4.18.5# insmod fs/fscache/fscache.koroot@ceph1:~/linux-4.18.5# insmod fs/ceph/ceph.koroot@ceph1:~/linux-4.18.5# lsmod | grep cephceph 380928 0fscache 364544 1 cephlibceph 315392 2 ceph,rbdlibcrc32c 16384 5 nf_conntrack,nf_nat,btrfs,raid456,libceph 注：若机器本来已经安装了ceph模块，依据上述安装module的逆序卸载即可(rmmod命令) 代码合并Linux源码中，与ceph相关的代码有以下几个位置： 1234fs/ceph/net/ceph/drivers/block/rbd*include/linux/ceph/ 若要使用较新内核版本里的Ceph代码在4.18.5内核上编译模块，需要把对应上面的所有Ceph代码copy替换掉，然后依据上面的编译步骤开始编译； 可以在如下的链接里查看内核4.19.1和4.18.5的代码修改： v4.19.1 diff with v4.18.5 可以看出里面ceph相关代码有很大的变动！ 注意事项： 因为不同内核版本里的函数名称、接口和代码都可能变化，要依据编译出错和提示修改替换后的代码，使之能够在4.18.5内核上编译通过 编译成功后，使用新的ceph module替换4.18.5里的ceph module即可，要在测试机器上先测试一下，因为很可能会有kernel panic]]></content>
@@ -1040,8 +1053,8 @@
       <tags>
         <tag>ceph</tag>
         <tag>memstore</tag>
-        <tag>rest-bench</tag>
         <tag>filestore</tag>
+        <tag>rest-bench</tag>
       </tags>
   </entry>
   <entry>
