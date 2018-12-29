@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,kubernetes,rook," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="概述在上一篇文章 中介绍了如何通过Rook在Kubernetes上部署Ceph集群，如何提供PV服务。 下面进一步的从Ceph集群的配置和维护角度，讲解下如何根据实际需求来部署、修改、升级Ceph集群。 下面实践基于Rook v0.8.0版本，最新的Rook v0.9.0版本相差不大。 Ceph OSD配置默认通过cluster.yaml创建Ceph集群时，使用的是filestore，并且使用的是">
+<meta name="keywords" content="ceph,kubernetes,rook">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Rook定制化和管理Ceph集群">
+<meta property="og:url" content="http://www.yangguanjun.com/2018/12/28/rook-ceph-practice-part2/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="概述在上一篇文章 中介绍了如何通过Rook在Kubernetes上部署Ceph集群，如何提供PV服务。 下面进一步的从Ceph集群的配置和维护角度，讲解下如何根据实际需求来部署、修改、升级Ceph集群。 下面实践基于Rook v0.8.0版本，最新的Rook v0.9.0版本相差不大。 Ceph OSD配置默认通过cluster.yaml创建Ceph集群时，使用的是filestore，并且使用的是">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2018-12-29T03:19:39.827Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Rook定制化和管理Ceph集群">
+<meta name="twitter:description" content="概述在上一篇文章 中介绍了如何通过Rook在Kubernetes上部署Ceph集群，如何提供PV服务。 下面进一步的从Ceph集群的配置和维护角度，讲解下如何根据实际需求来部署、修改、升级Ceph集群。 下面实践基于Rook v0.8.0版本，最新的Rook v0.9.0版本相差不大。 Ceph OSD配置默认通过cluster.yaml创建Ceph集群时，使用的是filestore，并且使用的是">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.yangguanjun.com/2018/12/28/rook-ceph-practice-part2/"/>
+
+
+
+
+
+  <title>Rook定制化和管理Ceph集群 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-7472013512056838",
+    enable_page_level_ads: true
+  });
+</script>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2018/12/28/rook-ceph-practice-part2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Rook定制化和管理Ceph集群</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-12-28T21:20:21+08:00">
+                2018-12-28
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/12/28/rook-ceph-practice-part2/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/12/28/rook-ceph-practice-part2/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在<a href="http://www.yangguanjun.com/2018/12/22/rook-ceph-practice-part1/">上一篇文章</a> 中介绍了如何通过Rook在Kubernetes上部署Ceph集群，如何提供PV服务。</p>
+<p>下面进一步的从Ceph集群的配置和维护角度，讲解下如何根据实际需求来部署、修改、升级Ceph集群。</p>
+<p>下面实践基于Rook v0.8.0版本，最新的Rook v0.9.0版本相差不大。</p>
+<h2 id="Ceph-OSD配置"><a href="#Ceph-OSD配置" class="headerlink" title="Ceph OSD配置"></a>Ceph OSD配置</h2><p>默认通过<code>cluster.yaml</code>创建Ceph集群时，使用的是filestore，并且使用的是<code>/var/lib/rook/osd-&lt;id&gt;</code>目录，这明显不是我们通常的使用方式，下面介绍如何配置Ceph OSD使用bluestore和具体磁盘。</p>
+<h3 id="使用所有可用磁盘"><a href="#使用所有可用磁盘" class="headerlink" title="使用所有可用磁盘"></a>使用所有可用磁盘</h3><p>如下，若我们配置具体节点上Ceph OSD使用所有可以使用的Devices，并且指定都使用bluestore的方式，则可以类似如下配置：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line">---</span><br><span class="line">apiVersion: ceph.rook.io/v1beta1</span><br><span class="line">kind: Cluster</span><br><span class="line">metadata:</span><br><span class="line">  name: rook-ceph</span><br><span class="line">  namespace: rook-ceph</span><br><span class="line">spec:</span><br><span class="line">  cephVersion:</span><br><span class="line">    image: ceph/ceph:v13</span><br><span class="line">    allowUnsupported: <span class="literal">false</span></span><br><span class="line">  dataDirHostPath: /var/lib/rook</span><br><span class="line">  serviceAccount: rook-ceph-cluster</span><br><span class="line">  mon:</span><br><span class="line">    count: 3</span><br><span class="line">    allowMultiplePerNode: <span class="literal">true</span></span><br><span class="line">  dashboard:</span><br><span class="line">    enabled: <span class="literal">true</span></span><br><span class="line">  network:</span><br><span class="line">    hostNetwork: <span class="literal">false</span></span><br><span class="line">  storage: <span class="comment"># cluster level storage configuration and selection</span></span><br><span class="line">    useAllNodes: <span class="literal">false</span></span><br><span class="line">    useAllDevices: <span class="literal">true</span></span><br><span class="line">    deviceFilter:</span><br><span class="line">    location:</span><br><span class="line">    config:</span><br><span class="line">      storeType: bluestore</span><br><span class="line">    nodes:</span><br><span class="line">    - name: <span class="string">"ke-dev1-worker1"</span></span><br><span class="line">    - name: <span class="string">"ke-dev1-worker3"</span></span><br><span class="line">    - name: <span class="string">"ke-dev1-worker4"</span></span><br></pre></td></tr></table></figure>
+<h3 id="使用指定磁盘"><a href="#使用指定磁盘" class="headerlink" title="使用指定磁盘"></a>使用指定磁盘</h3><p>若指定具体节点使用的磁盘，storage的部分配置如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">storage:</span><br><span class="line">  useAllNodes: <span class="literal">false</span></span><br><span class="line">  useAllDevices: <span class="literal">false</span></span><br><span class="line">  deviceFilter:</span><br><span class="line">  location:</span><br><span class="line">  config:</span><br><span class="line">    storeType: bluestore</span><br><span class="line">  nodes:</span><br><span class="line">  - name: <span class="string">"ke-dev1-worker1"</span></span><br><span class="line">    devices:</span><br><span class="line">    - name: <span class="string">"vde"</span></span><br><span class="line">  - name: <span class="string">"ke-dev1-worker3"</span></span><br><span class="line">    devices:</span><br><span class="line">    - name: <span class="string">"vde"</span></span><br><span class="line">  - name: <span class="string">"ke-dev1-worker4"</span></span><br><span class="line">    devices:</span><br><span class="line">    - name: <span class="string">"vdf"</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>指定磁盘必须有GPT header！</p>
+<p>不支持指定分区！(查看log，配置分区的信息并没有传递到ceph-osd-prepare这一步)</p>
+</blockquote>
+<h2 id="Ceph集群修改"><a href="#Ceph集群修改" class="headerlink" title="Ceph集群修改"></a>Ceph集群修改</h2><p>在部署完Ceph集群后，若想修改Ceph集群的部署配置，比如增加/删除OSDs等，可以通过下面命令执行：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># kubectl -n rook-ceph edit cluster rook-ceph</span></span><br><span class="line">...</span><br><span class="line">spec:</span><br><span class="line">  cephVersion:</span><br><span class="line">    image: ceph/ceph:v13</span><br><span class="line">  dashboard:</span><br><span class="line">    enabled: <span class="literal">true</span></span><br><span class="line">  dataDirHostPath: /var/lib/rook</span><br><span class="line">  mon:</span><br><span class="line">    allowMultiplePerNode: <span class="literal">true</span></span><br><span class="line">    count: 3</span><br><span class="line">  network:</span><br><span class="line">    hostNetwork: <span class="literal">false</span></span><br><span class="line">  serviceAccount: rook-ceph-cluster</span><br><span class="line">  storage:</span><br><span class="line">    config:</span><br><span class="line">      storeType: bluestore</span><br><span class="line">    nodes:</span><br><span class="line">    - config: null</span><br><span class="line">      devices:</span><br><span class="line">      - FullPath: <span class="string">""</span></span><br><span class="line">        config: null</span><br><span class="line">        name: vde</span><br><span class="line">      name: ke-dev1-worker1</span><br><span class="line">      resources: &#123;&#125;</span><br><span class="line">    - config: null</span><br><span class="line">      devices:</span><br><span class="line">      - FullPath: <span class="string">""</span></span><br><span class="line">        config: null</span><br><span class="line">        name: vde</span><br><span class="line">      name: ke-dev1-worker3</span><br><span class="line">      resources: &#123;&#125;</span><br><span class="line">    - config: null</span><br><span class="line">      devices:</span><br><span class="line">      - FullPath: <span class="string">""</span></span><br><span class="line">        config: null</span><br><span class="line">        name: vdf</span><br><span class="line">      name: ke-dev1-worker4</span><br><span class="line">      resources: &#123;&#125;</span><br><span class="line">    useAllDevices: <span class="literal">false</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>根据需要修改后，直接保存退出即可；</p>
+<h2 id="遇到的问题"><a href="#遇到的问题" class="headerlink" title="遇到的问题"></a>遇到的问题</h2><p>部署中出现问题后，可以通过下面方法查看log，分析原因：</p>
+<ol>
+<li>查看<code>rook-ceph-operator</code>pod的log</li>
+<li><code>kubectl describe &lt;pod&gt;</code>查看pod的输出</li>
+<li>查看组件对应pod的log</li>
+</ol>
+<h3 id="ceph-mon状态一直不为running"><a href="#ceph-mon状态一直不为running" class="headerlink" title="ceph-mon状态一直不为running"></a>ceph-mon状态一直不为running</h3><p>遇到两种情况下会出现ceph-mon一直能为running的状态：</p>
+<ol>
+<li>节点之前部署过ceph-mon pod，遗留的<code>/var/lib/rook/</code>下有数据，清除掉即可。</li>
+<li>节点存储mon data的磁盘剩余空间不够，ceph-mon启动失败，清除节点对应磁盘空间即可。</li>
+</ol>
+<h3 id="配置osd指定磁盘无效"><a href="#配置osd指定磁盘无效" class="headerlink" title="配置osd指定磁盘无效"></a>配置osd指定磁盘无效</h3><p>若<code>cluster.yaml</code>的storage做如下配置时，并不能找到按照配置的设备来部署OSD：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">storage:</span><br><span class="line">  useAllNodes: <span class="literal">false</span></span><br><span class="line">  useAllDevices: <span class="literal">false</span></span><br><span class="line">  deviceFilter:</span><br><span class="line">  location:</span><br><span class="line">  config:</span><br><span class="line">    storeType: bluestore</span><br><span class="line">  nodes:</span><br><span class="line">  - name: <span class="string">"ke-dev1-worker1"</span></span><br><span class="line">    devices:</span><br><span class="line">    - name: <span class="string">"vde"</span></span><br><span class="line">  - name: <span class="string">"ke-dev1-worker3"</span></span><br><span class="line">    devices:</span><br><span class="line">    - name: <span class="string">"vde"</span></span><br><span class="line">  - name: <span class="string">"ke-dev1-worker4"</span></span><br><span class="line">    devices:</span><br><span class="line">    - name: <span class="string">"vdf"</span></span><br></pre></td></tr></table></figure></p>
+<p>查看<code>rook-ceph-operator</code>pod的log，发现是识别了配置的<code>vde/vdf</code>信息：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># kubectl -n rook-ceph-systemm log rook-ceph-operator-5dc97f5c79-vq7xs</span></span><br><span class="line">...</span><br><span class="line">2018-11-29 03:28:30.239119 I | <span class="built_in">exec</span>: nodeep-scrub is <span class="built_in">set</span></span><br><span class="line">2018-11-29 03:28:30.252166 I | op-osd: 3 of the 3 storage nodes are valid</span><br><span class="line">2018-11-29 03:28:30.252192 I | op-osd: checking <span class="keyword">if</span> orchestration is still <span class="keyword">in</span> progress</span><br><span class="line">2018-11-29 03:28:30.259012 I | op-osd: start provisioning the osds on nodes, <span class="keyword">if</span> needed</span><br><span class="line">2018-11-29 03:28:30.338514 I | op-osd: avail devices <span class="keyword">for</span> node ke-dev1-worker1: [&#123;Name:vde FullPath: Config:map[]&#125;]</span><br><span class="line">2018-11-29 03:28:30.354912 I | op-osd: osd provision job started <span class="keyword">for</span> node ke-dev1-worker1</span><br><span class="line">2018-11-29 03:28:31.050925 I | op-osd: avail devices <span class="keyword">for</span> node ke-dev1-worker3: [&#123;Name:vde FullPath: Config:map[]&#125;]</span><br><span class="line">2018-11-29 03:28:31.071399 I | op-osd: osd provision job started <span class="keyword">for</span> node ke-dev1-worker3</span><br><span class="line">2018-11-29 03:28:32.253394 I | op-osd: avail devices <span class="keyword">for</span> node ke-dev1-worker4: [&#123;Name:vdf FullPath: Config:map[]&#125;]</span><br><span class="line">2018-11-29 03:28:32.269271 I | op-osd: osd provision job started <span class="keyword">for</span> node ke-dev1-worker4</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>查看<code>ceph-osd-prepare</code> job的log：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># kubectl -n rook-ceph get pods -a -o wide</span></span><br><span class="line">NAME                                          READY     STATUS      RESTARTS   AGE       IP                NODE</span><br><span class="line">rook-ceph-mgr<span class="_">-a</span>-959d64b9d-hfntv               1/1       Running     0          9m        192.168.32.184    ke-dev1-worker1</span><br><span class="line">rook-ceph-mon<span class="_">-a</span>-b79d8687d-qwcnp               1/1       Running     0          10m       192.168.53.210    ke-dev1-master3</span><br><span class="line">rook-ceph-mon-b-66b895d57d-prfdp              1/1       Running     0          9m        192.168.32.150    ke-dev1-worker1</span><br><span class="line">rook-ceph-mon-c-8489c4bc8b-jwm8v              1/1       Running     0          9m        192.168.2.76      ke-dev1-worker3</span><br><span class="line">rook-ceph-osd-prepare-ke-dev1-worker1-bbm9t   0/2       Completed   0          8m        192.168.32.170    ke-dev1-worker1</span><br><span class="line">rook-ceph-osd-prepare-ke-dev1-worker3-xg2pc   0/2       Completed   0          8m        192.168.2.122     ke-dev1-worker3</span><br><span class="line">rook-ceph-osd-prepare-ke-dev1-worker4-mjlg7   0/2       Completed   0          8m        192.168.217.153   ke-dev1-worker4</span><br><span class="line"></span><br><span class="line"><span class="comment"># kubectl -n rook-ceph log rook-ceph-osd-prepare-ke-dev1-worker1-bbm9t provision</span></span><br><span class="line">...</span><br><span class="line">2018-11-29 03:28:36.533532 I | <span class="built_in">exec</span>: Running <span class="built_in">command</span>: lsblk /dev/vde --bytes --nodeps --pairs --output SIZE,ROTA,RO,TYPE,PKNAME</span><br><span class="line">2018-11-29 03:28:36.537270 I | <span class="built_in">exec</span>: Running <span class="built_in">command</span>: sgdisk --<span class="built_in">print</span> /dev/vde</span><br><span class="line">2018-11-29 03:28:36.547839 W | inventory: skipping device vde with an unknown uuid. Failed to complete <span class="string">'get disk vde uuid'</span>: <span class="built_in">exit</span> status 2. ^GCaution: invalid main GPT header, but valid backup; regenerating main header</span><br><span class="line">from backup!</span><br><span class="line"></span><br><span class="line">Invalid partition data!</span><br></pre></td></tr></table></figure>
+<p>从log里找到了设备vde没有被识别的原因：<code>invalid main GPT header</code>。</p>
+<p>这个盘是新添加的，并没有创建GPT分区信息，手动给各个盘创建GPT header后，部署OSD正常！</p>
+<h2 id="扩展功能"><a href="#扩展功能" class="headerlink" title="扩展功能"></a>扩展功能</h2><p>记录下使用Rook部署Ceph系统的扩展功能需求。</p>
+<h3 id="如何配置分区？"><a href="#如何配置分区？" class="headerlink" title="如何配置分区？"></a>如何配置分区？</h3><p>Rook现在不支持配置OSD的devices为分区，代码中检测配置磁盘分区这块有待改善！</p>
+<h4 id="Operator-discover检查"><a href="#Operator-discover检查" class="headerlink" title="Operator discover检查"></a>Operator discover检查</h4><p>File: pkg/operator/ceph/cluster/osd/osd.go</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(c *Cluster)</span> <span class="title">startProvisioning</span><span class="params">(config *provisionConfig)</span></span> &#123;</span><br><span class="line">    config.devicesToUse = <span class="built_in">make</span>(<span class="keyword">map</span>[<span class="keyword">string</span>][]rookalpha.Device, <span class="built_in">len</span>(c.Storage.Nodes))</span><br><span class="line"></span><br><span class="line">    <span class="comment">// start with nodes currently in the storage spec</span></span><br><span class="line">    <span class="keyword">for</span> _, node := <span class="keyword">range</span> c.Storage.Nodes &#123;</span><br><span class="line">        ...</span><br><span class="line">        availDev, deviceErr := discover.GetAvailableDevices(c.context, n.Name, c.Namespace, n.Devices, n.Selection.DeviceFilter, n.Selection.GetUseAllDevices())</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>File: pkg/operator/discover/discover.go</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// GetAvailableDevices conducts outer join using input filters with free devices that a node has. It marks the devices from join result as in-use.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">GetAvailableDevices</span><span class="params">(context *clusterd.Context, nodeName, clusterName <span class="keyword">string</span>, devices []rookalpha.Device, filter <span class="keyword">string</span>, useAllDevices <span class="keyword">bool</span>)</span> <span class="params">([]rookalpha.Device, error)</span></span> &#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// find those on the node</span></span><br><span class="line">    nodeAllDevices, ok := allDevices[nodeName]</span><br><span class="line">    <span class="keyword">if</span> !ok &#123;</span><br><span class="line">        <span class="keyword">return</span> results, fmt.Errorf(<span class="string">"node %s has no devices"</span>, nodeName)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// find those in use on the node</span></span><br><span class="line">    devicesInUse, err := ListDevicesInUse(context, namespace, nodeName)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> results, err</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    nodeDevices := []sys.LocalDisk&#123;&#125;</span><br><span class="line">    <span class="keyword">for</span> _, nodeDevice := <span class="keyword">range</span> nodeAllDevices &#123;</span><br><span class="line">        <span class="comment">// <span class="doctag">TODO:</span> Filter out devices that are in use by another cluster.</span></span><br><span class="line">        <span class="comment">// We need to retain the devices in use for this cluster so the provisioner will continue to configure the same OSDs.</span></span><br><span class="line">        <span class="keyword">for</span> _, device := <span class="keyword">range</span> devicesInUse &#123;</span><br><span class="line">            <span class="keyword">if</span> nodeDevice.Name == device.Name &#123;</span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        nodeDevices = <span class="built_in">append</span>(nodeDevices, nodeDevice)</span><br><span class="line">    &#125;</span><br><span class="line">    claimedDevices := []sys.LocalDisk&#123;&#125;</span><br><span class="line">    <span class="comment">// now those left are free to use</span></span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(devices) &gt; <span class="number">0</span> &#123;</span><br><span class="line">        <span class="keyword">for</span> i := <span class="keyword">range</span> devices &#123;</span><br><span class="line">            <span class="keyword">for</span> j := <span class="keyword">range</span> nodeDevices &#123;</span><br><span class="line">                <span class="comment">// 指定devices为分区时</span></span><br><span class="line">                <span class="comment">// devices[i].Name 为 sdk1，而nodeDevices[j].Name 为 sdk</span></span><br><span class="line">                <span class="comment">// 所以最后返回到上层的可用Devices为空！！</span></span><br><span class="line">                <span class="keyword">if</span> devices[i].Name == nodeDevices[j].Name &#123;</span><br><span class="line">                    results = <span class="built_in">append</span>(results, devices[i])</span><br><span class="line">                    claimedDevices = <span class="built_in">append</span>(claimedDevices, nodeDevices[j])</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> <span class="built_in">len</span>(filter) &gt;= <span class="number">0</span> &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> useAllDevices &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>ListDevices函数返回的disk格式如下：<br><code>{Name:sdk ... Partitions:[{Name:sdk1 Size:4000785964544 Label: Filesystem:}] ...}</code></p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ListDevices lists all devices discovered on all nodes or specific node if node name is provided.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">ListDevices</span><span class="params">(context *clusterd.Context, namespace, nodeName <span class="keyword">string</span>)</span> <span class="params">(<span class="keyword">map</span>[<span class="keyword">string</span>][]sys.LocalDisk, error)</span></span> &#123;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="OSD-Daemon检查"><a href="#OSD-Daemon检查" class="headerlink" title="OSD Daemon检查"></a>OSD Daemon检查</h4><p>当磁盘通过了Ceph Operator Discover的相关检查后，会通过参数传递给OSD Prepare Job，如下所示：</p>
+<p>File：rook-ceph-osd-prepare-ceph0-bphlv-ceph0.log</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">2018-12-04 10:18:51.959163 I | rookcmd: starting Rook v0.8.0-320.g3135b1d with arguments <span class="string">'/rook/rook ceph osd provision'</span></span><br><span class="line">2018-12-04 10:18:51.993500 I | rookcmd: flag values: --cluster-id=c6434de9-f7ad-11e8-bec3-6c92bf2db856, --data-device-filter=, --data-devices=sdk,sdl, --data-directories=, --force-format=<span class="literal">false</span>, --<span class="built_in">help</span>=<span class="literal">false</span>, --location=, --<span class="built_in">log</span>-level=INFO, --metadata-device=, --node-name=ceph0, --osd-database-size=20480, --osd-journal-size=5120, --osd-store=bluestore, --osd-wal-size=576</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>上述指定了<code>--data-devices=sdk,sdl</code>。</p>
+<p>File: pkg/daemon/ceph/osd/daemon.go</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">getAvailableDevices</span><span class="params">(context *clusterd.Context, desiredDevices <span class="keyword">string</span>, metadataDevice <span class="keyword">string</span>, usingDeviceFilter <span class="keyword">bool</span>)</span> <span class="params">(*DeviceOsdMapping, error)</span></span> &#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">for</span> _, device := <span class="keyword">range</span> context.Devices &#123;</span><br><span class="line">        ownPartitions, fs, err := sys.CheckIfDeviceAvailable(context.Executor, device.Name)</span><br><span class="line">        <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">nil</span>, fmt.Errorf(<span class="string">"failed to get device %s info. %+v"</span>, device.Name, err)</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 从这里看出需要配置的磁盘上fs信息为空，并且没有分区信息！</span></span><br><span class="line">        <span class="keyword">if</span> fs != <span class="string">""</span> || !ownPartitions &#123;</span><br><span class="line">            <span class="comment">// not OK to use the device because it has a filesystem or rook doesn't own all its partitions</span></span><br><span class="line">            logger.Infof(<span class="string">"skipping device %s that is in use (not by rook). fs: %s, ownPartitions: %t"</span>, device.Name, fs, ownPartitions)</span><br><span class="line">            <span class="keyword">continue</span></span><br><span class="line">        &#125;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>所以现在通过任何方式无法配置Ceph OSD指定磁盘分区！</strong></p>
+<h3 id="如何配置HDD-SSD的BlueStore？"><a href="#如何配置HDD-SSD的BlueStore？" class="headerlink" title="如何配置HDD+SSD的BlueStore？"></a>如何配置HDD+SSD的BlueStore？</h3><p>配置节点OSD使用HDD+SSD的方式，可以修改cluster.yaml如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">storage:</span><br><span class="line">  useAllNodes: <span class="literal">false</span></span><br><span class="line">  useAllDevices: <span class="literal">false</span></span><br><span class="line">  location:</span><br><span class="line">  config:</span><br><span class="line">    storeType: bluestore</span><br><span class="line">  nodes:</span><br><span class="line">  ...</span><br><span class="line">  - name: <span class="string">"ke-dev1-worker4"</span></span><br><span class="line">    devices:</span><br><span class="line">    - name: <span class="string">"vdf"</span></span><br><span class="line">    - name: <span class="string">"vdg"</span></span><br><span class="line">    config:</span><br><span class="line">      metadataDevice: <span class="string">"vdh"</span></span><br></pre></td></tr></table></figure>
+<p>部署中可以通过获取ceph-osd-prepare的log来查看是否配置正确：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># kubectl -n rook-ceph log rook-ceph-osd-prepare-ke-dev1-worker4-456nj provision</span></span><br><span class="line">2018-11-30 03:30:37.118716 I | rookcmd: starting Rook v0.8.0-304.g0a8e109 with arguments <span class="string">'/rook/rook ceph osd provision'</span></span><br><span class="line">2018-11-30 03:30:37.124652 I | rookcmd: flag values: --cluster-id=072418f4-f450-11e8-bb3e-fa163e65e579, --data-device-filter=, --data-devices=vdf,vdg, --data-directories=, --force-format=<span class="literal">false</span>, --<span class="built_in">help</span>=<span class="literal">false</span>, --location=, --<span class="built_in">log</span>-level=INFO, --metadata-device=vdh, --node-name=ke-dev1-worker4, --osd-database-size=20480, --osd-journal-size=5120, --osd-store=bluestore, --osd-wal-size=576</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>如上述log，传进来的正确参数应该为：</p>
+<ul>
+<li>–data-devices=vdf,vdg</li>
+<li>–metadata-device=vdh</li>
+</ul>
+<p>若要指定SSD提供的wal/db分区的大小，可以加如下配置：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line">- name: <span class="string">"ke-dev1-worker4"</span></span><br><span class="line">  devices:</span><br><span class="line">  - name: <span class="string">"vdf"</span></span><br><span class="line">  - name: <span class="string">"vdg"</span></span><br><span class="line">  config:</span><br><span class="line">    metadataDevice: <span class="string">"vdh"</span></span><br><span class="line">    databaseSizeMB: <span class="string">"10240"</span></span><br><span class="line">    WalSizeMB: <span class="string">"10240"</span></span><br></pre></td></tr></table></figure>
+<h3 id="如何自定义ceph-conf？"><a href="#如何自定义ceph-conf？" class="headerlink" title="如何自定义ceph.conf？"></a>如何自定义ceph.conf？</h3><p>默认创建Ceph集群的配置参数在Rook代码里是固定的，在创建<code>Cluster</code>的时候生成Ceph集群的配置参数，参考上面章节的：<a href="#cephdefaultconf">Ceph默认配置</a></p>
+<p>如果用户想自定义Ceph集群的配置参数，可以通过修改<code>rook-config-override</code>的方法。</p>
+<p>如下是默认的<code>rook-config-override</code>：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># kubectl -n rook-ceph get configmap rook-config-override -o yaml</span></span><br><span class="line">apiVersion: v1</span><br><span class="line">data:</span><br><span class="line">  config: <span class="string">""</span></span><br><span class="line">kind: ConfigMap</span><br><span class="line">metadata:</span><br><span class="line">  creationTimestamp: 2018-12-03T05:34:58Z</span><br><span class="line">  name: rook-config-override</span><br><span class="line">  namespace: rook-ceph</span><br><span class="line">  ownerReferences:</span><br><span class="line">  - apiVersion: v1beta1</span><br><span class="line">    blockOwnerDeletion: <span class="literal">true</span></span><br><span class="line">    kind: Cluster</span><br><span class="line">    name: rook-ceph</span><br><span class="line">    uid: 229e7106-f6bd-11e8-bec3-6c92bf2db856</span><br><span class="line">  resourceVersion: <span class="string">"40803738"</span></span><br><span class="line">  selfLink: /api/v1/namespaces/rook-ceph/configmaps/rook-config-override</span><br><span class="line">  uid: 2c489850-f6bd-11e8-bec3-6c92bf2db856</span><br></pre></td></tr></table></figure>
+<h4 id="修改已有Ceph集群配置参数"><a href="#修改已有Ceph集群配置参数" class="headerlink" title="修改已有Ceph集群配置参数"></a>修改已有Ceph集群配置参数</h4><p>1、修改<code>rook-config-override</code>：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># kubectl -n rook-ceph edit configmap rook-config-override -o yaml</span></span><br><span class="line">apiVersion: v1</span><br><span class="line">data:</span><br><span class="line">  config: |</span><br><span class="line">    [global]</span><br><span class="line">    osd crush update on start = <span class="literal">false</span></span><br><span class="line">    osd pool default size = 2</span><br><span class="line">    [osd]</span><br><span class="line">    bluefs_buffered_io = <span class="literal">false</span></span><br><span class="line">    bluestore_csum_type = none</span><br><span class="line">kind: ConfigMap</span><br><span class="line">metadata:</span><br><span class="line">  creationTimestamp: 2018-12-03T05:34:58Z</span><br><span class="line">  name: rook-config-override</span><br><span class="line">  namespace: rook-ceph</span><br><span class="line">  ownerReferences:</span><br><span class="line">  - apiVersion: v1beta1</span><br><span class="line">    blockOwnerDeletion: <span class="literal">true</span></span><br><span class="line">    kind: Cluster</span><br><span class="line">    name: rook-ceph</span><br><span class="line">    uid: 229e7106-f6bd-11e8-bec3-6c92bf2db856</span><br><span class="line">  resourceVersion: <span class="string">"40803738"</span></span><br><span class="line">  selfLink: /api/v1/namespaces/rook-ceph/configmaps/rook-config-override</span><br><span class="line">  uid: 2c489850-f6bd-11e8-bec3-6c92bf2db856</span><br></pre></td></tr></table></figure>
+<p>2、依次重启ceph组件</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># kubectl -n rook-ceph get pods</span></span><br><span class="line">NAME                               READY     STATUS    RESTARTS   AGE</span><br><span class="line">rook-ceph-mgr<span class="_">-a</span>-5699bb7984-kpxgp   1/1       Running   0          2h</span><br><span class="line">rook-ceph-mon<span class="_">-a</span>-66854cfb5-m5d9x    1/1       Running   0          15m</span><br><span class="line">rook-ceph-mon-b-c6f58986f-xpnc4    1/1       Running   0          2h</span><br><span class="line">rook-ceph-mon-c-97669b7ff-kgdbp    1/1       Running   0          2h</span><br><span class="line">rook-ceph-osd-0-54bdd844b-wfqk6    1/1       Running   0          2h</span><br><span class="line">rook-ceph-osd-1-789cdb4c5b-rddhh   1/1       Running   0          2h</span><br><span class="line">rook-ceph-osd-2-57c8644749-djs98   1/1       Running   0          2h</span><br><span class="line">rook-ceph-osd-3-7566d48f85-k5mw6   1/1       Running   0          2h</span><br><span class="line"></span><br><span class="line"><span class="comment"># kubectl -n rook-ceph delete pod rook-ceph-mgr-a-5699bb7984-kpxgp</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># kubectl -n rook-ceph delete pod rook-ceph-mon-a-66854cfb5-m5d9x</span></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="comment"># kubectl -n rook-ceph delete pod rook-ceph-osd-0-54bdd844b-wfqk6</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>ceph-mon, ceph-osd的delete最后是one-by-one的，等待ceph集群状态为HEALTH_OK后再delete另一个</p>
+</blockquote>
+<p>3、检查ceph组件的配置</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat /var/lib/rook/osd2/rook-ceph.config</span></span><br><span class="line">[global]</span><br><span class="line">run dir                   = /var/lib/rook/osd2</span><br><span class="line">mon initial members       = a b c</span><br><span class="line">mon host                  = 10.96.195.188:6790,10.96.128.73:6790,10.96.51.21:6790</span><br><span class="line"><span class="built_in">log</span> file                  = /dev/stderr</span><br><span class="line">mon cluster <span class="built_in">log</span> file      = /dev/stderr</span><br><span class="line">public addr               = 192.168.150.252</span><br><span class="line">cluster addr              = 192.168.150.252</span><br><span class="line">mon keyvaluedb            = rocksdb</span><br><span class="line">mon_allow_pool_delete     = <span class="literal">true</span></span><br><span class="line">mon_max_pg_per_osd        = 1000</span><br><span class="line">debug default             = 0</span><br><span class="line">debug rados               = 0</span><br><span class="line">debug mon                 = 0</span><br><span class="line">debug osd                 = 0</span><br><span class="line">debug bluestore           = 0</span><br><span class="line">debug filestore           = 0</span><br><span class="line">debug journal             = 0</span><br><span class="line">debug leveldb             = 0</span><br><span class="line">filestore_omap_backend    = rocksdb</span><br><span class="line">osd pg bits               = 11</span><br><span class="line">osd pgp bits              = 11</span><br><span class="line">osd pool default size     = 2</span><br><span class="line">osd pool default min size = 1</span><br><span class="line">osd pool default pg num   = 100</span><br><span class="line">osd pool default pgp num  = 100</span><br><span class="line">osd objectstore           = bluestore</span><br><span class="line">crush location            = root=default host=ceph5</span><br><span class="line">rbd_default_features      = 3</span><br><span class="line">fatal signal handlers     = <span class="literal">false</span></span><br><span class="line">osd crush update on start = <span class="literal">false</span></span><br><span class="line"></span><br><span class="line">[osd.2]</span><br><span class="line">keyring                  = /var/lib/rook/osd2/keyring</span><br><span class="line">bluestore block path     = /dev/disk/by-partuuid/bad8c220-d4f7-40de-b7ff-fcc2e492ea64</span><br><span class="line">bluestore block wal path = /dev/disk/by-partuuid/5315d8be-f80b-4351-95b5-026889d1dd19</span><br><span class="line">bluestore block db path  = /dev/disk/by-partuuid/6d3d494f-0021-4e95-b45f-59a326976cf8</span><br><span class="line"></span><br><span class="line">[osd]</span><br><span class="line">bluefs_buffered_io  = <span class="literal">false</span></span><br><span class="line">bluestore_csum_type = none</span><br></pre></td></tr></table></figure>
+<h4 id="创建Ceph集群前指定配置参数"><a href="#创建Ceph集群前指定配置参数" class="headerlink" title="创建Ceph集群前指定配置参数"></a>创建Ceph集群前指定配置参数</h4><p>若用户想在创建Ceph集群前指定配置参数，可以通过先手动创建名为：<code>rook-config-override</code>的<code>ConfigMap</code>，然后再创建Ceph集群。</p>
+<p>1、创建ConfigMap后创建</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat ceph-override-conf.yaml</span></span><br><span class="line">apiVersion: v1</span><br><span class="line">kind: ConfigMap</span><br><span class="line">metadata:</span><br><span class="line">  name: rook-config-override</span><br><span class="line">  namespace: rook-ceph</span><br><span class="line">data:</span><br><span class="line">  config: |</span><br><span class="line">    [global]</span><br><span class="line">    osd crush update on start = <span class="literal">false</span></span><br><span class="line">    osd pool default size = 2</span><br><span class="line">    [osd]</span><br><span class="line">    bluefs_buffered_io = <span class="literal">false</span></span><br><span class="line">    bluestore_csum_type = none</span><br><span class="line"></span><br><span class="line"><span class="comment"># kubectl create -f ceph-override-conf.yaml</span></span><br><span class="line"><span class="comment"># kubectl create -f cluster.yaml</span></span><br><span class="line">serviceaccount <span class="string">"rook-ceph-cluster"</span> created</span><br><span class="line">role <span class="string">"rook-ceph-cluster"</span> created</span><br><span class="line">rolebinding <span class="string">"rook-ceph-cluster-mgmt"</span> created</span><br><span class="line">rolebinding <span class="string">"rook-ceph-cluster"</span> created</span><br><span class="line">configmap <span class="string">"rook-config-override"</span> created</span><br><span class="line">cluster <span class="string">"rook-ceph"</span> created</span><br></pre></td></tr></table></figure>
+<p>2、检查启动的Ceph组件配置</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat /var/lib/rook/mon-a/rook-ceph.config</span></span><br><span class="line">[global]</span><br><span class="line">fsid                      = e963975a-fe17-4806-b1b1-d4a6fcebd710</span><br><span class="line">run dir                   = /var/lib/rook/mon<span class="_">-a</span></span><br><span class="line">mon initial members       = a</span><br><span class="line">mon host                  = 10.96.0.239:6790</span><br><span class="line"><span class="built_in">log</span> file                  = /dev/stderr</span><br><span class="line">mon cluster <span class="built_in">log</span> file      = /dev/stderr</span><br><span class="line">public addr               = 10.96.0.239</span><br><span class="line">cluster addr              = 192.168.239.137</span><br><span class="line">mon keyvaluedb            = rocksdb</span><br><span class="line">mon_allow_pool_delete     = <span class="literal">true</span></span><br><span class="line">mon_max_pg_per_osd        = 1000</span><br><span class="line">debug default             = 0</span><br><span class="line">debug rados               = 0</span><br><span class="line">debug mon                 = 0</span><br><span class="line">debug osd                 = 0</span><br><span class="line">debug bluestore           = 0</span><br><span class="line">debug filestore           = 0</span><br><span class="line">debug journal             = 0</span><br><span class="line">debug leveldb             = 0</span><br><span class="line">filestore_omap_backend    = rocksdb</span><br><span class="line">osd pg bits               = 11</span><br><span class="line">osd pgp bits              = 11</span><br><span class="line">osd pool default size     = 2</span><br><span class="line">osd pool default min size = 1</span><br><span class="line">osd pool default pg num   = 100</span><br><span class="line">osd pool default pgp num  = 100</span><br><span class="line">rbd_default_features      = 3</span><br><span class="line">fatal signal handlers     = <span class="literal">false</span></span><br><span class="line">osd crush update on start = <span class="literal">false</span></span><br><span class="line"></span><br><span class="line">[mon.a]</span><br><span class="line">keyring          = /var/lib/rook/mon<span class="_">-a</span>/keyring</span><br><span class="line">public <span class="built_in">bind</span> addr = 192.168.239.137:6790</span><br><span class="line"></span><br><span class="line">[osd]</span><br><span class="line">bluefs_buffered_io  = <span class="literal">false</span></span><br><span class="line">bluestore_csum_type = none</span><br></pre></td></tr></table></figure>
+<h3 id="如何自定义crush-rule？"><a href="#如何自定义crush-rule？" class="headerlink" title="如何自定义crush rule？"></a>如何自定义crush rule？</h3><p>Rook没有提供kind为<code>crush rule</code>的API，所以这里没法类似创建Pool那样创建一个<code>crush rule</code>，<code>crush rule</code>的定制化也比较多，可以通过CLI或者修改CRUSHMAP的方式操作。</p>
+<h3 id="如何升级Ceph集群？"><a href="#如何升级Ceph集群？" class="headerlink" title="如何升级Ceph集群？"></a>如何升级Ceph集群？</h3><p>如下，创建Ceph版本为v12的Cluster：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># vim cluster.yaml</span></span><br><span class="line">...</span><br><span class="line">spec:</span><br><span class="line">  cephVersion:</span><br><span class="line">    image: ceph/ceph:v12</span><br><span class="line">    allowUnsupported: <span class="literal">false</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>创建后查看Ceph版本为：12.2.9</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[root@rook-ceph-mgr<span class="_">-a</span>-558d49cf8c-dk49n /]<span class="comment"># ceph -v</span></span><br><span class="line">ceph version 12.2.9 (9e300932ef8a8916fb3fda78c58691a6ab0f4217) luminous (stable)</span><br><span class="line"></span><br><span class="line"><span class="comment"># kubectl create -f toolbox.yaml</span></span><br><span class="line">deployment <span class="string">"rook-ceph-tools"</span> created</span><br><span class="line"><span class="comment"># kubectl -n rook-ceph exec -it rook-ceph-tools-79954fdf9d-s65wm bash</span></span><br><span class="line">[root@ceph0 /]<span class="comment"># ceph -v</span></span><br><span class="line">ceph version 13.2.2 (02899bfda814146b021136e9d8e80eba494e1126) mimic (stable)</span><br></pre></td></tr></table></figure>
+<p>通过edit来修改Cluster，指定image的Ceph版本为v13，如下：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># kubectl -n rook-ceph edit cluster rook-ceph</span></span><br><span class="line">...</span><br><span class="line">spec:</span><br><span class="line">  cephVersion:</span><br><span class="line">    image: ceph/ceph:v13</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">cluster <span class="string">"rook-ceph"</span> edited</span><br></pre></td></tr></table></figure>
+<p>之后查看Ceph OSD组件会逐个删除重建，升级到指定的Ceph版本：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># kubectl -n rook-ceph get pods -o wide</span></span><br><span class="line">NAME                               READY     STATUS        RESTARTS   AGE       IP                NODE</span><br><span class="line">rook-ceph-mgr<span class="_">-a</span>-558d49cf8c-dk49n   1/1       Running       0          29m       192.168.239.130   ceph0</span><br><span class="line">rook-ceph-mon<span class="_">-a</span>-6c99f7fc49-rw556   1/1       Running       0          30m       192.168.239.171   ceph0</span><br><span class="line">rook-ceph-mon-b-77bbdd8676-rj22f   1/1       Running       0          29m       192.168.152.189   ceph4</span><br><span class="line">rook-ceph-mon-c-c7dd7bb4b-8qclr    1/1       Running       0          29m       192.168.150.217   ceph5</span><br><span class="line">rook-ceph-osd-0-c5d865db6-5dgl4    1/1       Running       0          1m        192.168.152.190   ceph4</span><br><span class="line">rook-ceph-osd-1-785b4f8c6d-qf9lc   1/1       Running       0          55s       192.168.150.237   ceph5</span><br><span class="line">rook-ceph-osd-2-6679497484-hjf85   0/1       Terminating   0          28m       &lt;none&gt;            ceph5</span><br><span class="line">rook-ceph-osd-3-87f8d69db-tmrl5    1/1       Running       0          2m        192.168.239.184   ceph0</span><br><span class="line">rook-ceph-tools-79954fdf9d-s65wm   1/1       Running       0          23m       100.64.0.20       ceph0</span><br></pre></td></tr></table></figure>
+<p>升级过程中，会发现会自动设置上flag：noscrub,nodeep-scrub</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[root@ceph0 /]<span class="comment"># ceph -s</span></span><br><span class="line">  cluster:</span><br><span class="line">    id:     adb3db57-6f09-4c4a-a3f9-171d6cfe167a</span><br><span class="line">    health: HEALTH_WARN</span><br><span class="line">            noscrub,nodeep-scrub flag(s) <span class="built_in">set</span></span><br><span class="line">            1 osds down</span><br><span class="line">            Reduced data availability: 6 pgs inactive, 18 pgs down</span><br><span class="line">            Degraded data redundancy: 2/10 objects degraded (20.000%), 2 pgs degraded</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>待所有的OSD升级完成后，集群状态为<code>HEALTH_OK</code>，Ceph mgr，mon，mds组件不会自动升级：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># kubectl -n rook-ceph get pods -o wide</span></span><br><span class="line">NAME                               READY     STATUS    RESTARTS   AGE       IP                NODE</span><br><span class="line">rook-ceph-mgr<span class="_">-a</span>-558d49cf8c-dk49n   1/1       Running   0          32m       192.168.239.130   ceph0</span><br><span class="line">rook-ceph-mon<span class="_">-a</span>-6c99f7fc49-rw556   1/1       Running   0          33m       192.168.239.171   ceph0</span><br><span class="line">rook-ceph-mon-b-77bbdd8676-rj22f   1/1       Running   0          32m       192.168.152.189   ceph4</span><br><span class="line">rook-ceph-mon-c-c7dd7bb4b-8qclr    1/1       Running   0          32m       192.168.150.217   ceph5</span><br><span class="line">rook-ceph-osd-0-c5d865db6-5dgl4    1/1       Running   0          4m        192.168.152.190   ceph4</span><br><span class="line">rook-ceph-osd-1-785b4f8c6d-qf9lc   1/1       Running   0          3m        192.168.150.237   ceph5</span><br><span class="line">rook-ceph-osd-2-86bb5594df-tdhx4   1/1       Running   0          2m        192.168.150.244   ceph5</span><br><span class="line">rook-ceph-osd-3-87f8d69db-tmrl5    1/1       Running   0          5m        192.168.239.184   ceph0</span><br><span class="line">rook-ceph-tools-79954fdf9d-s65wm   1/1       Running   0          26m       100.64.0.20       ceph0</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>Rook V0.9.0版本里，mgr和mon会自动升级</p>
+</blockquote>
+<p>之后单独升级Ceph的其他组件：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># kubectl -n rook-ceph delete pod rook-ceph-mgr-a-558d49cf8c-dk49n</span></span><br><span class="line"><span class="comment"># kubectl -n rook-ceph delete pod rook-ceph-mon-a-6c99f7fc49-rw556</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>但发现这些pod重启后，还是使用旧的Ceph版本！！！！</p>
+<p>可以通过修改deployment的方法来升级Ceph mgr，mon，mds组件：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># kubectl -n rook-ceph get deployment</span></span><br><span class="line">NAME                     DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE</span><br><span class="line">rook-ceph-mds-cephfs<span class="_">-a</span>   1         1         1            1           22m</span><br><span class="line">rook-ceph-mds-cephfs-b   1         1         1            1           22m</span><br><span class="line">rook-ceph-mds-cephfs-c   1         1         1            1           22m</span><br><span class="line">rook-ceph-mds-cephfs<span class="_">-d</span>   1         1         1            1           22m</span><br><span class="line">rook-ceph-mgr<span class="_">-a</span>          1         1         1            1           25m</span><br><span class="line">rook-ceph-mon<span class="_">-a</span>          1         1         1            1           27m</span><br><span class="line">rook-ceph-mon-b          1         1         1            1           26m</span><br><span class="line">rook-ceph-mon-c          1         1         1            1           26m</span><br><span class="line">rook-ceph-osd-0          1         1         1            1           25m</span><br><span class="line">rook-ceph-osd-1          1         1         1            1           25m</span><br><span class="line">rook-ceph-osd-2          1         1         1            1           25m</span><br><span class="line">rook-ceph-tools          1         1         1            1           14m</span><br><span class="line"></span><br><span class="line"><span class="comment"># kubectl -n rook-ceph edit deployment rook-ceph-mon-a</span></span><br><span class="line">...</span><br><span class="line">        image: ceph/ceph:v13</span><br><span class="line">...</span><br><span class="line">deployment <span class="string">"rook-ceph-mon-a"</span> edited</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>升级Ceph MDS组件时候要全部升级，不同Ceph版本的MDSs不能组成多Active MDSs集群</p>
+</blockquote>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><h3 id="Rook的定位"><a href="#Rook的定位" class="headerlink" title="Rook的定位"></a>Rook的定位</h3><p>从Rook的官方文档中看出，它的定位是Kubernetes上的存储提供框架，提供基于Kubernetes的多种存储部署，比如：Ceph，Minio，CockroachDB，Cassandra，NFS等。</p>
+<p>Ceph只是作为其第一个提供的beta版的存储方案。</p>
+<p>参考：<a href="https://blog.rook.io/rook-v0-8-framework-for-storage-orchestrators-9421848505b3#866f" target="_blank" rel="noopener">Storage Provider Framework</a></p>
+<h3 id="Rook的优势"><a href="#Rook的优势" class="headerlink" title="Rook的优势"></a>Rook的优势</h3><ol>
+<li>与Kubernetes集成，一键部署</li>
+<li>Rook支持通过yaml文件创建pool，cephfs，radosgw，监控等</li>
+<li>简单扩容和小版本升级比较方便，kuberctl edit <ceph cluster="">即可</ceph></li>
+</ol>
+<h3 id="Rook的不足"><a href="#Rook的不足" class="headerlink" title="Rook的不足"></a>Rook的不足</h3><ol>
+<li>Rook项目时间还短，代码不够完善</li>
+<li>不支持分区配置OSD，不能准确定制OSD的磁盘使用</li>
+<li>Rook可以一键删除Ceph pool / cephfs / radosgw和Ceph集群，没有确认，有些危险</li>
+<li>基于容器化技术，Ceph的各个组件的IO栈又多了一层，性能会有所损耗</li>
+<li>Ceph运维增加了Kubernetes一层，对Ceph运维人员的知识栈要求又提高了</li>
+</ol>
+<h3 id="使用场景总结"><a href="#使用场景总结" class="headerlink" title="使用场景总结"></a>使用场景总结</h3><p>所以总体来说如下：</p>
+<p><strong>适合使用Rook的场景</strong> </p>
+<ul>
+<li>POC环境，测试环境</li>
+<li>Kubernetes + Ceph混合部署环境</li>
+<li>对Ceph性能没强要求环境</li>
+<li>不需要经常随社区升级Ceph版本的环境</li>
+</ul>
+<p><strong>不适合使用Rook的场景</strong></p>
+<ul>
+<li>Ceph集群单独部署环境</li>
+<li>Ceph性能强需求环境</li>
+<li>跟随Ceph社区升级版本的环境</li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>红包</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
+          
+            <a href="/tags/rook/" rel="tag"># rook</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/22/rook-ceph-practice-part1/" rel="next" title="Kubernetes上使用Rook部署Ceph系统并提供PV服务">
+                <i class="fa fa-chevron-left"></i> Kubernetes上使用Rook部署Ceph系统并提供PV服务
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">91</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">61</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Ceph-OSD配置"><span class="nav-number">2.</span> <span class="nav-text">Ceph OSD配置</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#使用所有可用磁盘"><span class="nav-number">2.1.</span> <span class="nav-text">使用所有可用磁盘</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用指定磁盘"><span class="nav-number">2.2.</span> <span class="nav-text">使用指定磁盘</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Ceph集群修改"><span class="nav-number">3.</span> <span class="nav-text">Ceph集群修改</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#遇到的问题"><span class="nav-number">4.</span> <span class="nav-text">遇到的问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ceph-mon状态一直不为running"><span class="nav-number">4.1.</span> <span class="nav-text">ceph-mon状态一直不为running</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#配置osd指定磁盘无效"><span class="nav-number">4.2.</span> <span class="nav-text">配置osd指定磁盘无效</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#扩展功能"><span class="nav-number">5.</span> <span class="nav-text">扩展功能</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#如何配置分区？"><span class="nav-number">5.1.</span> <span class="nav-text">如何配置分区？</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Operator-discover检查"><span class="nav-number">5.1.1.</span> <span class="nav-text">Operator discover检查</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#OSD-Daemon检查"><span class="nav-number">5.1.2.</span> <span class="nav-text">OSD Daemon检查</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何配置HDD-SSD的BlueStore？"><span class="nav-number">5.2.</span> <span class="nav-text">如何配置HDD+SSD的BlueStore？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何自定义ceph-conf？"><span class="nav-number">5.3.</span> <span class="nav-text">如何自定义ceph.conf？</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#修改已有Ceph集群配置参数"><span class="nav-number">5.3.1.</span> <span class="nav-text">修改已有Ceph集群配置参数</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#创建Ceph集群前指定配置参数"><span class="nav-number">5.3.2.</span> <span class="nav-text">创建Ceph集群前指定配置参数</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何自定义crush-rule？"><span class="nav-number">5.4.</span> <span class="nav-text">如何自定义crush rule？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何升级Ceph集群？"><span class="nav-number">5.5.</span> <span class="nav-text">如何升级Ceph集群？</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">6.</span> <span class="nav-text">总结</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Rook的定位"><span class="nav-number">6.1.</span> <span class="nav-text">Rook的定位</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Rook的优势"><span class="nav-number">6.2.</span> <span class="nav-text">Rook的优势</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Rook的不足"><span class="nav-number">6.3.</span> <span class="nav-text">Rook的不足</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用场景总结"><span class="nav-number">6.4.</span> <span class="nav-text">使用场景总结</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.yangguanjun.com/2018/12/28/rook-ceph-practice-part2/';
+          this.page.identifier = '2018/12/28/rook-ceph-practice-part2/';
+          this.page.title = 'Rook定制化和管理Ceph集群';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
