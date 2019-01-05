@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,cephfs,rook," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="问题描述在使用Rook部署的Ceph集群里，配置好CephFS后，在比较长的目录下，读写文件失败。 现象如下：  使用ceph-fuse客户端时：  12root@ceph3:/mnt/test/volumes/kubernetes/kubernetes/kubernetes-dynamic-pvc-9adbb10c-f86a-11e8-96ff-9247c38478e0# cat fox cat">
+<meta name="keywords" content="ceph,cephfs,rook">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Rook部署的Ceph系统中CephFS的一个小问题">
+<meta property="og:url" content="http://www.yangguanjun.com/2019/01/05/rook-cephfs-file-name-too-long-issue/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="问题描述在使用Rook部署的Ceph集群里，配置好CephFS后，在比较长的目录下，读写文件失败。 现象如下：  使用ceph-fuse客户端时：  12root@ceph3:/mnt/test/volumes/kubernetes/kubernetes/kubernetes-dynamic-pvc-9adbb10c-f86a-11e8-96ff-9247c38478e0# cat fox cat">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2019-01-05T12:22:01.377Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Rook部署的Ceph系统中CephFS的一个小问题">
+<meta name="twitter:description" content="问题描述在使用Rook部署的Ceph集群里，配置好CephFS后，在比较长的目录下，读写文件失败。 现象如下：  使用ceph-fuse客户端时：  12root@ceph3:/mnt/test/volumes/kubernetes/kubernetes/kubernetes-dynamic-pvc-9adbb10c-f86a-11e8-96ff-9247c38478e0# cat fox cat">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.yangguanjun.com/2019/01/05/rook-cephfs-file-name-too-long-issue/"/>
+
+
+
+
+
+  <title>Rook部署的Ceph系统中CephFS的一个小问题 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-7472013512056838",
+    enable_page_level_ads: true
+  });
+</script>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2019/01/05/rook-cephfs-file-name-too-long-issue/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Rook部署的Ceph系统中CephFS的一个小问题</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-01-05T20:20:21+08:00">
+                2019-01-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+                  , 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/rook/" itemprop="url" rel="index">
+                    <span itemprop="name">rook</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/01/05/rook-cephfs-file-name-too-long-issue/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2019/01/05/rook-cephfs-file-name-too-long-issue/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h2><p>在使用Rook部署的Ceph集群里，配置好CephFS后，在比较长的目录下，读写文件失败。</p>
+<p>现象如下： </p>
+<p>使用ceph-fuse客户端时： </p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@ceph3:/mnt/<span class="built_in">test</span>/volumes/kubernetes/kubernetes/kubernetes-dynamic-pvc-9adbb10c-f86a-11e8-96ff-9247c38478e0<span class="comment"># cat fox </span></span><br><span class="line">cat: fox: Input/output error</span><br></pre></td></tr></table></figure>
+<p>使用kernel client时： </p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@ceph3:/mnt/<span class="built_in">test</span>/volumes/kubernetes/kubernetes/kubernetes-dynamic-pvc-9adbb10c-f86a-11e8-96ff-9247c38478e0<span class="comment"># cat fox </span></span><br><span class="line">cat: fox: File name too long</span><br></pre></td></tr></table></figure>
+<h2 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h2><p>打开ceph-fuse client的log：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-fuse -m 10.10.15.89:6790,10.10.15.198:6790 /mnt/test/ -n client.admin --keyring=./yangguanjun/keyring --debug-client=20</span></span><br></pre></td></tr></table></figure></p>
+<p>然后在 /var/log/ceph/里查看log，有err：<code>-36</code><br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">2018-12-05 18:42:04.908612 7fd5955bc700  3 client.5213 ll_read 0x565512bf8760 0x10000000007  0~4096 </span><br><span class="line">2018-12-05 18:42:04.910114 7fd599dc5700 10 client.5213 ms_handle_connect on 172.16.1.54:6800/33886 </span><br><span class="line">2018-12-05 18:42:04.910887 7fd5955bc700 10 client.5213 check_pool_perm on pool 2 ns fsvolumens_kubernetes-dynamic-pvc-9adbb10c-f86a-11e8-96ff-9247c38478e0 rd_err = -36 wr_err = -36 </span><br><span class="line">2018-12-05 18:42:04.910907 7fd5955bc700 10 client.5213 check_pool_perm on pool 2 ns fsvolumens_kubernetes-dynamic-pvc-9adbb10c-f86a-11e8-96ff-9247c38478e0 rd_err = -36 wr_err = -36</span><br></pre></td></tr></table></figure></p>
+<p>查看linux里的 <code>include/uapi/asm-generic/errno.h</code>，有如下定义： </p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ENAMETOOLONG    36  <span class="comment">/* File name too long */</span></span></span><br></pre></td></tr></table></figure>
+<p>因为这个错误跟ceph-fuse和kernel client无关，所以猜测是osd相关地方的问题； </p>
+<p>然后搜索ceph代码，osd相关的地方有如下几处检查： </p>
+<p>文件：osd/PrimaryLogPG.cc<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** do_op - do an op</span></span><br><span class="line"><span class="comment"> * pg lock will be held (if multithreaded)</span></span><br><span class="line"><span class="comment"> * osd_lock NOT held.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">void</span> PrimaryLogPG::do_op(OpRequestRef&amp; op)</span><br><span class="line">&#123;</span><br><span class="line">...</span><br><span class="line">    <span class="comment">// object name too long?</span></span><br><span class="line">    <span class="keyword">if</span> (m-&gt;get_oid().name.size() &gt; cct-&gt;_conf-&gt;osd_max_object_name_len) &#123;</span><br><span class="line">        dout(<span class="number">4</span>) &lt;&lt; <span class="string">"do_op name is longer than "</span></span><br><span class="line">                &lt;&lt; cct-&gt;_conf-&gt;osd_max_object_name_len</span><br><span class="line">                &lt;&lt; <span class="string">" bytes"</span> &lt;&lt; dendl;</span><br><span class="line">        osd-&gt;reply_op_error(op, -ENAMETOOLONG);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (m-&gt;get_hobj().get_key().size() &gt; cct-&gt;_conf-&gt;osd_max_object_name_len) &#123;</span><br><span class="line">        dout(<span class="number">4</span>) &lt;&lt; <span class="string">"do_op locator is longer than "</span></span><br><span class="line">                &lt;&lt; cct-&gt;_conf-&gt;osd_max_object_name_len</span><br><span class="line">                &lt;&lt; <span class="string">" bytes"</span> &lt;&lt; dendl;</span><br><span class="line">        osd-&gt;reply_op_error(op, -ENAMETOOLONG);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (m-&gt;get_hobj().nspace.size() &gt; cct-&gt;_conf-&gt;osd_max_object_namespace_len) &#123;</span><br><span class="line">        dout(<span class="number">4</span>) &lt;&lt; <span class="string">"do_op namespace is longer than "</span></span><br><span class="line">                &lt;&lt; cct-&gt;_conf-&gt;osd_max_object_namespace_len</span><br><span class="line">                &lt;&lt; <span class="string">" bytes"</span> &lt;&lt; dendl;</span><br><span class="line">        osd-&gt;reply_op_error(op, -ENAMETOOLONG);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>于是打开OSD的log：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[root@rook-ceph-tools /]<span class="comment"># ceph tell osd.0 config set debug_osd 5</span></span><br><span class="line">Set debug_osd to 5/5</span><br><span class="line">[root@rook-ceph-tools /]<span class="comment"># ceph tell osd.1 config set debug_osd 5</span></span><br><span class="line">Set debug_osd to 5/5</span><br></pre></td></tr></table></figure></p>
+<p>然后继续测试重新问题，抓取osd的log：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># grep "longer than" *</span></span><br><span class="line">rook-ceph-osd-0-85f5bf454f-64w7d-ceph3.log:2018-12-05 11:14:38.864707 7fbe34194700  4 osd.0 pg_epoch: 24 pg[2.15( empty <span class="built_in">local</span>-lis/les=21/22 n=0 ec=20/20 lis/c 21/21 les/c/f 22/22/0 21/21/20) [0,1] r=0 lpr=21 crt=0<span class="string">'0 mlcod 0'</span>0 active+clean] do_op namespace is longer than 64 bytes</span><br><span class="line">rook-ceph-osd-0-85f5bf454f-64w7d-ceph3.log:2018-12-05 11:14:38.864853 7fbe3819c700  4 osd.0 pg_epoch: 24 pg[2.15( empty <span class="built_in">local</span>-lis/les=21/22 n=0 ec=20/20 lis/c 21/21 les/c/f 22/22/0 21/21/20) [0,1] r=0 lpr=21 crt=0<span class="string">'0 mlcod 0'</span>0 active+clean] do_op namespace is longer than 64 bytes</span><br></pre></td></tr></table></figure></p>
+<p>而对应代码处的检查为：<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (m-&gt;get_hobj().nspace.size() &gt; cct-&gt;_conf-&gt;osd_max_object_namespace_len)</span><br></pre></td></tr></table></figure></p>
+<p>查看osd相关的配置：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[root@rook-ceph-osd-0-85f5bf454f-64w7d-ceph3 ceph]<span class="comment"># cat ceph.conf</span></span><br><span class="line">...</span><br><span class="line">osd max object name len      = 256</span><br><span class="line">osd max object namespace len = 64</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p><strong>(o゜▽゜)o☆[BINGO!]，找到原因了，哪为什么会有这个配置呢？？</strong></p>
+<p>在Rook的代码里有下面代码，文件：pkg/daemon/ceph/osd/device.go</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">writeConfigFile</span><span class="params">(cfg *osdConfig, context *clusterd.Context, cluster *cephconfig.ClusterInfo, location <span class="keyword">string</span>)</span> <span class="title">error</span></span> &#123;</span><br><span class="line">    cephConfig := cephconfig.CreateDefaultCephConfig(context, cluster, cfg.rootPath)</span><br><span class="line">    <span class="keyword">if</span> isBluestore(cfg) &#123;</span><br><span class="line">        cephConfig.GlobalConfig.OsdObjectStore = config.Bluestore</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        cephConfig.GlobalConfig.OsdObjectStore = config.Filestore</span><br><span class="line">    &#125;</span><br><span class="line">    cephConfig.CrushLocation = location</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> cfg.dir || isFilestoreDevice(cfg) &#123;</span><br><span class="line">        <span class="comment">// using the local file system requires some config overrides</span></span><br><span class="line">        <span class="comment">// http://docs.ceph.com/docs/jewel/rados/configuration/filesystem-recommendations/#not-recommended</span></span><br><span class="line">        cephConfig.GlobalConfig.OsdMaxObjectNameLen = <span class="number">256</span></span><br><span class="line">        cephConfig.GlobalConfig.OsdMaxObjectNamespaceLen = <span class="number">64</span></span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看出这个配置项是在配置OSD使用目录 或 使用FileStore时添加的。</p>
+<p>查看Ceph关于Filestore里的说明，指出在ext4的文件系统里，因为xattrs长度的限制，启动Filestore会被限制，用户可以在确定object name比较短的应用场景里，配置下面的两个参数来使用ext4的Filestore。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">osd max object name len = 256</span><br><span class="line">osd max object namespace len = 64</span><br></pre></td></tr></table></figure>
+<p>参考：<a href="http://docs.ceph.com/docs/jewel/rados/configuration/filesystem-recommendations/#not-recommended" target="_blank" rel="noopener">http://docs.ceph.com/docs/jewel/rados/configuration/filesystem-recommendations/#not-recommended</a></p>
+<p>查看我们的配置，cluster.yaml里对OSD的配置如下：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">...</span></span><br><span class="line"><span class="attr">  storage:</span></span><br><span class="line"><span class="attr">    useAllNodes:</span> <span class="literal">false</span></span><br><span class="line"><span class="attr">    useAllDevices:</span> <span class="literal">false</span></span><br><span class="line"><span class="attr">    deviceFilter:</span></span><br><span class="line"><span class="attr">    config:</span></span><br><span class="line"><span class="attr">      storeType:</span> <span class="string">bluestore</span></span><br><span class="line"><span class="attr">    nodes:</span></span><br><span class="line"><span class="attr">    - name:</span> <span class="string">ceph2</span></span><br><span class="line"><span class="attr">      devices:</span></span><br><span class="line"><span class="attr">      - name:</span> <span class="string">sdb1</span></span><br><span class="line"><span class="attr">    - name:</span> <span class="string">ceph3</span></span><br><span class="line"><span class="attr">      devices:</span></span><br><span class="line"><span class="attr">      - name:</span> <span class="string">sdb1</span></span><br></pre></td></tr></table></figure>
+<p>而Rook在配置OSD时候，是不支持配置分区的。若配置为分区时，实际上Rook代码检查端会跳过所有有分区的盘，然后默认使用<code>/var/lib/rook/osd&lt;id&gt;/</code>这个目录来创建OSD，如下：<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ll  /var/lib/rook/osd0/</span></span><br><span class="line">total 3344</span><br><span class="line">drwxr--r-- 3 root root         4096 Dec  5 16:44 ./</span><br><span class="line">drwxr-xr-x 5 root root         4096 Dec  5 16:44 ../</span><br><span class="line">lrwxrwxrwx 1 root root           34 Dec  5 16:44 block -&gt; /var/lib/rook/osd0/bluestore-block</span><br><span class="line">lrwxrwxrwx 1 root root           31 Dec  5 16:44 block.db -&gt; /var/lib/rook/osd0/bluestore-db</span><br><span class="line">lrwxrwxrwx 1 root root           32 Dec  5 16:44 block.wal -&gt; /var/lib/rook/osd0/bluestore-wal</span><br><span class="line">-rw-r--r-- 1 root root            2 Dec  5 16:44 bluefs</span><br><span class="line">-rw-r--r-- 1 root root 472432779264 Dec  5 19:22 bluestore-block</span><br><span class="line">-rw-r--r-- 1 root root   1073741824 Dec  5 16:44 bluestore-db</span><br><span class="line">-rw-r--r-- 1 root root    603979776 Dec  5 19:27 bluestore-wal</span><br></pre></td></tr></table></figure></p>
+<h2 id="解决办法"><a href="#解决办法" class="headerlink" title="解决办法"></a>解决办法</h2><h3 id="临时方法"><a href="#临时方法" class="headerlink" title="临时方法"></a>临时方法</h3><p>修改<code>osd_max_object_namespace_len</code>为更长的值即可。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[root@rook-ceph-tools /]<span class="comment"># ceph tell osd.0 config set osd_max_object_namespace_len 256</span></span><br><span class="line">Set osd_max_object_namespace_len to 256</span><br><span class="line">[root@rook-ceph-tools /]<span class="comment"># ceph tell osd.1 config set osd_max_object_namespace_len 256</span></span><br><span class="line">Set osd_max_object_namespace_len to 256</span><br></pre></td></tr></table></figure>
+<h3 id="推荐方法"><a href="#推荐方法" class="headerlink" title="推荐方法"></a>推荐方法</h3><p>Ceph OSD使用BlueStore，在Rook对应Ceph集群的clustre.yaml文件里，指定OSD使用整块磁盘。</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">...</span></span><br><span class="line"><span class="attr">  storage:</span></span><br><span class="line"><span class="attr">    useAllNodes:</span> <span class="literal">false</span></span><br><span class="line"><span class="attr">    useAllDevices:</span> <span class="literal">false</span></span><br><span class="line"><span class="attr">    deviceFilter:</span></span><br><span class="line"><span class="attr">    config:</span></span><br><span class="line"><span class="attr">      storeType:</span> <span class="string">bluestore</span></span><br><span class="line"><span class="attr">    nodes:</span></span><br><span class="line"><span class="attr">    - name:</span> <span class="string">ceph2</span></span><br><span class="line"><span class="attr">      devices:</span></span><br><span class="line"><span class="attr">      - name:</span> <span class="string">sdb</span></span><br><span class="line"><span class="attr">    - name:</span> <span class="string">ceph3</span></span><br><span class="line"><span class="attr">      devices:</span></span><br><span class="line"><span class="attr">      - name:</span> <span class="string">sdb</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>注：指定的磁盘要创建GPT Header，并且删除所有分区</p>
+</blockquote>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>红包</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/cephfs/" rel="tag"># cephfs</a>
+          
+            <a href="/tags/rook/" rel="tag"># rook</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/28/rook-ceph-practice-part2/" rel="next" title="Rook定制化和管理Ceph集群">
+                <i class="fa fa-chevron-left"></i> Rook定制化和管理Ceph集群
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">92</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">11</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">61</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#问题描述"><span class="nav-number">1.</span> <span class="nav-text">问题描述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#问题分析"><span class="nav-number">2.</span> <span class="nav-text">问题分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#解决办法"><span class="nav-number">3.</span> <span class="nav-text">解决办法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#临时方法"><span class="nav-number">3.1.</span> <span class="nav-text">临时方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#推荐方法"><span class="nav-number">3.2.</span> <span class="nav-text">推荐方法</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.yangguanjun.com/2019/01/05/rook-cephfs-file-name-too-long-issue/';
+          this.page.identifier = '2019/01/05/rook-cephfs-file-name-too-long-issue/';
+          this.page.title = 'Rook部署的Ceph系统中CephFS的一个小问题';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
