@@ -96,7 +96,7 @@
 <meta property="og:image" content="http://www.yangguanjun.com/images/iozone-read-perf.jpg">
 <meta property="og:image" content="http://www.yangguanjun.com/images/iozone-throughput-perf.jpg">
 <meta property="og:image" content="http://www.yangguanjun.com/images/fio-randwrite-bw-mds-crush.jpg">
-<meta property="og:updated_time" content="2018-04-04T02:10:00.374Z">
+<meta property="og:updated_time" content="2019-01-31T07:11:45.063Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="cephfs架构解读与测试分析-part2">
 <meta name="twitter:description" content="本文是在日知录社区里分享内容的第二部分，主要介绍CephFS的测试方法和结果分析，对视频分享和第一部分感兴趣的请阅读如下链接： cephfs架构解读与测试分析-part1日知录 - CephFS架构解读与测试分析 CephFS测试为了验证CephFS是否满足产品需求，我们基于最新的Ceph Jewel 10.2.7版本做了测试。 CephFS Jewel版本特性 CephFS – Producti">
@@ -725,7 +725,7 @@
 </li>
 <li><p>测试系统吞吐量 - throughput模式</p>
 <p> 指定threads=16，获取整个系统的throughput</p>
- <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">iozone -a -i 0 -i 1 -i 2 -r 16m -s 2G -I -t 16 -Rb iozone-directio-throughput-output.xls</span><br><span class="line">iozone -a -i 0 -i 1 -i 2 -r 16m -s 2G -o -t 16 -Rb iozone-syncio-throughput-output.xls</span><br></pre></td></tr></table></figure>
+ <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">iozone -i 0 -i 1 -i 2 -r 16m -s 2G -I -t 16 -Rb iozone-directio-throughput-output.xls</span><br><span class="line">iozone -i 0 -i 1 -i 2 -r 16m -s 2G -o -t 16 -Rb iozone-syncio-throughput-output.xls</span><br></pre></td></tr></table></figure>
 </li>
 </ol>
 <p><strong>测试结果：</strong></p>

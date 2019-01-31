@@ -87,7 +87,7 @@
 <meta property="og:site_name" content="ictfox blog">
 <meta property="og:description" content="概述在使用CephFS的kernel client后，发现它对比ceph-fuse客户端，不方便找到对应的log了，在dmesg或kern.log里也仅有很少的log输出，这在遇到问题的时候很不方便，需要找到打印Ceph kernel log的方法。 代码定义Ceph的kernel module有两个，如下：12345root@ceph2:~# lsmod | grep cephceph">
 <meta property="og:locale" content="en">
-<meta property="og:updated_time" content="2018-11-09T14:12:33.841Z">
+<meta property="og:updated_time" content="2019-01-31T07:14:09.561Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Ceph Kernel module dynamic debug">
 <meta name="twitter:description" content="概述在使用CephFS的kernel client后，发现它对比ceph-fuse客户端，不方便找到对应的log了，在dmesg或kern.log里也仅有很少的log输出，这在遇到问题的时候很不方便，需要找到打印Ceph kernel log的方法。 代码定义Ceph的kernel module有两个，如下：12345root@ceph2:~# lsmod | grep cephceph">
@@ -438,7 +438,7 @@
 <p>比如：ceph_open_session，则会打印这个函数内的所有log </p>
 <p>2、file<br>输出指定文件的log<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> -n <span class="string">'file xxx.c +p'</span> &gt; /sys/kernel/debug/dynamic_debug/control </span><br><span class="line"><span class="built_in">echo</span> -n <span class="string">'file xxx.c -p'</span> &gt; /sys/kernel/debug/dynamic_debug/control</span><br></pre></td></tr></table></figure></p>
 <p>比如：ceph_common.c，则会打印该文件内的所有log </p>
-<p>3、module<br>输出指定模块的log<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> -n <span class="string">'module xxx.c +p'</span> &gt; /sys/kernel/debug/dynamic_debug/control </span><br><span class="line"><span class="built_in">echo</span> -n <span class="string">'module xxx.c -p'</span> &gt; /sys/kernel/debug/dynamic_debug/control</span><br></pre></td></tr></table></figure></p>
+<p>3、module<br>输出指定模块的log<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> -n <span class="string">'module libceph +p'</span> &gt; /sys/kernel/debug/dynamic_debug/control </span><br><span class="line"><span class="built_in">echo</span> -n <span class="string">'module libceph -p'</span> &gt; /sys/kernel/debug/dynamic_debug/control</span><br></pre></td></tr></table></figure></p>
 <p>比如：libceph/ceph，则会打印libceph或ceph模块的所有log </p>
 <p>当前ceph相关的就这两个模块； </p>
 <p>4、format<br>输出符合指定格式的log<br><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> -n <span class="string">'format xxx +p'</span> &gt; /sys/kernel/debug/dynamic_debug/control </span><br><span class="line"><span class="built_in">echo</span> -n <span class="string">'format xxx -p'</span> &gt; /sys/kernel/debug/dynamic_debug/control</span><br></pre></td></tr></table></figure></p>
