@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="ceph,kubernetes,csi," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="CSI简介官方spec文档：CSI Spec 术语简称：  CSI：Container Storage Interface CO：Container Orchestrator system SP：Storage Provider  CSI是Container Storage Interface的简称，旨在能为容器编排引擎和存储系统间建立一套标准的存储调用接口，通过该接口能为容器编排引擎提供存储服务">
+<meta name="keywords" content="ceph,kubernetes,csi">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes CSI简介">
+<meta property="og:url" content="http://www.yangguanjun.com/2019/02/14/kubernetes-csi-intro/index.html">
+<meta property="og:site_name" content="ictfox blog">
+<meta property="og:description" content="CSI简介官方spec文档：CSI Spec 术语简称：  CSI：Container Storage Interface CO：Container Orchestrator system SP：Storage Provider  CSI是Container Storage Interface的简称，旨在能为容器编排引擎和存储系统间建立一套标准的存储调用接口，通过该接口能为容器编排引擎提供存储服务">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://www.yangguanjun.com/images/kubernetes-without-csi.png">
+<meta property="og:image" content="http://www.yangguanjun.com/images/kubernetes-with-csi.png">
+<meta property="og:image" content="http://www.yangguanjun.com/images/write-csi-plugin-1.png">
+<meta property="og:image" content="http://www.yangguanjun.com/images/write-csi-plugin-2.png">
+<meta property="og:image" content="http://www.yangguanjun.com/images/write-csi-plugin-3.png">
+<meta property="og:image" content="http://www.yangguanjun.com/images/write-csi-plugin-4.png">
+<meta property="og:updated_time" content="2019-02-14T15:01:29.285Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Kubernetes CSI简介">
+<meta name="twitter:description" content="CSI简介官方spec文档：CSI Spec 术语简称：  CSI：Container Storage Interface CO：Container Orchestrator system SP：Storage Provider  CSI是Container Storage Interface的简称，旨在能为容器编排引擎和存储系统间建立一套标准的存储调用接口，通过该接口能为容器编排引擎提供存储服务">
+<meta name="twitter:image" content="http://www.yangguanjun.com/images/kubernetes-without-csi.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"always","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.yangguanjun.com/2019/02/14/kubernetes-csi-intro/"/>
+
+
+
+
+
+  <title>Kubernetes CSI简介 | ictfox blog</title>
+  
+
+
+
+
+
+
+
+
+  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-7472013512056838",
+    enable_page_level_ads: true
+  });
+</script>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">ictfox blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">ForTech</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            Search
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off"
+             placeholder="Searching..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.yangguanjun.com/2019/02/14/kubernetes-csi-intro/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="ictfox">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/ictfox.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ictfox blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Kubernetes CSI简介</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-02-14T22:50:12+08:00">
+                2019-02-14
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/" itemprop="url" rel="index">
+                    <span itemprop="name">ceph</span>
+                  </a>
+                </span>
+
+                
+                
+                  , 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ceph/kubernetes/" itemprop="url" rel="index">
+                    <span itemprop="name">kubernetes</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/02/14/kubernetes-csi-intro/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2019/02/14/kubernetes-csi-intro/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv" ></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="CSI简介"><a href="#CSI简介" class="headerlink" title="CSI简介"></a>CSI简介</h2><p>官方spec文档：<a href="https://github.com/container-storage-interface/spec/blob/master/spec.md" target="_blank" rel="noopener">CSI Spec</a></p>
+<p>术语简称：</p>
+<ul>
+<li>CSI：Container Storage Interface</li>
+<li>CO：Container Orchestrator system</li>
+<li>SP：Storage Provider</li>
+</ul>
+<p>CSI是<code>Container Storage Interface</code>的简称，旨在能为容器编排引擎和存储系统间建立一套标准的存储调用接口，通过该接口能为容器编排引擎提供存储服务。</p>
+<p>在CSI之前，K8S里提供存储服务是通过一种称为<code>in-tree</code>的方式来提供，如下图：</p>
+<p><img src="/images/kubernetes-without-csi.png" alt="kubernetes-without-csi"></p>
+<p>这种方式需要将存储提供者的代码逻辑放到K8S的代码库中运行，调用引擎与插件间属于强耦合，这种方式会带来一些问题：</p>
+<ol>
+<li>存储插件需要一同随K8S发布。</li>
+<li>K8S社区需要对存储插件的测试、维护负责。</li>
+<li>存储插件的问题有可能会影响K8S部件正常运行。</li>
+<li>存储插件享有K8S部件同等的特权存在安全隐患。</li>
+<li>存储插件开发者必须遵循K8S社区的规则开发代码。</li>
+</ol>
+<p>当前已有的<code>FlexVolume</code>机制试图通过调用一个可执行的程序包方式去解决这些问题，虽然它已经能够做到让存储提供方进行独立开发，但是有两个问题还没有得到很好解决：  </p>
+<ol>
+<li><p>在部署这些可执行文件时，需要host的root权限，依然存在安全隐患。</p>
+</li>
+<li><p>存储插件在执行mount、attach这类操作时，往往需要到host去安装第三方工具或者加载一些依赖库，这样host的OS版本往往需要定制，不再是一个简单的linux发型版本，这样的情况太多，会使部署变得复杂。</p>
+<p>例如：ceph需要安装rbd，gluster mount需要安装mount.glusterfs等等。</p>
+</li>
+</ol>
+<p>基于这些问题和挑战，CO（Container Orchestrator） 厂商提出 Container Storage Interface 用来定义容器存储标准，它独立于 Kubernetes Storage SIG，由 Kubernetes、Mesos、Cloud Foundry 三家一起推动。个人理解它有如下2个核心目标：</p>
+<ul>
+<li>提供统一的 CO 和 SP 都遵循的容器存储接口</li>
+<li>基于 CSI 实现了自身的 Volume Driver，即可在所有支持 CSI 的 CO 中平滑迁移</li>
+</ul>
+<p>CSI 持久化卷支持是在 Kubernetes v1.9 中引入的，作为一个 alpha 特性，必须由集群管理员明确启用。在kubernetes v1.10中，默认CSI是启用的。</p>
+<h2 id="Kubernetes-CSI架构"><a href="#Kubernetes-CSI架构" class="headerlink" title="Kubernetes CSI架构"></a>Kubernetes CSI架构</h2><p>Kubernetes的CSI架构如下，包含三个部分：  </p>
+<ol>
+<li>Kubernetes Core：Kubernetes核心组件</li>
+<li>Kubernetes External Component：Kubernetes支持CSI的扩展组件</li>
+<li>External Component：第三方存储厂商开发</li>
+</ol>
+<p><img src="/images/kubernetes-with-csi.png" alt="kubernetes-with-csi"></p>
+<h3 id="Kubernetes-External-Component"><a href="#Kubernetes-External-Component" class="headerlink" title="Kubernetes External Component"></a>Kubernetes External Component</h3><p>在CSI的框架里，Kubernetes本身需要提供以下三类插件：</p>
+<h4 id="Driver-registrar"><a href="#Driver-registrar" class="headerlink" title="- Driver registrar "></a>- Driver registrar </h4><p>一个Sidecar Container，向Kubernetes注册CSI Driver，添加Drivers的一些信息。<br>源码：<a href="https://github.com/kubernetes-csi/driver-registrar" target="_blank" rel="noopener">https://github.com/kubernetes-csi/driver-registrar</a></p>
+<h4 id="External-provisioner"><a href="#External-provisioner" class="headerlink" title="- External provisioner "></a>- External provisioner </h4><p>一个Sidecar Container，监控Kubernetes系统里的PVC对象，调用对应CSI的Volume创建、删除等接口。<br>源码：<a href="https://github.com/kubernetes-csi/external-provisioner" target="_blank" rel="noopener">https://github.com/kubernetes-csi/external-provisioner</a></p>
+<h4 id="External-attacher"><a href="#External-attacher" class="headerlink" title="- External attacher"></a>- External attacher</h4><p>一个Sidecar Container，监控Kubernetes系统里的VolumeAttachment对象，调用对应CSI的接口。<br>源码：<a href="https://github.com/kubernetes-csi/external-attacher" target="_blank" rel="noopener">https://github.com/kubernetes-csi/external-attacher</a></p>
+<p>K8S CSI扩展组件的镜像下载：<br><a href="https://quay.io/organization/k8scsi" target="_blank" rel="noopener">https://quay.io/organization/k8scsi</a></p>
+<h3 id="Storage-Vendor-external-component"><a href="#Storage-Vendor-external-component" class="headerlink" title="Storage Vendor external component"></a>Storage Vendor external component</h3><p>在CSI的框架中，存储提供商需要自己实现CSI标准里的存储插件，主要有如下三类：</p>
+<h4 id="CSI-Identity"><a href="#CSI-Identity" class="headerlink" title="- CSI Identity"></a>- CSI Identity</h4><p>负责认证插件的状态信息，实现如下接口：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">service Identity &#123;</span><br><span class="line">  rpc GetPluginInfo(GetPluginInfoRequest)</span><br><span class="line">        returns (GetPluginInfoResponse) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  rpc GetPluginCapabilities(GetPluginCapabilitiesRequest)</span><br><span class="line">        returns (GetPluginCapabilitiesResponse) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  rpc Probe (ProbeRequest)</span><br><span class="line">        returns (ProbeResponse) &#123;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="CSI-Controller"><a href="#CSI-Controller" class="headerlink" title="- CSI Controller "></a>- CSI Controller </h4><p>负责实际创建和管理volumes，实现如下接口：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">service Controller &#123;</span><br><span class="line">  rpc CreateVolume (CreateVolumeRequest)</span><br><span class="line">        returns (CreateVolumeResponse) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  rpc DeleteVolume (DeleteVolumeRequest)</span><br><span class="line">        returns (DeleteVolumeResponse) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  rpc ControllerPublishVolume (ControllerPublishVolumeRequest)</span><br><span class="line">        returns (ControllerPublishVolumeResponse) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  rpc ControllerUnpublishVolume (ControllerUnpublishVolumeRequest)</span><br><span class="line">        returns (ControllerUnpublishVolumeResponse) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  rpc ValidateVolumeCapabilities (ValidateVolumeCapabilitiesRequest)</span><br><span class="line">        returns (ValidateVolumeCapabilitiesResponse) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  rpc ListVolumes (ListVolumesRequest)</span><br><span class="line">        returns (ListVolumesResponse) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  rpc GetCapacity (GetCapacityRequest)</span><br><span class="line">        returns (GetCapacityResponse) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  rpc ControllerGetCapabilities (ControllerGetCapabilitiesRequest)</span><br><span class="line">        returns (ControllerGetCapabilitiesResponse) &#123;&#125;  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="CSI-Node"><a href="#CSI-Node" class="headerlink" title="- CSI Node"></a>- CSI Node</h4><p>负责在Kubernetes Node上volume相关的功能，实现如下接口：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">service Node &#123;</span><br><span class="line">  rpc NodeStageVolume (NodeStageVolumeRequest)</span><br><span class="line">        returns (NodeStageVolumeResponse) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  rpc NodeUnstageVolume (NodeUnstageVolumeRequest)</span><br><span class="line">        returns (NodeUnstageVolumeResponse) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  rpc NodePublishVolume (NodePublishVolumeRequest)</span><br><span class="line">        returns (NodePublishVolumeResponse) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  rpc NodeUnpublishVolume (NodeUnpublishVolumeRequest)</span><br><span class="line">        returns (NodeUnpublishVolumeResponse) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  rpc NodeGetId (NodeGetIdRequest)</span><br><span class="line">        returns (NodeGetIdResponse) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  rpc NodeGetCapabilities (NodeGetCapabilitiesRequest)</span><br><span class="line">        returns (NodeGetCapabilitiesResponse) &#123;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="CSI-Drivers"><a href="#CSI-Drivers" class="headerlink" title="CSI Drivers"></a>CSI Drivers</h3><p>当前已经有好多可以在Kubernetes中使用的CSI Drivers，参考：<br><a href="https://kubernetes-csi.github.io/docs/Drivers.html" target="_blank" rel="noopener">https://kubernetes-csi.github.io/docs/Drivers.html</a></p>
+<h2 id="开发CSI-Driver"><a href="#开发CSI-Driver" class="headerlink" title="开发CSI Driver"></a>开发CSI Driver</h2><p>SP要开发一个CSI Driver，要遵循以下三条：  </p>
+<ul>
+<li>实现CSI接口的功能</li>
+<li>实现CSI接口的幂等性</li>
+<li>符合CSI返回值规范</li>
+</ul>
+<h3 id="SP实现CSI-Driver"><a href="#SP实现CSI-Driver" class="headerlink" title="SP实现CSI Driver"></a>SP实现CSI Driver</h3><p>实现的CSI Driver组件有三个：  </p>
+<ul>
+<li>Identity Plugin</li>
+<li>Controller Plugin</li>
+<li>Node Plugin</li>
+</ul>
+<p>结合这三个组件的功能，开发者有两种选择：</p>
+<p>1、两个执行文件：Controller + Identity，Node + Identity</p>
+<p><img src="/images/write-csi-plugin-1.png" alt="Node and Controller plugins are running as two separate services"></p>
+<p>2、一个执行文件：Controller + Node + Identity</p>
+<p><img src="/images/write-csi-plugin-2.png" alt="Node and Controller plugin runs in a single binary"></p>
+<p>从调研结果看，官方推荐使用第二种：Controller + Node + Identity</p>
+<p>优点：一个可执行文件，方便维护和部署</p>
+<h3 id="部署CSI组件"><a href="#部署CSI组件" class="headerlink" title="部署CSI组件"></a>部署CSI组件</h3><p>如上介绍，Controller负责volumes的创建删除等操作，整个集群只需要部署一个；Node负责volume的attach、detach等操作，需要在每个节点部署一个，则Kubernetes的推荐部署方式为：  </p>
+<ol>
+<li>Controller plugin：StatefulSet，replicas设为1</li>
+<li>Node plugin：DaemonSet</li>
+</ol>
+<p><img src="/images/write-csi-plugin-3.png" alt="csi plugin deploy"></p>
+<h3 id="部署Kubernetes扩展组件"><a href="#部署Kubernetes扩展组件" class="headerlink" title="部署Kubernetes扩展组件"></a>部署Kubernetes扩展组件</h3><p>单纯的开发完CSI Driver后，还需要CO提供对应的扩展插件来支持CSI，这样CO系统才能正常的使用CSI的方式调用存储。</p>
+<p>在Kubernetes系统里，扩容插件和CSI的部署可以按照如下方式：</p>
+<p><img src="/images/write-csi-plugin-4.png" alt="deploy with kubernetes"></p>
+<h2 id="Ceph-SP-Example"><a href="#Ceph-SP-Example" class="headerlink" title="Ceph SP Example"></a>Ceph SP Example</h2><p>Ceph提供了RBD和CephFS两种CSI接口的存储。<br>源码：<a href="https://github.com/ceph/ceph-csi" target="_blank" rel="noopener">https://github.com/ceph/ceph-csi</a></p>
+<p>Docker image：<br><a href="https://quay.io/organization/cephcsi" target="_blank" rel="noopener">https://quay.io/organization/cephcsi</a></p>
+<h3 id="Ceph-CSI部署"><a href="#Ceph-CSI部署" class="headerlink" title="Ceph CSI部署"></a>Ceph CSI部署</h3><p>Controller Plugin在哪里？</p>
+<p>在各个组件的plugin里！（rbdplugin/cephfsplugin）</p>
+<h3 id="疑问：PVName与RBD-Image名字是否一致？"><a href="#疑问：PVName与RBD-Image名字是否一致？" class="headerlink" title="疑问：PVName与RBD Image名字是否一致？"></a>疑问：PVName与RBD Image名字是否一致？</h3><p>问题：<a href="https://github.com/kubernetes/kubernetes/issues/69324" target="_blank" rel="noopener">https://github.com/kubernetes/kubernetes/issues/69324</a></p>
+<p>在之前的external-storage的代码里，Ceph RBD Image名字与PVName完全无关联，带来了不必要的查询麻烦，那新的CSI框架下，这两个名字是否一致呢？</p>
+<h4 id="ceph-csi的实现"><a href="#ceph-csi的实现" class="headerlink" title="ceph-csi的实现"></a>ceph-csi的实现</h4><p>文件：pkg/rbd/controllerserver.go</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(cs *controllerServer)</span> <span class="title">CreateVolume</span><span class="params">(ctx context.Context, req *csi.CreateVolumeRequest)</span> <span class="params">(*csi.CreateVolumeResponse, error)</span></span> &#123;</span><br><span class="line">    ...</span><br><span class="line">	<span class="comment">// Generating Volume Name and Volume ID, as according to CSI spec they MUST be different</span></span><br><span class="line">	volName := req.GetName()</span><br><span class="line">	uniqueID := uuid.NewUUID().String()</span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(volName) == <span class="number">0</span> &#123;</span><br><span class="line">		volName = rbdVol.Pool + <span class="string">"-dynamic-pvc-"</span> + uniqueID</span><br><span class="line">	&#125;</span><br><span class="line">	rbdVol.VolName = volName</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从ceph-csi的rbd实现看，volName是否是随机UUID跟CreateVolume传入的参数相关。</p>
+<h4 id="Kubernetes扩展组件实现"><a href="#Kubernetes扩展组件实现" class="headerlink" title="Kubernetes扩展组件实现"></a>Kubernetes扩展组件实现</h4><p>文件：pkg/controller/controller.go</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(p *csiProvisioner)</span> <span class="title">Provision</span><span class="params">(options controller.VolumeOptions)</span> <span class="params">(*v1.PersistentVolume, error)</span></span> &#123;</span><br><span class="line">    ...</span><br><span class="line"> 	pvName, err := makeVolumeName(p.volumeNamePrefix, fmt.Sprintf(<span class="string">"%s"</span>, options.PVC.ObjectMeta.UID), p.volumeNameUUIDLength)</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>文件：cmd/csi-provisioner/csi-provisioner.go</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> (</span><br><span class="line">    ...</span><br><span class="line">    volumeNamePrefix     = flag.String(<span class="string">"volume-name-prefix"</span>, <span class="string">"pvc"</span>, <span class="string">"Prefix to apply to the name of a created volume."</span>)</span><br><span class="line">    volumeNameUUIDLength = flag.Int(<span class="string">"volume-name-uuid-length"</span>, <span class="number">-1</span>, <span class="string">"Truncates generated UUID of a created volume to this length. Defaults behavior is to NOT truncate."</span>)</span><br><span class="line">    ...</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<p>从这里可以看出，Kubernetes的Controller组件实现里，支持启动时候指定：  </p>
+<ul>
+<li>volumeNamePrefix：默认为<code>pvc</code></li>
+<li>volumeNameUUIDLength：默认为<code>-1</code>，表示不做VolumeName的Truncate</li>
+</ul>
+<p>所以在CSI的框架下，默认Kubernetes的Controller组件会传入Volume Name，底层Ceph RBD CSI实现中也会检查这个Name，如果设置的话就会依据它来创建RBD Image。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>支持原创</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>红包</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="ictfox WeChat Pay"/>
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="ictfox Alipay"/>
+        <p>Alipay</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/ceph/" rel="tag"># ceph</a>
+          
+            <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
+          
+            <a href="/tags/csi/" rel="tag"># csi</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/01/05/rook-cephfs-file-name-too-long-issue/" rel="next" title="Rook部署的Ceph系统中CephFS的一个小问题">
+                <i class="fa fa-chevron-left"></i> Rook部署的Ceph系统中CephFS的一个小问题
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/ictfox.jpg"
+                alt="ictfox" />
+            
+              <p class="site-author-name" itemprop="name">ictfox</p>
+              <p class="site-description motion-element" itemprop="description">学无止境</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">93</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">12</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">62</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/ictfox" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/smart_bruins" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/ictfox" target="_blank" title="Weibo">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>Weibo</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://www.askceph.com" title="Ceph问答社区" target="_blank">Ceph问答社区</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://blog.csdn.net/for_tech" title="CSDN博客" target="_blank">CSDN博客</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#CSI简介"><span class="nav-number">1.</span> <span class="nav-text">CSI简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Kubernetes-CSI架构"><span class="nav-number">2.</span> <span class="nav-text">Kubernetes CSI架构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Kubernetes-External-Component"><span class="nav-number">2.1.</span> <span class="nav-text">Kubernetes External Component</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Driver-registrar"><span class="nav-number">2.1.1.</span> <span class="nav-text">- Driver registrar </span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#External-provisioner"><span class="nav-number">2.1.2.</span> <span class="nav-text">- External provisioner </span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#External-attacher"><span class="nav-number">2.1.3.</span> <span class="nav-text">- External attacher</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Storage-Vendor-external-component"><span class="nav-number">2.2.</span> <span class="nav-text">Storage Vendor external component</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#CSI-Identity"><span class="nav-number">2.2.1.</span> <span class="nav-text">- CSI Identity</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#CSI-Controller"><span class="nav-number">2.2.2.</span> <span class="nav-text">- CSI Controller </span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#CSI-Node"><span class="nav-number">2.2.3.</span> <span class="nav-text">- CSI Node</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CSI-Drivers"><span class="nav-number">2.3.</span> <span class="nav-text">CSI Drivers</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#开发CSI-Driver"><span class="nav-number">3.</span> <span class="nav-text">开发CSI Driver</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#SP实现CSI-Driver"><span class="nav-number">3.1.</span> <span class="nav-text">SP实现CSI Driver</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#部署CSI组件"><span class="nav-number">3.2.</span> <span class="nav-text">部署CSI组件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#部署Kubernetes扩展组件"><span class="nav-number">3.3.</span> <span class="nav-text">部署Kubernetes扩展组件</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Ceph-SP-Example"><span class="nav-number">4.</span> <span class="nav-text">Ceph SP Example</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Ceph-CSI部署"><span class="nav-number">4.1.</span> <span class="nav-text">Ceph CSI部署</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#疑问：PVName与RBD-Image名字是否一致？"><span class="nav-number">4.2.</span> <span class="nav-text">疑问：PVName与RBD Image名字是否一致？</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#ceph-csi的实现"><span class="nav-number">4.2.1.</span> <span class="nav-text">ceph-csi的实现</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Kubernetes扩展组件实现"><span class="nav-number">4.2.2.</span> <span class="nav-text">Kubernetes扩展组件实现</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ictfox</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://ictfox.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://www.yangguanjun.com/2019/02/14/kubernetes-csi-intro/';
+          this.page.identifier = '2019/02/14/kubernetes-csi-intro/';
+          this.page.title = 'Kubernetes CSI简介';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://ictfox.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
