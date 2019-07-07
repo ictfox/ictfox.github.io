@@ -90,7 +90,7 @@
 <meta property="og:image" content="http://www.yangguanjun.com/images/ceph-node-high-workload-issue1.jpg">
 <meta property="og:image" content="http://www.yangguanjun.com/images/ceph-node-high-workload-issue2.jpg">
 <meta property="og:image" content="http://www.yangguanjun.com/images/ceph-node-high-workload-issue3.jpg">
-<meta property="og:updated_time" content="2018-04-04T02:10:00.353Z">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Ceph节点load很高问题的分析解决">
 <meta name="twitter:description" content="现象当ceph在做数据迁移的时候，有一个节点的系统load很高，通过top命令可以看到如下信息：  从上图中可以看出，ceph-osd占的cpu很高，这个比较奇怪。。。对比别的机器上的ceph配置，没找到差异信息。 分析在该机器上安装perf工具，通过perf看到如下数据：perf top -p &amp;lt;ceph-osd-pid&amp;gt;  从上面的输出中看出，ceph-osd很多的时间花费在内核内">
@@ -594,7 +594,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">93</span>
+                  <span class="site-state-item-count">94</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -616,7 +616,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">62</span>
+                  <span class="site-state-item-count">63</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>

@@ -87,7 +87,7 @@
 <meta property="og:site_name" content="ictfox blog">
 <meta property="og:description" content="在分析ceph性能的时候，发现OSD处理线程等待PG lock的时间比较长，当时就想能不能像ceph perf counter一样，统计下PG lock上的等待时间？（后来分析代码知道了PG lock互斥的原因：Ceph PGLock and RWState) 虽然最后证明这样的办法不可靠，不方便分析，但本次尝试也给出了在ceph代码中添加tracepoint的方法和步骤，记录如下； ceph p">
 <meta property="og:locale" content="en">
-<meta property="og:updated_time" content="2018-04-04T02:10:00.342Z">
+<meta property="og:updated_time" content="2018-04-04T02:10:00.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="ceph mutex lock monitor">
 <meta name="twitter:description" content="在分析ceph性能的时候，发现OSD处理线程等待PG lock的时间比较长，当时就想能不能像ceph perf counter一样，统计下PG lock上的等待时间？（后来分析代码知道了PG lock互斥的原因：Ceph PGLock and RWState) 虽然最后证明这样的办法不可靠，不方便分析，但本次尝试也给出了在ceph代码中添加tracepoint的方法和步骤，记录如下； ceph p">
@@ -595,7 +595,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">93</span>
+                  <span class="site-state-item-count">94</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -617,7 +617,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">62</span>
+                  <span class="site-state-item-count">63</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>
