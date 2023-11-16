@@ -261,8 +261,8 @@
         <category>storage</category>
       </categories>
       <tags>
-        <tag>bcache</tag>
         <tag>ssd</tag>
+        <tag>bcache</tag>
       </tags>
   </entry>
   <entry>
@@ -273,8 +273,8 @@
         <category>storage</category>
       </categories>
       <tags>
-        <tag>flashcache</tag>
         <tag>ssd</tag>
+        <tag>flashcache</tag>
       </tags>
   </entry>
   <entry>
@@ -1107,8 +1107,8 @@
       </categories>
       <tags>
         <tag>ceph</tag>
-        <tag>radosgw</tag>
         <tag>memstore</tag>
+        <tag>radosgw</tag>
         <tag>cache tiering</tag>
       </tags>
   </entry>
